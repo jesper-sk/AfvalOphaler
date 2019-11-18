@@ -8,6 +8,8 @@ namespace AfvalOphaler
 {
     static class Parser
     {
-
+        // Spaties weghalen
+        // Splitsen op ;
+        // DoMagic(overgebleven_dingen)
     }
 }
