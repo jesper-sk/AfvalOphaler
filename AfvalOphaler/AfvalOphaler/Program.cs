@@ -59,3 +59,4 @@ namespace AfvalOphaler
         public const int OrderId = 0;
     }
 }
+
