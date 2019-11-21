@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Drawing;
 
 namespace AfvalOphaler
 {
@@ -28,6 +29,20 @@ namespace AfvalOphaler
                 dists[rowd[0], rowd[1]] = rowd[2];
                 times[rowd[0], rowd[1]] = rowd[3];
             }
+        }
+
+        public static List<Point> ParseOrderCoordinates(string dir)
+        {
+            List<Point> orders = new List<Point>();
+            string[] lines = File.ReadAllLines(dir);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] splitline = lines[i].Trim().Split(';');
+                int x = int.Parse(splitline[7]);
+                int y = int.Parse(splitline[8]);
+                orders.Add(new Point(x, y));
+            }
+            return orders;
         }
     }
 }
