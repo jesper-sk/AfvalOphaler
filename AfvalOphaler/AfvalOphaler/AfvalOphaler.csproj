@@ -60,11 +60,14 @@
     <Compile Include="RouteVisualizer.Designer.cs">
       <DependentUpon>RouteVisualizer.cs</DependentUpon>
     </Compile>
+    <Compile Include="Schedule.cs" />
+    <Compile Include="Solver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Brainstorm.txt" />
     <Content Include="data\dist.txt" />
     <Content Include="data\order.txt" />
   </ItemGroup>
