@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Windows.Forms;
 
 // © Het Woczek duo
 
@@ -29,12 +30,41 @@ namespace AfvalOphaler
             Application.DoEvents();
             vis.WindowState = FormWindowState.Maximized;
             Application.DoEvents();
+            Console.ReadKey();
 #else
-            Console.Write("Parsing.");
+            Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
-            Console.Write(".");
-            Parser.ParseOrders(ordersDir, t);
-            Console.WriteLine(".");
+            Console.WriteLine("Parsing order.txt");
+            BigLL l = Parser.ParseOrders(ordersDir, t);
+
+            Node curr = l.HeadX;
+            for (int i = 0; i < 9; i++)
+            {
+                Console.WriteLine(curr.Order);
+                curr = curr.SeqX.Prev;
+            }
+            Console.WriteLine("");
+            curr = l.HeadY;
+            for (int i = 0; i < 9; i++)
+            {
+                Console.WriteLine(curr.Order);
+                curr = curr.SeqY.Prev;
+            }
+            Console.WriteLine("");
+            curr = l.HeadTime;
+            for (int i = 0; i < 9; i++)
+            {
+                Console.WriteLine(curr.Order);
+                curr = curr.SeqDist.Prev;
+            }
+            Console.WriteLine("");
+            curr = l.FootScore;
+            for (int i = 0; i < 9; i++)
+            {
+                Console.WriteLine(curr.Order);
+                curr = curr.SeqScore.Next;
+            }
+            Console.WriteLine("");
             while (true)
             {
                 string[] inp = Console.ReadLine().Split();

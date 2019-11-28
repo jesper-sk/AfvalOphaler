@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AfvalOphaler
 {
-    public class BigLL
+    public class BigLL : IEnumerable
     {
         public List<Node> Nodes;
         public int Length;
@@ -14,8 +15,14 @@ namespace AfvalOphaler
         Node Head;
         Node Foot;
 
-        public Node EntryX;
-        public Node EntryY;
+        public Node HeadX;
+        public Node HeadY;
+        public Node HeadTime;
+        public Node HeadScore;
+        public Node FootX;
+        public Node FootY;
+        public Node FootTime;
+        public Node FootScore;
 
         public BigLL(params Order[] orders) //Assumes orders are ordered on orderId
         {
@@ -34,33 +41,40 @@ namespace AfvalOphaler
             }
 
             Nodes.Sort((a, b) => a.Order.XCoord.CompareTo(b.Order.XCoord));
-            EntryX = Nodes[0];
+            HeadX = Nodes[0];
             for(int i = 1; i < Length; i++)
             {
                 Nodes[i].SeqX.Next = Nodes[i - 1];
                 Nodes[i - 1].SeqX.Prev = Nodes[i];
             }
+            FootX = Nodes[Length-1];
 
             Nodes.Sort((a, b) => a.Order.YCoord.CompareTo(b.Order.YCoord));
+            HeadY = Nodes[0];
             for (int i = 1; i < Length; i++)
             {
                 Nodes[i].SeqY.Next = Nodes[i - 1];
                 Nodes[i - 1].SeqY.Prev = Nodes[i];
             }
+            FootY = Nodes[Length - 1];
 
             Nodes.Sort((a, b) => a.Order.JourneyTime.CompareTo(b.Order.JourneyTime));
+            HeadTime = Nodes[0];
             for (int i = 1; i < Length; i++)
             {
                 Nodes[i].SeqDist.Next = Nodes[i - 1];
                 Nodes[i - 1].SeqDist.Prev = Nodes[i];
             }
+            FootTime = Nodes[Length - 1];
 
             Nodes.Sort((a, b) => a.Order.Score.CompareTo(b.Order.Score));
+            HeadScore = Nodes[0];
             for (int i = 1; i < Length; i++)
             {
                 Nodes[i].SeqScore.Next = Nodes[i - 1];
                 Nodes[i - 1].SeqScore.Prev = Nodes[i];
             }
+            FootScore = Nodes[Length - 1];
         }
 
         private Node AppendOrder(Order o)
@@ -71,6 +85,11 @@ namespace AfvalOphaler
             Foot.Seq.Next.Seq.Prev = n;
             Foot.Seq.Next = n;
             return n;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -95,6 +114,31 @@ namespace AfvalOphaler
         public Node()
         {
             IsSentry = true;
+        }
+    }
+
+    public class NodeSeqEnumerator : IEnumerator
+    {
+        Node curr = null;
+        Node next;
+        Func<Node, Node> getNext;
+
+        public NodeSeqEnumerator(Node head, Func<Node, Node> gn)
+        {
+            next = head;
+            getNext = gn;
+        }
+
+        object IEnumerator.Current => curr;
+
+        bool IEnumerator.MoveNext()
+        {
+            throw new NotImplementedException();
+        }
+
+        void IEnumerator.Reset()
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -138,12 +182,12 @@ namespace AfvalOphaler
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
             JourneyTime = t[Dump.MatrixId, MatrixId];
-            Score = ((NumContainers * VolPerContainer) + (TimeToEmpty * 100)) / JourneyTime;
+            Score = Math.Round(((NumContainers * VolPerContainer) + (TimeToEmpty * 100)) / JourneyTime, 3);
         }
 
         public override string ToString()
         {
-            return $"{OrderId};{Name};{Frequency}PWK;{NumContainers};{VolPerContainer};{TimeToEmpty};{MatrixId};{XCoord};{YCoord}";
+            return $"oid{OrderId}; mid{MatrixId}; s{Score}; jt{JourneyTime}; f{Frequency}PWK; nc{NumContainers}; vpc{VolPerContainer}; tte{TimeToEmpty}; x{XCoord}; y{YCoord}; {Name}";
         }
     }
 }
