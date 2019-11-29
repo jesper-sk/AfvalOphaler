@@ -1,0 +1,10 @@
+﻿To Do:
+- klasse Schedule
+	- bevat Routes
+		- Vuilniswagen ID
+		- Dag ID
+		- Time left
+		- Weight left
+		- Bevat verzameling Loops
+			- Linked List <- doet jeppe :)
+
