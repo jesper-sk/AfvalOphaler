@@ -1,5 +1,5 @@
 ﻿//#define FINAL
-//#define TEST
+#define TEST
 
 using System;
 using System.Collections.Generic;
@@ -26,11 +26,19 @@ namespace AfvalOphaler
         static void Main(string[] args)
         {
 #if TEST
-			RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
+            /*RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
             Application.DoEvents();
             vis.WindowState = FormWindowState.Maximized;
             Application.DoEvents();
+            Console.ReadKey();*/
+
+            Console.WriteLine("Parsing dist.txt");
+            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
+            Console.WriteLine("Parsing order.txt");
+            BigLL l = Parser.ParseOrders(ordersDir, t);
+
             Console.ReadKey();
+
 #else
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);

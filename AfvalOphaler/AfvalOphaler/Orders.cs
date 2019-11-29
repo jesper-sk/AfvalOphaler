@@ -33,7 +33,7 @@ namespace AfvalOphaler
             Length = orders.Length;
             Nodes = new List<Node>(orders.Length);
 
-            for(int i = 0; i < orders.Length; i++)
+            for (int i = 0; i < orders.Length; i++)
             {
                 Node n = AppendOrder(orders[i]);
                 if (orders[i].OrderId == 0) Console.WriteLine(i);
@@ -42,12 +42,12 @@ namespace AfvalOphaler
 
             Nodes.Sort((a, b) => a.Order.XCoord.CompareTo(b.Order.XCoord));
             HeadX = Nodes[0];
-            for(int i = 1; i < Length; i++)
+            for (int i = 1; i < Length; i++)
             {
                 Nodes[i].SeqX.Next = Nodes[i - 1];
                 Nodes[i - 1].SeqX.Prev = Nodes[i];
             }
-            FootX = Nodes[Length-1];
+            FootX = Nodes[Length - 1];
 
             Nodes.Sort((a, b) => a.Order.YCoord.CompareTo(b.Order.YCoord));
             HeadY = Nodes[0];
@@ -114,31 +114,6 @@ namespace AfvalOphaler
         public Node()
         {
             IsSentry = true;
-        }
-    }
-
-    public class NodeSeqEnumerator : IEnumerator
-    {
-        Node curr = null;
-        Node next;
-        Func<Node, Node> getNext;
-
-        public NodeSeqEnumerator(Node head, Func<Node, Node> gn)
-        {
-            next = head;
-            getNext = gn;
-        }
-
-        object IEnumerator.Current => curr;
-
-        bool IEnumerator.MoveNext()
-        {
-            throw new NotImplementedException();
-        }
-
-        void IEnumerator.Reset()
-        {
-            throw new NotImplementedException();
         }
     }
 
