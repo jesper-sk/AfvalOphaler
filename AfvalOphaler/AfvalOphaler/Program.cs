@@ -37,6 +37,13 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             BigLL l = Parser.ParseOrders(ordersDir, t);
 
+            // Solving:
+            Schedule startState = new Schedule();
+            Solver solver = new Solver(startState);
+            solver.StartSolving();
+            Schedule bestSchedule = solver.GetBestSchedule();
+            Console.WriteLine(bestSchedule);
+
             Console.ReadKey();
 
 #else

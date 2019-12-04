@@ -1,10 +1,33 @@
 ﻿To Do:
-- klasse Schedule
-	- bevat Routes
-		- Vuilniswagen ID
-		- Dag ID
-		- Time left
-		- Weight left
-		- Bevat verzameling Loops
-			- Linked List <- doet jeppe :)
+- Add maken
+- Day veranderen:
+	- Loop klasse maken in Schedule
+		- Bevat een linkedlist van nodes:
+			- Bevat order
+			- Bevat lijst van (next, prev) <- voor elke keer dat de node is ingepland
+				-> length(lijst(next,prev)) == freq(order) (ervanuitgaande dat we een order altijd geheel inplannen, which we do)
+		- Tijd Over
+		- Ruimte Over in vuilniswagen.
+	- Tijd over
+	- AddNodeToLoop(Node n, Loop lp, Location la) Methode maken
 
+Add(Node a)
+	Node closest = null;
+	loop_of_closest = null
+	double closestdistance = double.MaxValue
+
+	foreach(mogelijke_dag in mogelijke_dagen)
+		if (mogelijke_dag.Time_Left < a.Time) continue;
+		else
+			foreach (loop in day)
+				if (loop.Time_Left < a.Time || loop.Space_Left < a.Space) continue
+				else 
+					foreach (Node in Loop)
+						if (GetDistance(Node, a) < closestdistance)
+							closestdistance = GetDistance(Node, a)
+							closest = Node
+							loop_of_closest = loop
+
+	return (GetDelta(loop, a, closest), current_state))
+
+if (Zoekalgoritme.Approves(Add(Node a))) => AddNodeToLoop(loop, a, closest)
