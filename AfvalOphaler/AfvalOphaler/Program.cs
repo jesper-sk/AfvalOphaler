@@ -34,8 +34,9 @@ namespace AfvalOphaler
 
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
+            GlobalData.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
-            BigLL l = Parser.ParseOrders(ordersDir, t);
+            BigLL l = Parser.ParseOrders(ordersDir);
 
             Console.ReadKey();
 
@@ -89,12 +90,53 @@ namespace AfvalOphaler
         }
     }
 
-    public static class Dump
+    public static class GlobalData
     {
-        public const int XCoord = 56343016;
-        public const int YCoord = 513026712;
-        public const int MatrixId = 287;
-        public const int OrderId = 0;
+        public static int[,] JourneyTime;
+        public static Node Dump = new Node(
+            new Order()
+            {
+                OrderId = 0,
+                Name = "Dump",
+                MatrixId = 287,
+                XCoord = 56343016,
+                YCoord = 513026712
+            });
+
+        public static readonly int[][][] AllowedDayCombinations =
+        {
+            new int[][] { new int[] {0} },
+            new int[][]
+            {
+                new int[] {0},
+                new int[] {1},
+                new int[] {2},
+                new int[] {3},
+                new int[] {4}
+            },
+            new int[][]
+            {
+                new int[] {0, 3},
+                new int[] {1, 4}
+            },
+            new int[][]
+            {
+                new int[] {0, 2, 4}
+            },
+            new int[][]
+            {
+                new int[] {1,2,3,4}, //ma niet
+                new int[] {0,2,3,4}, //di niet
+                new int[] {0,1,3,4}, //wo niet
+                new int[] {0,1,2,4}, //do niet
+                new int[] {0,1,2,3}  //vr niet
+            },
+            new int[][]
+            {
+                new int[] {0,1,2,3,4}
+            }
+        };
+
     }
 }
 
