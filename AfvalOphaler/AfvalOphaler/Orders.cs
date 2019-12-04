@@ -9,6 +9,8 @@ namespace AfvalOphaler
 {
     public class BigLL : IEnumerable
     {
+        //TODO: Add Dump
+
         public List<Node> Nodes;
         public int Length;
 
@@ -75,6 +77,19 @@ namespace AfvalOphaler
                 Nodes[i - 1].SeqScore.Prev = Nodes[i];
             }
             FootScore = Nodes[Length - 1];
+
+            Node[] temp = Nodes.ToArray();
+            foreach(Node node in temp)
+            {
+                Nodes.Sort((a, b) => 
+                    GlobalData.JourneyTime[node.Order.MatrixId, a.Order.MatrixId]
+                        .CompareTo(
+                            GlobalData.JourneyTime[node.Order.MatrixId, b.Order.MatrixId]
+                            )
+                        );
+
+                node.Nearest = Nodes.ToArray();
+            }
         }
 
         private Node AppendOrder(Order o)
@@ -105,6 +120,10 @@ namespace AfvalOphaler
 
         public List<DoubleLink> Loops = new List<DoubleLink>();
 
+        public Node[] Nearest;
+
+        public int[] NumVisits = new int[5];
+
         public readonly bool IsSentry;
         public Node(Order o)
         {
@@ -114,6 +133,41 @@ namespace AfvalOphaler
         public Node()
         {
             IsSentry = true;
+        }
+
+        public List<Node> GetNearestLoopNodes(out List<int> days)
+        {
+            foreach(int[] combi in GlobalData.AllowedDayCombinations[Order.Frequency])
+            {
+                List<Node> att = new List<Node>(Order.Frequency);
+                List<int> attd = new List<int>(Order.Frequency);
+                foreach(int day in combi)
+                {
+                    Node take = null;
+                    for(int i = 0; i < Nearest.Length; i++)
+                    {
+                        Node curr = Nearest[i];
+                        if (curr.NumVisits[day] > 0)
+                        {
+                            take = curr;
+                            break;
+                        }
+                    }
+                    if (take != null)
+                    {
+                        att.Add(take);
+                        attd.Add(day);
+                    }
+                    else break; //Nothing found, proceed to next daycombination
+                }
+                if (att.Count == Order.Frequency)
+                {
+                    days = attd;
+                    return att;
+                }
+            }
+            days = new List<int>(0);
+            return new List<Node>(0);
         }
     }
 
@@ -133,19 +187,19 @@ namespace AfvalOphaler
 
     public struct Order
     {
-        public readonly int OrderId;
-        public readonly string Name;
-        public readonly int Frequency;
-        public readonly int NumContainers;
-        public readonly int VolPerContainer;
-        public readonly double TimeToEmpty;
-        public readonly int MatrixId;
-        public readonly int XCoord;
-        public readonly int YCoord;
-        public readonly int JourneyTime;
-        public readonly double Score;
+        public int OrderId;
+        public string Name;
+        public int Frequency;
+        public int NumContainers;
+        public int VolPerContainer;
+        public double TimeToEmpty;
+        public int MatrixId;
+        public int XCoord;
+        public int YCoord;
+        public int JourneyTime;
+        public double Score;
 
-        public Order (string[] row, int[,] t)
+        public Order (string[] row)
         {
             OrderId = int.Parse(row[0]);
             Name = row[1].Trim();
@@ -156,7 +210,7 @@ namespace AfvalOphaler
             MatrixId = int.Parse(row[6]);
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
-            JourneyTime = t[Dump.MatrixId, MatrixId];
+            JourneyTime = GlobalData.JourneyTime[GlobalData.Dump.Order.MatrixId, MatrixId];
             Score = Math.Round(((NumContainers * VolPerContainer) + (TimeToEmpty * 100)) / JourneyTime, 3);
         }
 
