@@ -12,10 +12,12 @@ namespace AfvalOphaler
         Schedule startSchedule;
         Schedule[] top10Schedules;
         int threads;
+        Random rnd;
         public Solver(Schedule _startSchedule, int _threads = 1)
         {
             startSchedule = _startSchedule;
             threads = _threads;
+            rnd = new Random();
         }
 
         void StartSolving()
@@ -26,10 +28,17 @@ namespace AfvalOphaler
             Task.WaitAll(tasks);
         }
 
-        void DoSolving(Schedule state, int iteration, int maxiterations = 1000000)
+        void DoSolving(Schedule state, int iteration, int maxiterations = 1000000, int op_count = 10)
         {
             if (iteration == maxiterations) lock (addlock) { AddScheduleToTop(state); }
-            Schedule newState = state;
+
+            // Bepaal 10 operaties die je gaat doen
+            Func<Schedule, double, Schedule>[] ops = new Func<Schedule, double, Schedule>[op_count];
+            double op = rnd.NextDouble();
+
+            // 'Pas' elke operatie toe -> krijg de delta's
+            // Bepaal afhankelijk van zoek algortime welke je echt doet.
+            Schedule newState = state;        
             DoSolving(newState, iteration++, maxiterations);
         }
 
