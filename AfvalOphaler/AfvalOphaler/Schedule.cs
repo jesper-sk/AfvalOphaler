@@ -258,11 +258,13 @@ namespace AfvalOphaler
     public abstract class NeighborResult
     {
         public Schedule state;
-        public double delta;
-        public NeighborResult(Schedule s, double d)
+        public double[] deltas;
+        public double totalDelta;
+        public NeighborResult(Schedule s, double[] d)
         {
             state = s;
-            delta = d;
+            deltas = d;
+            foreach (double delta in deltas) totalDelta += delta;
         }
 
         public abstract void ApplyOperator();
@@ -271,26 +273,28 @@ namespace AfvalOphaler
     public class AddResult : NeighborResult
     {
         Order order;
-        Node nextTo;
-        int loopIndex;
-        int dayIndex;
-        int truckIndex;
+        Node[] nextTos;
+        int[] loopIndices;
+        int[] dayIndices;
+        int[] truckIndices;
 
-        public AddResult(Schedule s, Order order, Node nextTo, int loopIndex, int dayIndex, int truckIndex, double d) : base(s, d)
+        public AddResult(Schedule s, Order order, Node[] nextTos, int[] loopIndices, int[] dayIndices, int[] truckIndices, double[] deltas) : base(s, deltas)
         {
             this.order = order;
-            this.nextTo = nextTo;
-            this.loopIndex = loopIndex;
-            this.dayIndex = dayIndex;
-            this.truckIndex = truckIndex;
-            //dag,truck
+            this.nextTos = nextTos;
+            this.loopIndices = loopIndices;
+            this.dayIndices = dayIndices;
+            this.truckIndices = truckIndices;
         }
 
         public override void ApplyOperator()
         {
-            state.days[dayIndex, truckIndex].AddOrderToLoop(order, nextTo, loopIndex);
+            for(int i = 0; i < nextTos.Length; i++)
+            {
+                state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
+                state.totalTime += deltas[i];
+            }
             state.totalPenalty -= 3 * order.TimeToEmpty;
-            state.totalTime += delta;
         }
         public override void DiscardOperator()
         {
@@ -299,7 +303,7 @@ namespace AfvalOphaler
     }
     public class DeleteResult : NeighborResult
     {
-        public DeleteResult(Schedule s, double d) : base(s, d)
+        public DeleteResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -309,7 +313,7 @@ namespace AfvalOphaler
     }
     public class TransferResult : NeighborResult
     {
-        public TransferResult(Schedule s, double d) : base(s, d)
+        public TransferResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -318,7 +322,7 @@ namespace AfvalOphaler
     }
     public class SwapResult : NeighborResult
     {
-        public SwapResult(Schedule s, double d) : base(s, d)
+        public SwapResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -329,7 +333,7 @@ namespace AfvalOphaler
     public class ImpossibleResult : NeighborResult
     {
         List<Order> failedOrders;
-        public ImpossibleResult(Schedule s, double d, List<Order> failed) : base(s, d)
+        public ImpossibleResult(Schedule s, double[] d, List<Order> failed) : base(s, d)
         {
             failedOrders = failed;
         }
