@@ -124,7 +124,8 @@ namespace AfvalOphaler
         private readonly object addlock = new object();
         void AddScheduleToTop(Schedule s)
         {
-            double s_score = s.Score;
+            Console.WriteLine("Adding schedule to top: " + s.CalculateScore());
+            double s_score = s.CalculateScore();
             for (int i = 0; i < 10; i++)
                 if (top10Schedules[i] == null) top10Schedules[i] = s;
                 else if (s_score < top10Schedules[i].Score)
