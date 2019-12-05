@@ -11,7 +11,8 @@ namespace AfvalOphaler
     {
         public Day[,] days;
         public double totalTime;
-        public Stack<BigLLNode> bestRatioedOrders;
+        public Stack<Order> bestRatioedOrders;
+        public Queue<Order> notPlannedOrders;
 
         public double CalculateTotalTime()
         {
@@ -23,7 +24,8 @@ namespace AfvalOphaler
         public double CalculateTotalPenalty()
         {
             double total = 0;
-            foreach (BigLLNode n in bestRatioedOrders) total += (3 * n.Order.TimeToEmpty);
+            foreach (Order o in bestRatioedOrders) total += (3 * o.TimeToEmpty);
+            foreach (Order o in notPlannedOrders) total += (3 * o.TimeToEmpty);
             return total;
         }
         public double Score { get => totalTime + totalPenalty; }
@@ -50,8 +52,13 @@ namespace AfvalOphaler
         static AddResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            BigLLNode bestnotpicked = s.bestRatioedOrders.Peek();
+            Order bestnotpicked = s.bestRatioedOrders.Peek();
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
+            
+            // ASAP
+
+            // BEST
+
             BigLLNode[] nearest = new BigLLNode[5];
 
             throw new NotImplementedException();
@@ -103,7 +110,7 @@ namespace AfvalOphaler
             TimeLeft = 720;
         }
 
-        public void EvaluateAddition(Order order)
+        public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop)
         {
             Node opt = null;
 
@@ -117,6 +124,11 @@ namespace AfvalOphaler
                     }
                 }
             }
+        }
+
+        public void AddOrderToLoop(Order order, Node nextTo, int loop)
+        {
+
         }
     }
 
@@ -220,8 +232,9 @@ namespace AfvalOphaler
     public abstract class NeighborResult
     {
         public double delta;
-        public NeighborResult(double d)
+        public NeighborResult(bool possible, double d)
         {
+
             delta = d;
         }
 
