@@ -112,18 +112,30 @@ namespace AfvalOphaler
 
         public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop)
         {
-            Node opt = null;
+            bestNode = null;
+            bestDeltaTime = double.MaxValue;
+            bestLoop = -1;
 
-            foreach(Loop loop in Loops)
+            int l = Loops.Count;
+            for(int i = 0; i < l; i++)
             {
-                if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double roomLeft, out double td))
+                Loop loop = Loops[i];
+                if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
-                    if (TimeLeft > td)
+                    if (TimeLeft > bestDeltaTime)
                     {
-
+                        if (lTd < bestDeltaTime)
+                        {
+                            bestNode = lOpt;
+                            bestDeltaTime = lTd;
+                            bestLoop = i;
+                        }
                     }
                 }
             }
+
+            if (bestLoop == -1) return false;
+            return true;
         }
 
         public void AddOrderToLoop(Order order, Node nextTo, int loop)
