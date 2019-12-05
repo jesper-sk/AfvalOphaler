@@ -36,6 +36,7 @@ namespace AfvalOphaler
 
         void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange)
         {
+            Console.WriteLine("---");
             Console.WriteLine($"Doing iteration {iteration}...");
             if (iteration >= maxIterations) 
             { 
@@ -80,23 +81,28 @@ namespace AfvalOphaler
                 }
             }
 
-            Console.WriteLine("---");
 
             // Apply best operator, discard the rest;
             if (bestindex != -1 && results[bestindex].GetTotalDelta() < 0)
             {
                 noChangeCount = 0;
+                Console.WriteLine("Applying operator: " + bestindex);
                 results[bestindex].ApplyOperator();
                 int j = 0;
                 while (j < bestindex) { results[j].DiscardOperator(); j++; }
                 j++;
                 while (j < opCount) { results[j].DiscardOperator(); j++; }
-
                 DoSolving(state, ++iteration, maxIterations, opCount, noChangeCount, maxNoChange);
             }
-            else if (noChangeCount < maxNoChange) DoSolving(state, ++iteration, maxIterations, opCount, ++noChangeCount, maxNoChange);
+            else if (noChangeCount < maxNoChange)
+            {
+                Console.WriteLine("Nog Change");
+                foreach (NeighborResult res in results) res.DiscardOperator();
+                DoSolving(state, ++iteration, maxIterations, opCount, ++noChangeCount, maxNoChange);
+            }
             else
             {
+                Console.WriteLine("To long no change, stopping search");
                 lock (addlock) { AddScheduleToTop(state); }
                 return;
             }

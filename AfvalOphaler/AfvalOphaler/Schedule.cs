@@ -11,8 +11,9 @@ namespace AfvalOphaler
     {
         #region Variables
         public Day[,] days;
-        public Stack<Order> bestRatioedOrders;
-        public Queue<Order> notPlannedOrders;
+        //public Stack<Order> bestRatioedOrders;
+        //public Queue<Order> notPlannedOrders;
+        public List<Order> nonPlannedOrders;
 
         public double totalTime;
         public double CalculateTotalTime()
@@ -26,8 +27,9 @@ namespace AfvalOphaler
         public double CalculateTotalPenalty()
         {
             double total = 0;
-            foreach (Order o in bestRatioedOrders) total +=  o.Frequency * 3 * o.TimeToEmpty;
-            foreach (Order o in notPlannedOrders) total += o.Frequency * 3 * o.TimeToEmpty;
+            //foreach (Order o in bestRatioedOrders) total +=  o.Frequency * 3 * o.TimeToEmpty;
+            //foreach (Order o in notPlannedOrders) total += o.Frequency * 3 * o.TimeToEmpty;
+            foreach (Order o in nonPlannedOrders) total += o.Frequency * 3 * o.TimeToEmpty;
             totalPenalty = total;
             return total;
         }
@@ -41,10 +43,11 @@ namespace AfvalOphaler
             orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
             days = new Day[5, 2];
             for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) days[d, t] = new Day();
-            rnd = new Random();
+            Rnd = new Random();
 
-            bestRatioedOrders = new Stack<Order>(orders);
-            notPlannedOrders = new Queue<Order>();
+            //bestRatioedOrders = new Stack<Order>(orders);
+            //notPlannedOrders = new Queue<Order>();
+            nonPlannedOrders = new List<Order>();
             CalculateTotalPenalty();
         }
 
@@ -55,7 +58,7 @@ namespace AfvalOphaler
         #endregion
 
         #region Neighbor Operations
-        Random rnd;
+        public Random Rnd;
         public static Func<Schedule, NeighborResult>[] neighborOperators =
         {
             currState => Add(currState),
@@ -74,13 +77,10 @@ namespace AfvalOphaler
         static NeighborResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            Order bestNotPicked;
-            if (s.bestRatioedOrders.Count == 0)
-            {
-                if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
-                else return new ImpossibleResult(s, null);
-            }
-            else bestNotPicked = s.bestRatioedOrders.Pop();
+            if (s.nonPlannedOrders.Count == 0) return new ImpossibleResult(s, null);
+
+            int notPickedOrderIndex = (int)(s.nonPlannedOrders.Count * Math.Pow(s.Rnd.NextDouble(), 1.0 / 10.0));
+            Order bestNotPicked = s.nonPlannedOrders[notPickedOrderIndex];
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
             // ASAP
@@ -135,7 +135,7 @@ namespace AfvalOphaler
                     Console.WriteLine($"Choosen day for {d}e inplan: {days[d]}, loop: {loopIndices[d]}");
                 }
                 */
-                return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
+                return new AddResult(s, bestNotPicked, notPickedOrderIndex, nextTos, loopIndices, days, trucks, deltas);
             }
             else
             {
@@ -383,6 +383,7 @@ namespace AfvalOphaler
     public abstract class NeighborResult
     {
         public Schedule state;
+
         public NeighborResult(Schedule s)
         {
             state = s;
@@ -391,21 +392,22 @@ namespace AfvalOphaler
         public abstract double GetTotalDelta();
 
         public abstract void ApplyOperator();
-        public abstract void DiscardOperator();
 
     }
     public class AddResult : NeighborResult
     {
         Order order;
-        Node[] nextTos;
-        int[] loopIndices;
-        int[] dayIndices;
-        int[] truckIndices;
-        double[] deltas;
+        int orderIndex;
+        List<Node> nextTos;
+        List<int> loopIndices;
+        List<int> dayIndices;
+        List<int> truckIndices;
+        List<double> deltas;
 
-        public AddResult(Schedule s, Order order, Node[] nextTos, int[] loopIndices, int[] dayIndices, int[] truckIndices, double[] deltas) : base(s)
+        public AddResult(Schedule s, Order order, int orderIndex, List<Node> nextTos, List<int> loopIndices, List<int> dayIndices, List<int> truckIndices, List<double> deltas) : base(s)
         {
             this.order = order;
+            this.orderIndex = orderIndex;
             this.nextTos = nextTos;
             this.loopIndices = loopIndices;
             this.dayIndices = dayIndices;
@@ -422,17 +424,13 @@ namespace AfvalOphaler
 
         public override void ApplyOperator()
         {
-            //Console.WriteLine("Applying AddOperator...");
-            for(int i = 0; i < nextTos.Length; i++)
+            for(int i = 0; i < nextTos.Count; i++)
             {
                 state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
                 state.totalTime += deltas[i];
             }
             state.totalPenalty -= 3 * order.Frequency * order.TimeToEmpty;
-        }
-        public override void DiscardOperator()
-        {
-            state.bestRatioedOrders.Push(order);
+            state.nonPlannedOrders.RemoveAt(orderIndex);
         }
     }
     public class DeleteResult : NeighborResult
@@ -445,7 +443,6 @@ namespace AfvalOphaler
         public override double GetTotalDelta() { throw new NotImplementedException(); }
 
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
-        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class TransferResult : NeighborResult
     {
@@ -457,7 +454,6 @@ namespace AfvalOphaler
         public override double GetTotalDelta() { throw new NotImplementedException(); }
 
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
-        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class SwapResult : NeighborResult
     {
@@ -469,7 +465,6 @@ namespace AfvalOphaler
         public override double GetTotalDelta() { throw new NotImplementedException(); }
 
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
-        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
 
     public class ImpossibleResult : NeighborResult
@@ -487,14 +482,9 @@ namespace AfvalOphaler
 
         public override void ApplyOperator() 
         {
-            DiscardOperator();
+            Console.WriteLine("APPLYING IMPOSSIBLE OPERATOR, DAKANNIEHE!!!");
             //Console.WriteLine("Trying to apply ImpossibleOperator...");
             //throw new InvalidOperationException(); 
-        }
-        public override void DiscardOperator()
-        {
-            if (failedOrders == null) return;
-            foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
         }
     }
     #endregion
