@@ -146,9 +146,12 @@ namespace AfvalOphaler
             return true;
         }
 
-        public void AddOrderToLoop(Order order, Node nextTo, int loop)
+        public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
-
+            TimeLeft += Loops[loopIndex].Duration;
+            Node res = Loops[loopIndex].AddOrder(order, nextTo);
+            TimeLeft -= Loops[loopIndex].Duration;
+            return res;
         }
     }
 
@@ -156,7 +159,7 @@ namespace AfvalOphaler
     {
         //LinkedList van nodes
 
-        public double Time;
+        public double Duration;
         public double RoomLeft;
 
         public Node Start; //Order references to Dump
@@ -164,7 +167,7 @@ namespace AfvalOphaler
         public Loop()
         {
             Start = new Node();
-            Time = 30;              //Het storten moet één keer per Loop (lus) gebeuren
+            Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
             RoomLeft = 20000;       //Gecomprimeerd
         }
 
@@ -203,15 +206,16 @@ namespace AfvalOphaler
             return true;
         }
 
-        public void AddOrder(Order order, Node nextTo)
+        public Node AddOrder(Order order, Node nextTo)
         {
-            nextTo.AppendNext(order);
-            Time += order.TimeToEmpty
+            Node n = nextTo.AppendNext(order);
+            Duration += order.TimeToEmpty
                 + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
                 - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId];
 
             RoomLeft -= order.NumContainers * order.VolPerContainer * 0.2;
+            return n;
         }
     }
 
