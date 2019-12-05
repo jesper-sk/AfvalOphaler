@@ -124,7 +124,6 @@ namespace AfvalOphaler
                     for(int i = 0; i < k; i++)
                     {
                         int dist = EucDist(order.XCoord, order.YCoord, clusters[i]);
-                        if (dist < 0) Console.WriteLine("Overflow");
                         if (dist < mind)
                         {
                             mind = dist;
