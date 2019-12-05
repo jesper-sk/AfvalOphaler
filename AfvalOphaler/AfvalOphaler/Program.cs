@@ -45,10 +45,8 @@ namespace AfvalOphaler
             Solver solver = new Solver(startStates, threads);
             solver.StartSolving(1000, 1, 1);
             Schedule bestSchedule = solver.GetBestSchedule();
-            Console.WriteLine("Solving done, score of best schedule: " + bestSchedule.CalculateScore());
-            string bestcheckstring = bestSchedule.ToCheckString();
-            File.WriteAllText(@".\result.txt", bestcheckstring);
-            //Console.WriteLine(bestcheckstring);
+            Console.WriteLine("Solving done, score of best schedule:");
+            Console.WriteLine(bestSchedule.ToCheckString());
             Console.WriteLine("done");
             Console.ReadKey();
 
