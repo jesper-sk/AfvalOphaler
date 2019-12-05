@@ -31,10 +31,12 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             */
-            Parallel.ForEach(startSchedules, s => { DoSolving(s, 0, maxIterations, opCount, 0, maxNoChange); });
+            LocalSolver solver = new HillClimbLocalSolver();
+            solver.Init();
+            Parallel.ForEach(startSchedules, s => { DoSolving(s, 0, maxIterations, opCount, 0, maxNoChange, solver); });
         }
 
-        void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange)
+        void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange, LocalSolver solver)
         {
             Console.WriteLine("---");
             Console.WriteLine($"Doing iteration {iteration}...");
@@ -68,7 +70,18 @@ namespace AfvalOphaler
                 results.Add(res);
             }
 
-            // Bepaal afhankelijk van zoekalgortime welke je echt doet.
+            if (solver.ApplyAccordingly(results))
+            {
+                DoSolving(state, ++iteration, maxIterations, opCount, noChangeCount, maxNoChange, solver);
+            }
+            else if (noChangeCount < maxNoChange) DoSolving(state, ++iteration, maxIterations, opCount, ++noChangeCount, maxNoChange, solver);
+            else
+            {
+                lock (addlock) { AddScheduleToTop(state); }
+                return;
+            }
+
+            /*// Bepaal afhankelijk van zoekalgortime welke je echt doet.
             // Nu ff hillclimb (lekker greedy)
             int bestindex = -1;
             double bestdelta = double.MaxValue;
@@ -105,7 +118,7 @@ namespace AfvalOphaler
                 Console.WriteLine("To long no change, stopping search");
                 lock (addlock) { AddScheduleToTop(state); }
                 return;
-            }
+            }*/
         }   
 
         private readonly object addlock = new object();
@@ -123,4 +136,101 @@ namespace AfvalOphaler
 
         public Schedule GetBestSchedule() { return top10Schedules[0]; }
     }
+
+    public abstract class LocalSolver
+    {
+        public abstract void Init();
+
+        public abstract bool ApplyAccordingly(List<NeighborResult> results);
+    }
+
+    public class HillClimbLocalSolver : LocalSolver
+    {
+        public override void Init()
+        {
+            // Hé jochie
+        }
+
+        public override bool ApplyAccordingly(List<NeighborResult> results)
+        {
+            int bestIndex = -1;
+            double bestdelta = double.MaxValue;
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (!(results[i] is ImpossibleResult) && results[i].GetTotalDelta() < bestdelta)
+                {
+                    bestIndex = i;
+                    bestdelta = results[i].GetTotalDelta();
+                }
+            }
+
+            for(int i = results.Count - 1; i > bestIndex; i--)
+            {
+                results[i].DiscardOperator();
+            }
+            for(int i = bestIndex - 1; i >= 0; i--)
+            {
+                results[i].DiscardOperator();
+            }
+            if (bestIndex == -1) return false;
+            results[bestIndex].ApplyOperator();
+            return true;
+        }
+    }
+
+    public class SaLocalSolver : LocalSolver
+    {
+        public readonly double cs;
+        public readonly double a;
+
+        private double c;
+        private Random rnd;
+        public SaLocalSolver(double cs, double a)
+        {
+            this.cs = cs;
+            this.a = a;
+        }
+
+        public override void Init()
+        {
+            c = cs;
+            rnd = new Random();
+        }
+
+        public override bool ApplyAccordingly(List<NeighborResult> results)
+        {
+            bool applied = false;
+            int i = 0;
+            for(; i < results.Count; i++)
+            {
+                var curr = results[i];
+                if (curr is ImpossibleResult) continue;
+                double delta = curr.GetTotalDelta();
+                if (delta < 0)
+                {
+                    curr.ApplyOperator();
+                    applied = true;
+                    break;
+                }
+                else
+                {
+                    double p = Prob(delta, c);
+                    double r = rnd.NextDouble();
+
+                    if (p > r)
+                    {
+                        curr.ApplyOperator();
+                        applied = true;
+                        break;
+                    }
+                }
+            }
+            c *= a;
+            return applied;
+        }
+
+        static double Prob(double delta, double temp) => Math.Exp(-delta / temp);
+    }
 }
+
+
