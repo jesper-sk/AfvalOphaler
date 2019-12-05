@@ -79,6 +79,7 @@ namespace AfvalOphaler
             }
 
             // Apply best operator, discard the rest;
+            Console.WriteLine(results[bestindex].totalDelta);
             results[bestindex].ApplyOperator();
             int j = 0;
             while (j < bestindex) { results[j].DiscardOperator(); j++; }

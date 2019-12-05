@@ -65,24 +65,12 @@ namespace AfvalOphaler
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
             Order bestNotPicked;
-            /*
-            if (s.bestRatioedOrders.Count == 0) 
-            {
-                //Console.WriteLine("Empty stack...");
-                if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
-                else
-                {
-                    //Console.WriteLine("Queue empty too...");
-                    return new ImpossibleResult(s, new double[] { 0 }, null);
-                }
-            }
-            */
             if (s.bestRatioedOrders.Count == 0)
             {
-
-                return new ImpossibleResult(s, new double[] { 0 }, null);
+                if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
+                else return new ImpossibleResult(s, new double[] { 0 }, null);
             }
-            bestNotPicked = s.bestRatioedOrders.Pop();
+            else bestNotPicked = s.bestRatioedOrders.Pop();
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
             // ASAP
@@ -412,7 +400,7 @@ namespace AfvalOphaler
                 state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
                 state.totalTime += deltas[i];
             }
-            state.totalPenalty -= 3 * order.TimeToEmpty;
+            state.totalPenalty -= 3 * order.Frequency * order.TimeToEmpty;
         }
         public override void DiscardOperator()
         {
