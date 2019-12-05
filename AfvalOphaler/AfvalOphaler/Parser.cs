@@ -92,8 +92,7 @@ namespace AfvalOphaler
                 orders[i].Cluster = rnd.Next(0, k);
             }
 
-
-            do UpdateMeans(); while (UpdateClusters());
+            do { UpdateMeans(); Console.WriteLine("Cluster");  } while (UpdateClusters());
 
             
             void UpdateMeans()
@@ -154,7 +153,11 @@ namespace AfvalOphaler
                         changed = true;
                     }
                 }
-                if (EmptyCluster()) return false;
+                if (EmptyCluster())
+                {
+                    Console.WriteLine("Empty");
+                    return false;
+                }
                 return changed;
             }
             
