@@ -86,7 +86,7 @@ namespace AfvalOphaler
             while (j < opCount) { results[j].DiscardOperator(); j++; }
 
             //Console.WriteLine($"State after iteration: time={state.CalculateTotalTime()}, penaly={state.CalculateTotalPenalty()}");
-            //Console.WriteLine();
+            Console.WriteLine("---");
             iteration++;
             DoSolving(state, iteration, maxIterations, opCount, noChangeCount, maxNoChange);
 

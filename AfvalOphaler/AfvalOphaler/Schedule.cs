@@ -90,7 +90,6 @@ namespace AfvalOphaler
             for (int c = 0; c < combis.Length; c++)
             {
                 int truckFoundForAllDays = 0;
-
                 nextTos = new List<Node>(bestNotPicked.Frequency);
                 loopIndices = new List<int>(bestNotPicked.Frequency);
                 days = new List<int>(bestNotPicked.Frequency);
@@ -103,12 +102,12 @@ namespace AfvalOphaler
                     for (int t = 0; t < 2; t++)
                     {
                         Node where = null;
-                        if (s.days[d, t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
+                        if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
                         {
                             //Console.WriteLine("EvaluateAddition == TRUE!!!");
                             nextTos.Add(where);
                             loopIndices.Add(loop);
-                            days.Add(d);
+                            days.Add(combis[c][d]);
                             trucks.Add(t);
                             deltas.Add(delta);
 
@@ -124,11 +123,19 @@ namespace AfvalOphaler
             if (planningFound)
             {
                 //Console.WriteLine("Planning found...");
+                /*
+                Console.WriteLine($"Freq: {bestNotPicked.Frequency}");
+                for (int d = 0; d < days.Count; d++)
+                {
+                    Console.WriteLine($"Choosen day for {d}e inplan: {days[d]}, loop: {loopIndices[d]}");
+                }
+                */
                 return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
             }
             else
             {
-                //Console.WriteLine("No planning found...");
+                Console.WriteLine("No planning found for order:");
+                Console.WriteLine(bestNotPicked);
                 return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
             }
 
@@ -203,10 +210,18 @@ namespace AfvalOphaler
                         bestLoop = i;
                     }
                 }
-                else if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) Loops.Add(new Loop());
             }
-
-            if (bestLoop == -1) return false;
+            if (bestLoop == -1)
+            {
+                if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft)
+                {
+                    Loops.Add(new Loop());
+                    bestLoop = Loops.Count - 1;
+                    bestDeltaTime = order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30;
+                    bestNode = Loops[bestLoop].Start;
+                }
+                return false;
+            }
             return true;
         }
 
@@ -418,6 +433,7 @@ namespace AfvalOphaler
         }
         public override void ApplyOperator() 
         {
+            DiscardOperator();
             //Console.WriteLine("Trying to apply ImpossibleOperator...");
             //throw new InvalidOperationException(); 
         }
