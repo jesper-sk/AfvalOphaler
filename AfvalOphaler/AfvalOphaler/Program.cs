@@ -39,11 +39,11 @@ namespace AfvalOphaler
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
             // Solving:
-            int threads = 5;
+            int threads = 1;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
-            solver.StartSolving(2000, 5, 500);
+            solver.StartSolving(100000, 5, 10000);
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("Solving done, score of best schedule: " + bestSchedule.CalculateScore());
             string bestcheckstring = bestSchedule.ToCheckString();

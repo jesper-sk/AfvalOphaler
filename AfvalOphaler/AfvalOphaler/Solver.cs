@@ -31,15 +31,15 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             */
-            LocalSolver solver = new HillClimbLocalSolver();
+            LocalSolver solver = new SaLocalSolver(0.5, 0.99999);
             solver.Init();
             Parallel.ForEach(startSchedules, s => { DoSolving(s, 0, maxIterations, opCount, 0, maxNoChange, solver); });
         }
 
         void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange, LocalSolver solver)
         {
-            Console.WriteLine("---");
-            Console.WriteLine($"Doing iteration {iteration}...");
+            //Console.WriteLine("---");
+            //Console.WriteLine($"Doing iteration {iteration}...");
             if (iteration >= maxIterations) 
             { 
                 lock (addlock) { AddScheduleToTop(state); } 
