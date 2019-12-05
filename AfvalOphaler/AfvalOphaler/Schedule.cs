@@ -33,10 +33,14 @@ namespace AfvalOphaler
         public double Score { get => totalTime + totalPenalty; }
         public double CalculateScore() { return (CalculateTotalTime() + CalculateTotalPenalty()); }
 
-        public Schedule()
+        public Schedule(List<Order> orders)
         {
+            orders.Sort((a, b) => a.Score.CompareTo(b.Score));
             days = new Day[5, 2];
             rnd = new Random();
+
+            bestRatioedOrders = new Stack<Order>(orders);
+            notPlannedOrders = new Queue<Order>();
         }
 
         public Schedule Clone()
@@ -157,8 +161,6 @@ namespace AfvalOphaler
 
     public class Loop
     {
-        //LinkedList van nodes
-
         public double Duration;
         public double RoomLeft;
 
@@ -268,19 +270,31 @@ namespace AfvalOphaler
     }
     public class AddResult : NeighborResult
     {
-        Order toAdd;
-        public AddResult(Schedule s, double d, Order o) : base(s, d)
+        Order order;
+        Node nextTo;
+        int loopIndex;
+        int dayIndex;
+        int truckIndex;
+
+        public AddResult(Schedule s, Order order, Node nextTo, int loopIndex, int dayIndex, int truckIndex, double d) : base(s, d)
         {
-            toAdd = o;
+            this.order = order;
+            this.nextTo = nextTo;
+            this.loopIndex = loopIndex;
+            this.dayIndex = dayIndex;
+            this.truckIndex = truckIndex;
+            //dag,truck
         }
 
         public override void ApplyOperator()
         {
-
+            state.days[dayIndex, truckIndex].AddOrderToLoop(order, nextTo, loopIndex);
+            state.totalPenalty -= 3 * order.TimeToEmpty;
+            state.totalTime += delta;
         }
         public override void DiscardOperator()
         {
-            state.bestRatioedOrders.Push(toAdd);
+            state.bestRatioedOrders.Push(order);
         }
     }
     public class DeleteResult : NeighborResult

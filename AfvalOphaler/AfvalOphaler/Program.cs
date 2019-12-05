@@ -36,10 +36,10 @@ namespace AfvalOphaler
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
-            BigLL l = Parser.ParseOrders(ordersDir);
+            List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
             // Solving:
-            Schedule startState = new Schedule();
+            Schedule startState = new Schedule(orders);
             Solver solver = new Solver(startState);
             solver.StartSolving();
             Schedule bestSchedule = solver.GetBestSchedule();

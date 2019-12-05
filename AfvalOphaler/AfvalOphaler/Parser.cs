@@ -58,15 +58,15 @@ namespace AfvalOphaler
             return new BigLL(orders);
         }
 
-        public static Order[] ParseOrderArr(string dir)
+        public static List<Order> ParseOrdersArr(string dir)
         {
             string[] lines = File.ReadAllLines(dir);
-            Order[] orders = new Order[lines.Length - 1];
+            List<Order> orders = new List<Order>(lines.Length - 1);
             for (int i = 1; i < lines.Length; i++)
             {
                 Order o = new Order(lines[i].Split(';'));
                 //Console.WriteLine(o.ToString());
-                orders[i - 1] = o;
+                orders.Add(o);
             }
             return orders;
         }
