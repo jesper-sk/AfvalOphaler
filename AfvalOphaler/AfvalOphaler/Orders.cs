@@ -197,6 +197,7 @@ namespace AfvalOphaler
         public int MatrixId;
         public int XCoord;
         public int YCoord;
+        public double JourneyTimeFromDump;
         public double JourneyTimeToDump;
         public double Score;
 
@@ -211,7 +212,8 @@ namespace AfvalOphaler
             MatrixId = int.Parse(row[6]);
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
-            JourneyTimeToDump = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
+            JourneyTimeFromDump = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
+            JourneyTimeToDump = GD.JourneyTime[MatrixId, GD.Dump.MatrixId];
             Score = (JourneyTimeToDump + 1) / TimeToEmpty;
         }
 

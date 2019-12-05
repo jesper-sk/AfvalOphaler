@@ -37,7 +37,11 @@ namespace AfvalOphaler
         void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange)
         {
             Console.WriteLine($"Doing iteration {iteration}...");
-            if (iteration >= maxIterations) { lock (addlock) { AddScheduleToTop(state); } return; }
+            if (iteration >= maxIterations) 
+            { 
+                lock (addlock) { AddScheduleToTop(state); } 
+                return; 
+            }
 
             // Bepaal op_count operaties die je gaat doen
             /*
@@ -57,7 +61,7 @@ namespace AfvalOphaler
             {
                 //Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
                 NeighborResult res = Schedule.addOperator(state);
-                Console.WriteLine($"res delta: {res.totalDelta}");
+                //Console.WriteLine($"res delta: {res.totalDelta}");
                 results.Add(res);
             }
 
@@ -81,8 +85,8 @@ namespace AfvalOphaler
             j++;
             while (j < opCount) { results[j].DiscardOperator(); j++; }
 
-            Console.WriteLine($"State after iteration: time={state.CalculateTotalTime()}, penaly={state.CalculateTotalPenalty()}");
-            Console.WriteLine();
+            //Console.WriteLine($"State after iteration: time={state.CalculateTotalTime()}, penaly={state.CalculateTotalPenalty()}");
+            //Console.WriteLine();
             iteration++;
             DoSolving(state, iteration, maxIterations, opCount, noChangeCount, maxNoChange);
 

@@ -67,11 +67,11 @@ namespace AfvalOphaler
             Order bestNotPicked;
             if (s.bestRatioedOrders.Count == 0) 
             {
-                Console.WriteLine("Empty stack...");
+                //Console.WriteLine("Empty stack...");
                 if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
                 else
                 {
-                    Console.WriteLine("Queue empty too...");
+                    //Console.WriteLine("Queue empty too...");
                     return new ImpossibleResult(s, new double[] { 0 }, null);
                 }
             }
@@ -105,7 +105,7 @@ namespace AfvalOphaler
                         Node where = null;
                         if (s.days[d, t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
                         {
-                            Console.WriteLine("EvaluateAddition == TRUE!!!");
+                            //Console.WriteLine("EvaluateAddition == TRUE!!!");
                             nextTos.Add(where);
                             loopIndices.Add(loop);
                             days.Add(d);
@@ -123,12 +123,12 @@ namespace AfvalOphaler
             }
             if (planningFound)
             {
-                Console.WriteLine("Planning found...");
+                //Console.WriteLine("Planning found...");
                 return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
             }
             else
             {
-                Console.WriteLine("No planning found...");
+                //Console.WriteLine("No planning found...");
                 return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
             }
 
@@ -173,8 +173,6 @@ namespace AfvalOphaler
         public List<Loop> Loops;
         public double TimeLeft;
 
-        public List<int> loops;
-
         public Day()
         {
             Loops = new List<Loop>() { new Loop() };
@@ -193,18 +191,19 @@ namespace AfvalOphaler
                 Loop loop = Loops[i];
                 if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
-                    Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
+                    //Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
                     double newTimeLeft = TimeLeft - lTd;
-                    Console.WriteLine($"newtimeleft: {newTimeLeft}");
+                    //Console.WriteLine($"newtimeleft: {newTimeLeft}");
                     if (newTimeLeft >= 0 && newTimeLeft > bestTimeLeft)
                     {
-                        Console.WriteLine("updating best loop...");
+                        //Console.WriteLine("updating best loop...");
                         bestNode = lOpt;
                         bestTimeLeft = newTimeLeft;
                         bestDeltaTime = lTd;
                         bestLoop = i;
                     }
                 }
+                else if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) Loops.Add(new Loop());
             }
 
             if (bestLoop == -1) return false;
@@ -213,7 +212,7 @@ namespace AfvalOphaler
 
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
-            Console.WriteLine($"Timeleft before AddOrder: {Loops[loopIndex].Duration}");
+            //Console.WriteLine($"Timeleft before AddOrder: {Loops[loopIndex].Duration}");
             TimeLeft += Loops[loopIndex].Duration;
 
             Node res = Loops[loopIndex].AddOrder(order, nextTo);
@@ -226,6 +225,7 @@ namespace AfvalOphaler
     {
         public double Duration;
         public double RoomLeft;
+        public int Count;
 
         public Node Start; //Order references to Dump
 
@@ -234,6 +234,7 @@ namespace AfvalOphaler
             Start = new Node();
             Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
             RoomLeft = 20000;       //Gecomprimeerd
+            Count = 0;
         }
 
         public bool EvaluateOptimalAddition(Order order, out Node opt, out double newRoomLeft, out double td)
@@ -244,7 +245,7 @@ namespace AfvalOphaler
 
             if (newRoomLeft <= 0)
             {
-                Console.WriteLine("Can't add cuz it will /schenden/ weightconstraint... ");
+                //Console.WriteLine("Can't add cuz it will /schenden/ weightconstraint... ");
                 return false;    //Toevoegen zal de gewichtsconstraint schenden
             }
 
@@ -267,14 +268,14 @@ namespace AfvalOphaler
 
             if (tPrev < tNext) opt = opt.Prev;
 
-            Console.WriteLine($"opt: {opt.Data}");
-            Console.WriteLine($"order: {order}");
+            //Console.WriteLine($"opt: {opt.Data}");
+            //Console.WriteLine($"order: {order}");
 
             // Calculate delta
-            Console.WriteLine($"timetoempty: {order.TimeToEmpty}");
-            Console.WriteLine($"journeytime erbij: {GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]}");
-            Console.WriteLine($"journeytime erbij: {GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]}");
-            Console.WriteLine($"journeytime eraf: {GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]}");
+            //Console.WriteLine($"timetoempty: {order.TimeToEmpty}");
+            //Console.WriteLine($"journeytime erbij: {GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]}");
+            //Console.WriteLine($"journeytime erbij: {GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]}");
+            //Console.WriteLine($"journeytime eraf: {GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]}");
             td = (order.TimeToEmpty
                 + GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]
@@ -292,6 +293,7 @@ namespace AfvalOphaler
             Node n = nextTo.AppendNext(order);
 
             RoomLeft -= (order.NumContainers * order.VolPerContainer * 0.2);
+            Count++;
             return n;
         }
     }
@@ -365,7 +367,7 @@ namespace AfvalOphaler
 
         public override void ApplyOperator()
         {
-            Console.WriteLine("Applying AddOperator...");
+            //Console.WriteLine("Applying AddOperator...");
             for(int i = 0; i < nextTos.Length; i++)
             {
                 state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
@@ -416,7 +418,7 @@ namespace AfvalOphaler
         }
         public override void ApplyOperator() 
         {
-            Console.WriteLine("Trying to apply ImpossibleOperator...");
+            //Console.WriteLine("Trying to apply ImpossibleOperator...");
             //throw new InvalidOperationException(); 
         }
         public override void DiscardOperator()
