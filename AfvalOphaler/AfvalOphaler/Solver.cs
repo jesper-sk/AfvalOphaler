@@ -9,13 +9,13 @@ namespace AfvalOphaler
 {
     class Solver
     {
-        Schedule startSchedule;
+        Schedule[] startSchedules;
         Schedule[] top10Schedules;
         int threads;
         Random rnd;
-        public Solver(Schedule _startSchedule, int _threads = 1)
+        public Solver(Schedule[] _startSchedules, int _threads = 1)
         {
-            startSchedule = _startSchedule;
+            startSchedules = _startSchedules;
             threads = _threads;
             rnd = new Random();
         }
@@ -24,7 +24,7 @@ namespace AfvalOphaler
         {
             top10Schedules = new Schedule[10];
             var tasks = new Task[threads];
-            for (int i = 0; i < threads; i++) tasks[i] = Task.Run(() => DoSolving(startSchedule.Clone(), 0));
+            for (int i = 0; i < threads; i++) tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0));
             Task.WaitAll(tasks);
         }
 

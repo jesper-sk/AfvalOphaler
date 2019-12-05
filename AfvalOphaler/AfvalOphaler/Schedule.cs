@@ -48,42 +48,89 @@ namespace AfvalOphaler
 
         Random rnd;
         public static Func<Schedule, NeighborResult>[] neighborOperators = { addOperator, deleteOperator, transferOperator, swapOperator };
-        public static Func<Schedule, AddResult> addOperator = (currState) => Add(currState);
-        public static Func<Schedule, DeleteResult> deleteOperator = (currState) => Delete(currState);
-        public static Func<Schedule, TransferResult> transferOperator = (currState) => Transfer(currState);
-        public static Func<Schedule, SwapResult> swapOperator = (currState) => Swap(currState);
-        static AddResult Add(Schedule s)
+        public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
+        public static Func<Schedule, NeighborResult> deleteOperator = (currState) => Delete(currState);
+        public static Func<Schedule, NeighborResult> transferOperator = (currState) => Transfer(currState);
+        public static Func<Schedule, NeighborResult> swapOperator = (currState) => Swap(currState);
+        static NeighborResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            Order bestnotpicked = s.bestRatioedOrders.Pop();
+            Order bestNotPicked = s.bestRatioedOrders.Pop();
+
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
-            
+            Node whereToAdd;
+            double bestDeltaTime;
+            int bestLoopIndex;
             // ASAP
-            /* foreach day
-                if (day.evaluateAddition())
-                    return new AddResult(true)
-               if (nodayfound)
-                return new AddResult(false)
+            int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency];
+            bool dayFound = false;
+            int[] days = new int[bestNotPicked.Frequency];
+            int[] trucks = new int[bestNotPicked.Frequency];
+            double[] deltas = new double[bestNotPicked.Frequency];
+            for (int c = 0; c < combis.Length; c++)
+            {
+
+                for (int d = 0; d < combis[c].Length; d++)
+                {
+                    for (int t = 0; t < 2; t++)
+                    {
+                        if (s.days[d, t].EvaluateAddition())
+                    }
+                }
+            }
+            for (int d = 0; d < 5; d++) 
+            { 
+                int truck = 0; 
+                if (s.days[d, truck].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex) || s.days[d, ++truck].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex)) return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, truck, bestDeltaTime); 
+            }
+            /*
+                if (s.days[d, 0].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex))
+                {
+                    return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, 0, bestDeltaTime);
+                }
+                else if (s.days[d, 1].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex))
+                {
+                    return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, 1, bestDeltaTime);
+                }              
+            }
             */
+            return new ImpossibleResult(s, 0, new List<Order>() { bestNotPicked });
             // BEST
-
-            BigLLNode[] nearest = new BigLLNode[5];
-
-            throw new NotImplementedException();
+            /*
+            bestDeltaTime = double.MaxValue;
+            bool dayFound = false;
+            int bestDay;
+            int bestTruck
+            for (int d = 0; d < 5; d -= -1)
+            {
+                double delta;
+                int loop;
+                int truck = 0;
+                if (s.days[d, 0].EvaluateAddition(bestNotPicked, out whereToAdd, out delta, out loop))
+                {
+                    
+                }
+                if (s.days[d, 1].EvaluateAddition(bestNotPicked, out whereToAdd, out delta, out loop))
+                {
+                    
+                }
+            }
+            if (day
+            */
         }
-        static DeleteResult Delete(Schedule s)
+        static NeighborResult Delete(Schedule s)
         {
             // Pak willekeurige node in een loop
             // verwijder deze
             throw new NotImplementedException();
         }
-        static TransferResult Transfer(Schedule s)
+        static NeighborResult Transfer(Schedule s)
         {
             // Pak een willekeurige node in een loop
             // voeg deze toe aan de dichtsbijzijnde andere loop
             throw new NotImplementedException();
         }
-        static SwapResult Swap(Schedule s)
+        static NeighborResult Swap(Schedule s)
         {
             // Pak twee willekeurige nodes uit twee verschillende loops.
             // swap deze

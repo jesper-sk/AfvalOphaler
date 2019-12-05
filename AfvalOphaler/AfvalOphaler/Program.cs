@@ -39,8 +39,9 @@ namespace AfvalOphaler
             BigLL l = Parser.ParseOrders(ordersDir);
 
             // Solving:
-            Schedule startState = new Schedule();
-            Solver solver = new Solver(startState);
+            int threads = 1;
+            Schedule[] startStates = new Schedule[threads];
+            Solver solver = new Solver(startStates, threads);
             solver.StartSolving();
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine(bestSchedule);
@@ -110,6 +111,7 @@ namespace AfvalOphaler
         };
         public static BigLLNode DumpLLing = new BigLLNode(Dump);
 
+        // [Frequentie, aantal_combinaties, allowed_days_in_combi]
         public static readonly int[][][] AllowedDayCombinations =
         {
             new int[][] { new int[] {0} },
