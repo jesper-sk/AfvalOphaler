@@ -60,7 +60,7 @@ namespace AfvalOphaler
             }
             FootY = Nodes[Length - 1];
 
-            Nodes.Sort((a, b) => a.Order.JourneyTime.CompareTo(b.Order.JourneyTime));
+            Nodes.Sort((a, b) => a.Order.JourneyTimeToDump.CompareTo(b.Order.JourneyTimeToDump));
             HeadTime = Nodes[0];
             for (int i = 1; i < Length; i++)
             {
@@ -196,7 +196,7 @@ namespace AfvalOphaler
         public int MatrixId;
         public int XCoord;
         public int YCoord;
-        public int JourneyTime;
+        public int JourneyTimeToDump;
         public double Score;
 
         public Order (string[] row)
@@ -210,15 +210,15 @@ namespace AfvalOphaler
             MatrixId = int.Parse(row[6]);
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
-            JourneyTime = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
-            Score = (JourneyTime + 1) / TimeToEmpty;
+            JourneyTimeToDump = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
+            Score = (JourneyTimeToDump + 1) / TimeToEmpty;
         }
 
         public Order() { }
 
         public override string ToString()
         {
-            return $"oid{OrderId}; mid{MatrixId}; s{Score}; jt{JourneyTime}; f{Frequency}PWK; nc{NumContainers}; vpc{VolPerContainer}; tte{TimeToEmpty}; x{XCoord}; y{YCoord}; {Name}";
+            return $"oid{OrderId}; mid{MatrixId}; s{Score}; jt{JourneyTimeToDump}; f{Frequency}PWK; nc{NumContainers}; vpc{VolPerContainer}; tte{TimeToEmpty}; x{XCoord}; y{YCoord}; {Name}";
         }
     }
 }

@@ -9,6 +9,7 @@ namespace AfvalOphaler
 {
     public class Schedule
     {
+        #region Variables
         public Day[,] days;
         public Stack<Order> bestRatioedOrders;
         public Queue<Order> notPlannedOrders;
@@ -32,24 +33,28 @@ namespace AfvalOphaler
         }
         public double Score { get => totalTime + totalPenalty; }
         public double CalculateScore() { return (CalculateTotalTime() + CalculateTotalPenalty()); }
+        #endregion
 
+        #region Constructor and Clone
         public Schedule(List<Order> orders)
         {
             orders.Sort((a, b) => a.Score.CompareTo(b.Score));
             days = new Day[5, 2];
+            for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) days[d, t] = new Day();
             rnd = new Random();
 
             bestRatioedOrders = new Stack<Order>(orders);
             notPlannedOrders = new Queue<Order>();
+            CalculateTotalPenalty();
         }
 
         public Schedule Clone()
         {      
             return this; //Hey jochie
         }
+        #endregion
 
         #region Neighbor Operations
-
         Random rnd;
         public static Func<Schedule, NeighborResult>[] neighborOperators = { addOperator, deleteOperator, transferOperator, swapOperator };
         public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
@@ -59,7 +64,18 @@ namespace AfvalOphaler
         static NeighborResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            Order bestNotPicked = s.bestRatioedOrders.Pop();
+            Order bestNotPicked;
+            if (s.bestRatioedOrders.Count == 0) 
+            {
+                Console.WriteLine("Empty stack...");
+                if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
+                else
+                {
+                    Console.WriteLine("Queue empty too...");
+                    return new ImpossibleResult(s, new double[] { 0 }, null);
+                }
+            }
+            bestNotPicked = s.bestRatioedOrders.Pop();
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
             // ASAP
@@ -86,8 +102,10 @@ namespace AfvalOphaler
                     bool truckFound = false;
                     for (int t = 0; t < 2; t++)
                     {
-                        if (s.days[d, t].EvaluateAddition(bestNotPicked, out Node where, out double delta, out int loop))
+                        Node where = null;
+                        if (s.days[d, t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
                         {
+                            Console.WriteLine("EvaluateAddition == TRUE!!!");
                             nextTos.Add(where);
                             loopIndices.Add(loop);
                             days.Add(d);
@@ -103,31 +121,19 @@ namespace AfvalOphaler
                 }
                 if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
             }
-            if (planningFound) return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
-            else return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
+            if (planningFound)
+            {
+                Console.WriteLine("Planning found...");
+                return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
+            }
+            else
+            {
+                Console.WriteLine("No planning found...");
+                return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
+            }
 
             // BEST
-            /*
-            bestDeltaTime = double.MaxValue;
-            bool dayFound = false;
-            int bestDay;
-            int bestTruck
-            for (int d = 0; d < 5; d -= -1)
-            {
-                double delta;
-                int loop;
-                int truck = 0;
-                if (s.days[d, 0].EvaluateAddition(bestNotPicked, out whereToAdd, out delta, out loop))
-                {
-                    
-                }
-                if (s.days[d, 1].EvaluateAddition(bestNotPicked, out whereToAdd, out delta, out loop))
-                {
-                    
-                }
-            }
-            if (day
-            */
+            // Tries to plan the order is the most optimal place, not the earliest place.         
         }
         static NeighborResult Delete(Schedule s)
         {
@@ -147,9 +153,9 @@ namespace AfvalOphaler
             // swap deze
             throw new NotImplementedException();
         }
-
         #endregion
 
+        #region To Strings
         public override string ToString()
         {
             return $"Total time: {CalculateTotalTime()}, Total Penalty: {CalculateTotalPenalty()}";
@@ -159,6 +165,7 @@ namespace AfvalOphaler
         {
             return "Hey Jochie";
         }
+        #endregion
     }
 
     public class Day
@@ -178,23 +185,23 @@ namespace AfvalOphaler
         public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop)
         {
             bestNode = null;
+            double bestTimeLeft = 0;
             bestDeltaTime = double.MaxValue;
             bestLoop = -1;
 
-            int l = Loops.Count;
-            for(int i = 0; i < l; i++)
+            for(int i = 0; i < Loops.Count; i++)
             {
                 Loop loop = Loops[i];
                 if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
-                    if (TimeLeft > bestDeltaTime)
+                    Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
+                    double newTimeLeft = TimeLeft - lTd;
+                    if (newTimeLeft > 0 && newTimeLeft > bestTimeLeft)
                     {
-                        if (lTd < bestDeltaTime)
-                        {
-                            bestNode = lOpt;
-                            bestDeltaTime = lTd;
-                            bestLoop = i;
-                        }
+                        bestNode = lOpt;
+                        bestTimeLeft = newTimeLeft;
+                        bestDeltaTime = lTd;
+                        bestLoop = i;
                     }
                 }
             }
@@ -230,9 +237,13 @@ namespace AfvalOphaler
         {
             td = 0;
             opt = null;
-            newRoomLeft = (order.NumContainers * order.VolPerContainer) * 0.2; //Het gecomprimeerde gewicht dat erbij zou komen
+            newRoomLeft = RoomLeft - (order.NumContainers * order.VolPerContainer) * 0.2; //Het gecomprimeerde gewicht dat erbij zou komen
 
-            if (newRoomLeft > RoomLeft) return false;    //Toevoegen zal de gewichtsconstraint schenden
+            if (newRoomLeft <= 0)
+            {
+                Console.WriteLine("Can't add cuz it will /schenden/ weightconstraint... ");
+                return false;    //Toevoegen zal de gewichtsconstraint schenden
+            }
 
             int best = GD.JourneyTime[order.MatrixId, Start.Data.MatrixId];
             opt = Start;
@@ -253,6 +264,7 @@ namespace AfvalOphaler
 
             if (tPrev < tNext) opt = opt.Prev;
 
+            // Calculate delta
             td = order.TimeToEmpty
                 + GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]
@@ -390,7 +402,11 @@ namespace AfvalOphaler
         {
             failedOrders = failed;
         }
-        public override void ApplyOperator() { throw new InvalidOperationException(); }
+        public override void ApplyOperator() 
+        {
+            Console.WriteLine("Trying to apply ImpossibleOperator...");
+            //throw new InvalidOperationException(); 
+        }
         public override void DiscardOperator()
         {
             foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
