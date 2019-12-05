@@ -196,6 +196,21 @@ namespace AfvalOphaler
             }
             return b.ToString();
         }
+
+        public string GetStatistics()
+        {
+            StringBuilder res = new StringBuilder();
+            res.AppendLine("Score = " + Score);
+            res.AppendLine("TotalTime = " + totalTime);
+            res.AppendLine("TotalPenalty = " + totalPenalty);
+            for (int i = 0; i < 5; i++)
+            {
+                res.AppendLine($"Day {i}:");
+                res.AppendLine($"Truck 1: {days[i, 0]}");
+                res.AppendLine($"Truck 2: {days[i, 1]}");
+            }
+            return res.ToString();
+        }
         #endregion
     }
 
