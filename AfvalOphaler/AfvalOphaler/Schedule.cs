@@ -33,8 +33,8 @@ namespace AfvalOphaler
             totalPenalty = total;
             return total;
         }
-        public double Score { get => totalTime + totalPenalty; }
-        public double CalculateScore() { return (CalculateTotalTime() + CalculateTotalPenalty()); }
+        public double Score { get => CalculateScore(); }
+        public double CalculateScore() { return CalculateTotalTime() + CalculateTotalPenalty(); }
         #endregion
 
         #region Constructor and Clone
@@ -47,7 +47,7 @@ namespace AfvalOphaler
 
             //bestRatioedOrders = new Stack<Order>(orders);
             //notPlannedOrders = new Queue<Order>();
-            nonPlannedOrders = new List<Order>();
+            nonPlannedOrders = orders.ToList();
             CalculateTotalPenalty();
         }
 
@@ -139,7 +139,7 @@ namespace AfvalOphaler
             }
             else
             {
-                Console.WriteLine($"No planning found for order: {bestNotPicked.OrderId}");
+                //Console.WriteLine($"No planning found for order: {bestNotPicked.OrderId}");
                 return new ImpossibleResult(s, new List<Order> { bestNotPicked });
             }
 

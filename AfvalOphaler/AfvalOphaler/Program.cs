@@ -39,7 +39,7 @@ namespace AfvalOphaler
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
             // Solving:
-            int threads = 5;
+            int threads = 100;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
