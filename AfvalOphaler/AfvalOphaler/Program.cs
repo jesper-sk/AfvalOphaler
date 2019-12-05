@@ -116,7 +116,7 @@ namespace AfvalOphaler
         // [Frequentie, aantal_combinaties, allowed_days_in_combi]
         public static readonly int[][][] AllowedDayCombinations =
         {
-            new int[][] { new int[] {0} },
+            new int[][] { new int[] {} },
             new int[][]
             {
                 new int[] {0},
