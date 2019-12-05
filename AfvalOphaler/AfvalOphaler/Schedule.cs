@@ -7,17 +7,18 @@ using System.Threading.Tasks;
 
 namespace AfvalOphaler
 {
-    class Schedule
+    public class Schedule
     {
         public Day[,] days;
-        public double totalTime;
         public Stack<Order> bestRatioedOrders;
         public Queue<Order> notPlannedOrders;
 
+        public double totalTime;
         public double CalculateTotalTime()
         {
             double total = 0;
             foreach (Day d in days) total += d.totalTime;
+            totalTime = total;
             return total;
         }
         public double totalPenalty;
@@ -26,9 +27,11 @@ namespace AfvalOphaler
             double total = 0;
             foreach (Order o in bestRatioedOrders) total += (3 * o.TimeToEmpty);
             foreach (Order o in notPlannedOrders) total += (3 * o.TimeToEmpty);
+            totalPenalty = total;
             return total;
         }
         public double Score { get => totalTime + totalPenalty; }
+        public double CalculateScore() { return (CalculateTotalTime() + CalculateTotalPenalty()); }
 
         public Schedule()
         {
@@ -37,8 +40,8 @@ namespace AfvalOphaler
         }
 
         public Schedule Clone()
-        {
-            return this;
+        {      
+            return this; //Hey jochie
         }
 
         #region Neighbor Operations
@@ -52,11 +55,16 @@ namespace AfvalOphaler
         static AddResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            Order bestnotpicked = s.bestRatioedOrders.Peek();
+            Order bestnotpicked = s.bestRatioedOrders.Pop();
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
             
             // ASAP
-
+            /* foreach day
+                if (day.evaluateAddition())
+                    return new AddResult(true)
+               if (nodayfound)
+                return new AddResult(false)
+            */
             // BEST
 
             BigLLNode[] nearest = new BigLLNode[5];
@@ -96,7 +104,7 @@ namespace AfvalOphaler
 
     }
 
-    class Day
+    public class Day
     {
         public List<Loop> Loops;
         public double TimeLeft;
@@ -144,7 +152,7 @@ namespace AfvalOphaler
         }
     }
 
-    class Loop
+    public class Loop
     {
         //LinkedList van nodes
 
@@ -207,7 +215,7 @@ namespace AfvalOphaler
         }
     }
 
-    class Node
+    public class Node
     {
         public readonly Order Data;
         public readonly bool IsDump;
@@ -243,69 +251,74 @@ namespace AfvalOphaler
 
     public abstract class NeighborResult
     {
+        public Schedule state;
         public double delta;
-        public NeighborResult(bool possible, double d)
+        public NeighborResult(Schedule s, double d)
         {
-
+            state = s;
             delta = d;
         }
 
         public abstract void ApplyOperator();
+        public abstract void DiscardOperator();
     }
     public class AddResult : NeighborResult
     {
-        BigLLNode toAdd;
-        BigLLNode[] whereToAdd;
-        int[] whichLoops;
-        public AddResult(double d, BigLLNode t, BigLLNode[] where, int[] which) : base(d)
+        Order toAdd;
+        public AddResult(Schedule s, double d, Order o) : base(s, d)
         {
-            toAdd = t;
-            whereToAdd = where;
-            whichLoops = which;
+            toAdd = o;
         }
 
         public override void ApplyOperator()
         {
-            for (int i = 0; i < whereToAdd.Length; i++)
-            {
-                BigLLNode temp = whereToAdd[i].Loops[i].Next;
-                toAdd.Loops[toAdd.Loops.Count - 1].Next = temp;
-                whereToAdd[i].Loops[i].Next = toAdd;           
-            }
+
+        }
+        public override void DiscardOperator()
+        {
+            state.bestRatioedOrders.Push(toAdd);
         }
     }
     public class DeleteResult : NeighborResult
     {
-        public DeleteResult(double d) : base(d)
+        public DeleteResult(Schedule s, double d) : base(s, d)
         {
 
         }
 
-        public override void ApplyOperator()
-        {
-            
-        }
+        public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
+        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class TransferResult : NeighborResult
     {
-        public TransferResult(double d) : base(d)
+        public TransferResult(Schedule s, double d) : base(s, d)
         {
 
         }
-        public override void ApplyOperator()
-        {
-
-        }
+        public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
+        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class SwapResult : NeighborResult
     {
-        public SwapResult(double d) : base(d)
+        public SwapResult(Schedule s, double d) : base(s, d)
         {
 
         }
-        public override void ApplyOperator()
-        {
+        public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
+        public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
+    }
 
+    public class ImpossibleResult : NeighborResult
+    {
+        List<Order> failedOrders;
+        public ImpossibleResult(Schedule s, double d, List<Order> failed) : base(s, d)
+        {
+            failedOrders = failed;
+        }
+        public override void ApplyOperator() { throw new InvalidOperationException(); }
+        public override void DiscardOperator()
+        {
+            foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
         }
     }
 
