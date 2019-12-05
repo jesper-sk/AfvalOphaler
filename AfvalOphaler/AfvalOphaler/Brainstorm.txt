@@ -5,7 +5,8 @@
 		- Bevat een linkedlist van nodes:
 			- Bevat order
 			- Bevat lijst van (next, prev) <- voor elke keer dat de node is ingepland
-				-> length(lijst(next,prev)) == freq(order) (ervanuitgaande dat we een order altijd geheel inplannen, which we do)
+				-> length(lijst(next,prev)) == freq(order) 
+					(ervanuitgaande dat we een order altijd geheel inplannen, which we do)
 		- Tijd Over
 		- Ruimte Over in vuilniswagen.
 	- Tijd over
@@ -31,3 +32,8 @@ Add(Node a)
 	return (GetDelta(loop, a, closest), current_state))
 
 if (Zoekalgoritme.Approves(Add(Node a))) => AddNodeToLoop(loop, a, closest)
+
+
+
+
+	

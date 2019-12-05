@@ -34,7 +34,7 @@ namespace AfvalOphaler
 
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
-            GlobalData.JourneyTime = t;
+            GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             BigLL l = Parser.ParseOrders(ordersDir);
 
@@ -97,18 +97,18 @@ namespace AfvalOphaler
         }
     }
 
-    public static class GlobalData
+    public static class GD
     {
         public static int[,] JourneyTime;
-        public static Node Dump = new Node(
-            new Order()
-            {
-                OrderId = 0,
-                Name = "Dump",
-                MatrixId = 287,
-                XCoord = 56343016,
-                YCoord = 513026712
-            });
+        public static Order Dump = new Order()
+        {
+            OrderId = 0,
+            Name = "Dump",
+            MatrixId = 287,
+            XCoord = 56343016,
+            YCoord = 513026712
+        };
+        public static BigLLNode DumpLLing = new BigLLNode(Dump);
 
         public static readonly int[][][] AllowedDayCombinations =
         {

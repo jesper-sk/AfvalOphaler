@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace AfvalOphaler
     {
         public Day[,] days;
         public double totalTime;
-        public Stack<Node> bestRatioedOrders;
+        public Stack<BigLLNode> bestRatioedOrders;
 
         public double CalculateTotalTime()
         {
@@ -22,7 +23,7 @@ namespace AfvalOphaler
         public double CalculateTotalPenalty()
         {
             double total = 0;
-            foreach (Node n in bestRatioedOrders) total += (3 * n.Order.TimeToEmpty);
+            foreach (BigLLNode n in bestRatioedOrders) total += (3 * n.Order.TimeToEmpty);
             return total;
         }
         public double Score { get => totalTime + totalPenalty; }
@@ -49,9 +50,9 @@ namespace AfvalOphaler
         static AddResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
-            Node bestnotpicked = s.bestRatioedOrders.Peek();
+            BigLLNode bestnotpicked = s.bestRatioedOrders.Peek();
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
-            Node[] nearest = new Node[5];
+            BigLLNode[] nearest = new BigLLNode[5];
 
             throw new NotImplementedException();
         }
@@ -90,12 +91,129 @@ namespace AfvalOphaler
 
     class Day
     {
+        public List<Loop> Loops;
+        public double TimeLeft;
+
         public List<int> loops;
         public double totalTime;
 
         public Day()
         {
-            loops = new List<int>();
+            Loops = new List<Loop>() { new Loop() };
+            TimeLeft = 720;
+        }
+
+        public void EvaluateAddition(Order order)
+        {
+            Node opt = null;
+
+            foreach(Loop loop in Loops)
+            {
+                if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double roomLeft, out double td))
+                {
+                    if (TimeLeft > td)
+                    {
+
+                    }
+                }
+            }
+        }
+    }
+
+    class Loop
+    {
+        //LinkedList van nodes
+
+        public double Time;
+        public double RoomLeft;
+
+        public Node Start; //Order references to Dump
+
+        public Loop()
+        {
+            Start = new Node();
+            Time = 30;              //Het storten moet één keer per Loop (lus) gebeuren
+            RoomLeft = 20000;       //Gecomprimeerd
+        }
+
+        public bool EvaluateOptimalAddition(Order order, out Node opt, out double newRoomLeft, out double td)
+        {
+            td = 0;
+            opt = null;
+            newRoomLeft = (order.NumContainers * order.VolPerContainer) * 0.2; //Het gecomprimeerde gewicht dat erbij zou komen
+
+            if (newRoomLeft > RoomLeft) return false;    //Toevoegen zal de gewichtsconstraint schenden
+
+            int best = GD.JourneyTime[order.MatrixId, Start.Data.MatrixId];
+            opt = Start;
+            Node curr = Start.Next;
+            while (!curr.IsDump)
+            {
+                int t = GD.JourneyTime[order.MatrixId, curr.Data.MatrixId];
+                if (t < best)
+                {
+                    opt = curr;
+                    best = t;
+                }
+                curr = curr.Next;
+            }
+
+            int tNext = GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId];
+            int tPrev = GD.JourneyTime[order.MatrixId, opt.Prev.Data.MatrixId];
+
+            if (tPrev < tNext) opt = opt.Prev;
+
+            td = order.TimeToEmpty
+                + GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]
+                + GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]
+                - GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId];
+
+            return true;
+        }
+
+        public void AddOrder(Order order, Node nextTo)
+        {
+            nextTo.AppendNext(order);
+            Time += order.TimeToEmpty
+                + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
+                + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
+                - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId];
+
+            RoomLeft -= order.NumContainers * order.VolPerContainer * 0.2;
+        }
+    }
+
+    class Node
+    {
+        public readonly Order Data;
+        public readonly bool IsDump;
+
+        public Node Prev;
+        public Node Next;
+
+        public Node()
+        {
+            IsDump = true;
+            Data = GD.Dump;
+            Prev = Next = this;
+        }
+
+        public Node(Order o)
+        {
+            IsDump = false;
+            Data = o;
+        }
+
+        public Node AppendNext(Order o)
+        {
+            Node n = new Node(o)
+            {
+                Prev = this,
+                Next = Next
+            };
+            Next.Prev = n;
+            Next = n;
+            return n;
         }
     }
 
@@ -111,10 +229,10 @@ namespace AfvalOphaler
     }
     public class AddResult : NeighborResult
     {
-        Node toAdd;
-        Node[] whereToAdd;
+        BigLLNode toAdd;
+        BigLLNode[] whereToAdd;
         int[] whichLoops;
-        public AddResult(double d, Node t, Node[] where, int[] which) : base(d)
+        public AddResult(double d, BigLLNode t, BigLLNode[] where, int[] which) : base(d)
         {
             toAdd = t;
             whereToAdd = where;
@@ -125,7 +243,7 @@ namespace AfvalOphaler
         {
             for (int i = 0; i < whereToAdd.Length; i++)
             {
-                Node temp = whereToAdd[i].Loops[i].Next;
+                BigLLNode temp = whereToAdd[i].Loops[i].Next;
                 toAdd.Loops[toAdd.Loops.Count - 1].Next = temp;
                 whereToAdd[i].Loops[i].Next = toAdd;           
             }

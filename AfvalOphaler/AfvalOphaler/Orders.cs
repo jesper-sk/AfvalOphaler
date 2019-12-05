@@ -11,33 +11,33 @@ namespace AfvalOphaler
     {
         //TODO: Add Dump
 
-        public List<Node> Nodes;
+        public List<BigLLNode> Nodes;
         public int Length;
 
-        Node Head;
-        Node Foot;
+        BigLLNode Head;
+        BigLLNode Foot;
 
-        public Node HeadX;
-        public Node HeadY;
-        public Node HeadTime;
-        public Node HeadScore;
-        public Node FootX;
-        public Node FootY;
-        public Node FootTime;
-        public Node FootScore;
+        public BigLLNode HeadX;
+        public BigLLNode HeadY;
+        public BigLLNode HeadTime;
+        public BigLLNode HeadScore;
+        public BigLLNode FootX;
+        public BigLLNode FootY;
+        public BigLLNode FootTime;
+        public BigLLNode FootScore;
 
         public BigLL(params Order[] orders) //Assumes orders are ordered on orderId
         {
-            Head = new Node();
-            Foot = new Node();
+            Head = new BigLLNode();
+            Foot = new BigLLNode();
             Head.Seq.Prev = Foot;
             Foot.Seq.Next = Head;
             Length = orders.Length;
-            Nodes = new List<Node>(orders.Length);
+            Nodes = new List<BigLLNode>(orders.Length);
 
             for (int i = 0; i < orders.Length; i++)
             {
-                Node n = AppendOrder(orders[i]);
+                BigLLNode n = AppendOrder(orders[i]);
                 if (orders[i].OrderId == 0) Console.WriteLine(i);
                 Nodes.Add(n);
             }
@@ -78,13 +78,13 @@ namespace AfvalOphaler
             }
             FootScore = Nodes[Length - 1];
 
-            Node[] temp = Nodes.ToArray();
-            foreach(Node node in temp)
+            BigLLNode[] temp = Nodes.ToArray();
+            foreach(BigLLNode node in temp)
             {
                 Nodes.Sort((a, b) => 
-                    GlobalData.JourneyTime[node.Order.MatrixId, a.Order.MatrixId]
+                    GD.JourneyTime[node.Order.MatrixId, a.Order.MatrixId]
                         .CompareTo(
-                            GlobalData.JourneyTime[node.Order.MatrixId, b.Order.MatrixId]
+                            GD.JourneyTime[node.Order.MatrixId, b.Order.MatrixId]
                             )
                         );
 
@@ -92,9 +92,9 @@ namespace AfvalOphaler
             }
         }
 
-        private Node AppendOrder(Order o)
+        private BigLLNode AppendOrder(Order o)
         {
-            Node n = new Node(o);
+            BigLLNode n = new BigLLNode(o);
             n.Seq.Prev = Foot;
             n.Seq.Next = Foot.Seq.Next;
             Foot.Seq.Next.Seq.Prev = n;
@@ -108,7 +108,7 @@ namespace AfvalOphaler
         }
     }
 
-    public class Node
+    public class BigLLNode
     {
         public Order Order;
 
@@ -120,33 +120,33 @@ namespace AfvalOphaler
 
         public List<DoubleLink> Loops = new List<DoubleLink>();
 
-        public Node[] Nearest;
+        public BigLLNode[] Nearest;
 
         public int[] NumVisits = new int[5];
 
         public readonly bool IsSentry;
-        public Node(Order o)
+        public BigLLNode(Order o)
         {
             Order = o;
             IsSentry = false;
         }
-        public Node()
+        public BigLLNode()
         {
             IsSentry = true;
         }
 
-        public List<Node> GetNearestLoopNodes(out List<int> days)
+        public List<BigLLNode> GetNearestLoopNodes(out List<int> days)
         {
-            foreach(int[] combi in GlobalData.AllowedDayCombinations[Order.Frequency])
+            foreach(int[] combi in GD.AllowedDayCombinations[Order.Frequency])
             {
-                List<Node> att = new List<Node>(Order.Frequency);
+                List<BigLLNode> att = new List<BigLLNode>(Order.Frequency);
                 List<int> attd = new List<int>(Order.Frequency);
                 foreach(int day in combi)
                 {
-                    Node take = null;
+                    BigLLNode take = null;
                     for(int i = 0; i < Nearest.Length; i++)
                     {
-                        Node curr = Nearest[i];
+                        BigLLNode curr = Nearest[i];
                         if (curr.NumVisits[day] > 0)
                         {
                             take = curr;
@@ -167,16 +167,16 @@ namespace AfvalOphaler
                 }
             }
             days = new List<int>(0);
-            return new List<Node>(0);
+            return new List<BigLLNode>(0);
         }
     }
 
     public class DoubleLink
     {
-        public Node Next;
-        public Node Prev;
+        public BigLLNode Next;
+        public BigLLNode Prev;
 
-        public DoubleLink(Node next, Node prev)
+        public DoubleLink(BigLLNode next, BigLLNode prev)
         {
             Next = next;
             Prev = prev;
@@ -185,7 +185,7 @@ namespace AfvalOphaler
         public DoubleLink() {; }
     }
 
-    public struct Order
+    public class Order
     {
         public int OrderId;
         public string Name;
@@ -210,9 +210,11 @@ namespace AfvalOphaler
             MatrixId = int.Parse(row[6]);
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
-            JourneyTime = GlobalData.JourneyTime[GlobalData.Dump.Order.MatrixId, MatrixId];
+            JourneyTime = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
             Score = Math.Round(((NumContainers * VolPerContainer) + (TimeToEmpty * 100)) / JourneyTime, 3);
         }
+
+        public Order() { }
 
         public override string ToString()
         {
