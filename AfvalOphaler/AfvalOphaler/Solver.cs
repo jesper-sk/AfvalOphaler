@@ -35,10 +35,10 @@ namespace AfvalOphaler
             //LocalSolver solver = new HillClimbLocalSolver();
             LocalSolver solver = new SaLocalSolver(0.5, 0.9999);
             solver.Init();
-            Parallel.ForEach(startSchedules, s => { DoSolving(s, 0, maxIterations, opCount, 0, maxNoChange, solver); });
+            Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, solver); });
         }
 
-        void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange, LocalSolver solver)
+        void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, LocalSolver solver)
         {
             int noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
@@ -56,7 +56,8 @@ namespace AfvalOphaler
                     noChange++;
                 }
                 else noChange = 0;
-                if (noChange > noChangeCount) break;
+                if (noChange > maxNoChange) break;
+                if (iter % 10000 == 0) Console.WriteLine(iter);
             }
             lock(addlock) { AddScheduleToTop(state); }
         }   
