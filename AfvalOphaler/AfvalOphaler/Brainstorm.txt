@@ -35,5 +35,17 @@ if (Zoekalgoritme.Approves(Add(Node a))) => AddNodeToLoop(loop, a, closest)
 
 
 
+Format Inlevermodel
 
+Iedere regel bevat vier entries gescheiden door een punt-komma
+1.	Vrachtautonummer (1 of 2)
+2.	Dagnummer (maandag =1, dinsdag =2, …, vrijdag =5)
+3.	Hoeveelste adres dat het voertuig op die dag aandoet (begin met 1, 2, …)
+4.	Id. van het adres (uit orderbestand.txt); de stort heeft nummer 0. (OrderId)
+Voorbeeld: Op maandag begint voertuig 1 met adres 10, daarna 20, dan afstorten, en vervolgens door naar 30. 
+Op het eind van de dag gaat de auto weer naar de stort; dit moet je ook aangeven.
+1; 1; 1; 10
+1; 1; 2; 20
+1; 1; 3; 0
+1; 1; 4; 30
 	
