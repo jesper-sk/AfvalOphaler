@@ -256,6 +256,11 @@ namespace AfvalOphaler
             TimeLeft -= Loops[loopIndex].Duration;
             return res;
         }
+
+        public override string ToString()
+        {
+            return $"LoopCount={Loops.Count}, timeLeft={TimeLeft}";
+        }
     }
 
     public class Loop
@@ -332,6 +337,11 @@ namespace AfvalOphaler
             RoomLeft -= (order.NumContainers * order.VolPerContainer * 0.2);
             Count++;
             return n;
+        }
+
+        public override string ToString()
+        {
+            return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
         }
     }
 
