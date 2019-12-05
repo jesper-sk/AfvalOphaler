@@ -72,7 +72,7 @@ namespace AfvalOphaler
             return orders;
         }
 
-        public static void KMeansClusterOrders(List<Order> orders, int k)
+        public static void KMeansClusterOrders(List<Order> orders, int k, int maxI)
         {
             Random rnd = new Random();
             List<Pointc> clusters = new List<Pointc>(k);
@@ -92,7 +92,8 @@ namespace AfvalOphaler
                 orders[i].Cluster = rnd.Next(0, k);
             }
 
-            do { UpdateMeans(); Console.WriteLine("Cluster");  } while (UpdateClusters());
+            int iter = 0;
+            do { UpdateMeans(); iter++; } while (UpdateClusters() && iter < maxI);
 
             
             void UpdateMeans()
@@ -109,6 +110,7 @@ namespace AfvalOphaler
                 }
                 for (int i = 0; i < k; i++)
                 {
+                    if (ninc[i] == 0) continue;
                     clusters[i].X = Convert.ToInt32(xs[i] / ninc[i]);
                     clusters[i].Y = Convert.ToInt32(ys[i] / ninc[i]);
                 }
@@ -140,7 +142,7 @@ namespace AfvalOphaler
                 if (EmptyCluster())
                 {
                     Console.WriteLine("Empty");
-                    return false;
+                    //return false;
                 }
                 return changed;
             }
