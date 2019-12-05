@@ -77,7 +77,11 @@ namespace AfvalOphaler
                 }
             }
             */
-            if (s.bestRatioedOrders.Count == 0) return new ImpossibleResult(s, new double[] { 0 }, null);
+            if (s.bestRatioedOrders.Count == 0)
+            {
+
+                return new ImpossibleResult(s, new double[] { 0 }, null);
+            }
             bestNotPicked = s.bestRatioedOrders.Pop();
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
@@ -460,7 +464,6 @@ namespace AfvalOphaler
         public override void DiscardOperator()
         {
             if (failedOrders == null) return;
-            Console.WriteLine($"Enqueing {failedOrders.Count} orders");
             foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
         }
     }
