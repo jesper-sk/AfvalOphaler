@@ -40,14 +40,16 @@ namespace AfvalOphaler
         #region Constructor and Clone
         public Schedule(List<Order> orders)
         {
-            orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
             days = new Day[5, 2];
             for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) days[d, t] = new Day();
             Rnd = new Random();
 
+            //orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
             //bestRatioedOrders = new Stack<Order>(orders);
             //notPlannedOrders = new Queue<Order>();
-            nonPlannedOrders = orders.ToList();
+            //nonPlannedOrders = orders.ToList();
+            nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList();
+
             CalculateTotalPenalty();
         }
 
