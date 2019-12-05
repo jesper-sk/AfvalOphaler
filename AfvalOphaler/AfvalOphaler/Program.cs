@@ -1,5 +1,5 @@
 ﻿//#define FINAL
-#define TEST
+//#define TEST
 
 using System;
 using System.Collections.Generic;
@@ -39,11 +39,11 @@ namespace AfvalOphaler
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
             // Solving:
-            int threads = 1;
+            int threads = 10;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
-            solver.StartSolving(1000000, 1, 100000);
+            solver.StartSolving(1000000, 10 , 100000);
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("===");
             Console.WriteLine("Solving done, score of best schedule:");
@@ -51,55 +51,19 @@ namespace AfvalOphaler
             string bestcheckstring = bestSchedule.ToCheckString();
             File.WriteAllText(@".\result.txt", bestcheckstring);
             //Console.WriteLine(bestcheckstring);
-            Console.WriteLine("= Done =");
+            Console.WriteLine("done");
             Console.ReadKey();
 
 #else
-            Console.WriteLine("Parsing dist.txt");
-            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
-            Console.WriteLine("Parsing order.txt");
-            BigLL l = Parser.ParseOrders(ordersDir, t);
+            Console.WriteLine("Hé jochie");
+            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
+            GD.JourneyTime = t;
+            List<Order> orders = Parser.ParseOrdersArr(ordersDir);
+            Console.WriteLine("Clustering...");
+            Parser.KMeansClusterOrders(orders, 10);
+            Console.WriteLine("Hé Ed!");
+            Console.ReadKey();
 
-            Node curr = l.HeadX;
-            for (int i = 0; i < 9; i++)
-            {
-                Console.WriteLine(curr.Order);
-                curr = curr.SeqX.Prev;
-            }
-            Console.WriteLine("");
-            curr = l.HeadY;
-            for (int i = 0; i < 9; i++)
-            {
-                Console.WriteLine(curr.Order);
-                curr = curr.SeqY.Prev;
-            }
-            Console.WriteLine("");
-            curr = l.HeadTime;
-            for (int i = 0; i < 9; i++)
-            {
-                Console.WriteLine(curr.Order);
-                curr = curr.SeqDist.Prev;
-            }
-            Console.WriteLine("");
-            curr = l.FootScore;
-            for (int i = 0; i < 9; i++)
-            {
-                Console.WriteLine(curr.Order);
-                curr = curr.SeqScore.Next;
-            }
-            Console.WriteLine("");
-            while (true)
-            {
-                string[] inp = Console.ReadLine().Split();
-                if (inp[0] == "t")
-                {
-                    Console.WriteLine($"{t[int.Parse(inp[1]), int.Parse(inp[2])]}");
-                }
-                else if (inp[0] == "d")
-                {
-                    Console.WriteLine($"{d[int.Parse(inp[1]), int.Parse(inp[2])]}");
-                }
-            }
 #endif
         }
     }

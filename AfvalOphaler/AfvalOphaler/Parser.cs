@@ -41,7 +41,7 @@ namespace AfvalOphaler
                 string[] splitline = lines[i].Trim().Split(';');
                 int x = int.Parse(splitline[7]);
                 int y = int.Parse(splitline[8]);
-                orders.Add(new Point(x, y));
+                orders.Add(new System.Drawing.Point(x, y));
             }
             return orders;
         }
@@ -70,6 +70,100 @@ namespace AfvalOphaler
                 orders.Add(o);
             }
             return orders;
+        }
+
+        public static void KMeansClusterOrders(List<Order> orders, int k)
+        {
+            Random rnd = new Random();
+            List<Pointc> clusters = new List<Pointc>(k);
+            int xmax = orders.Max(a => a.XCoord);
+            int ymax = orders.Max(a => a.YCoord);
+            int xmin = orders.Min(a => a.XCoord);
+            int ymin = orders.Min(a => a.YCoord);
+
+            //Setting clusters
+            for (int i = 0; i < k; i++)
+            {
+                clusters.Add(new Pointc());
+                orders[i].Cluster = i;
+            }
+            for (int i = k; i < orders.Count; i++)
+            {
+                orders[i].Cluster = rnd.Next(0, k);
+            }
+
+
+            do UpdateMeans(); while (UpdateClusters());
+
+            
+            void UpdateMeans()
+            {
+                int[] ninc = new int[k];
+                long[] xs = new long[k];
+                long[] ys = new long[k];
+                foreach (Order order in orders)
+                {
+                    int c = order.Cluster;
+                    ninc[c]++;
+                    xs[c] += order.XCoord;
+                    ys[c] += order.YCoord;
+                }
+                for (int i = 0; i < k; i++)
+                {
+                    clusters[i].X = Convert.ToInt32(xs[i] / ninc[i]);
+                    clusters[i].Y = Convert.ToInt32(ys[i] / ninc[i]);
+                }
+            }
+
+            bool EmptyCluster()
+            {
+                int[] ninc = new int[k];
+                foreach(Order order in orders)
+                {
+                    ninc[order.Cluster]++;
+                }
+                foreach(int i in ninc)
+                {
+                    if (i == 0) return true;
+                }
+                return false;
+            }
+
+            int EucDist(int x, int y, Pointc p2) => Convert.ToInt32(Math.Sqrt(Math.Pow(x - p2.X, 2) + Math.Pow(y - p2.Y, 2)));
+
+            bool UpdateClusters()
+            {
+                bool changed = false;
+                foreach (Order order in orders)
+                {
+                    int ind = -1;
+                    int mind = int.MaxValue;
+                    for(int i = 0; i < k; i++)
+                    {
+                        int dist = EucDist(order.XCoord, order.YCoord, clusters[i]);
+                        if (dist < mind)
+                        {
+                            mind = dist;
+                            ind = i;
+                        }
+                    }
+
+                    if (ind != order.Cluster)
+                    {
+                        order.Cluster = ind;
+                        changed = true;
+                    }
+                }
+                if (EmptyCluster()) return false;
+                return changed;
+            }
+            
+        }
+
+        public class Pointc
+        {
+            public int X;
+            public int Y;
         }
     }
 }

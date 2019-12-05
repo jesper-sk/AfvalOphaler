@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace AfvalOphaler
 {
+    #region BIGLLAMA
     public class BigLL : IEnumerable
     {
         //TODO: Add Dump
@@ -185,7 +186,7 @@ namespace AfvalOphaler
 
         public DoubleLink() {; }
     }
-
+    #endregion
     public class Order
     {
         public int OrderId;
@@ -200,6 +201,7 @@ namespace AfvalOphaler
         public double JourneyTimeFromDump;
         public double JourneyTimeToDump;
         public double Score;
+        public int Cluster;
 
         public Order (string[] row)
         {
