@@ -36,7 +36,7 @@ namespace AfvalOphaler
 
         void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange)
         {
-            //Console.WriteLine($"Doing iteration {iteration}...");
+            Console.WriteLine($"Doing iteration {iteration}...");
             if (iteration >= maxIterations) 
             { 
                 lock (addlock) { AddScheduleToTop(state); } 
@@ -59,62 +59,47 @@ namespace AfvalOphaler
             List<NeighborResult> results = new List<NeighborResult>(opCount);
             for (int i = 0; i < opCount; i++)
             {
-                //Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
-                NeighborResult res = Schedule.addOperator(state);
+                Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
+                NeighborResult res = op(state); // <- { AddResult, ImpossibleResult }
+
+                //NeighborResult res = Schedule.addOperator(state);
                 //Console.WriteLine($"res delta: {res.totalDelta}");
                 results.Add(res);
             }
 
             // Bepaal afhankelijk van zoekalgortime welke je echt doet.
             // Nu ff hillclimb (lekker greedy)
-            int bestindex = 0;
-            double bestdelta = results[0].totalDelta;
-            for (int i = 1; i < opCount; i++)
+            int bestindex = -1;
+            double bestdelta = double.MaxValue;
+            for (int i = 0; i < opCount; i++)
             {
-                if (results[i].totalDelta < bestdelta)
+                if (!(results[i] is ImpossibleResult) && results[i].GetTotalDelta() < bestdelta)
                 {
                     bestindex = i;
-                    bestdelta = results[i].totalDelta;
+                    bestdelta = results[i].GetTotalDelta();
                 }
             }
+
+            Console.WriteLine("---");
 
             // Apply best operator, discard the rest;
-            Console.WriteLine(results[bestindex].totalDelta);
-            results[bestindex].ApplyOperator();
-            int j = 0;
-            while (j < bestindex) { results[j].DiscardOperator(); j++; }
-            j++;
-            while (j < opCount) { results[j].DiscardOperator(); j++; }
-
-            //Console.WriteLine($"State after iteration: time={state.CalculateTotalTime()}, penaly={state.CalculateTotalPenalty()}");
-            Console.WriteLine("---");
-            iteration++;
-            DoSolving(state, iteration, maxIterations, opCount, noChangeCount, maxNoChange);
-
-            /*
-            if (bestdelta < 0)
+            if (bestindex != -1 && results[bestindex].GetTotalDelta() < 0)
             {
-                // Apply best operator, discard the rest;
+                noChangeCount = 0;
                 results[bestindex].ApplyOperator();
-                int i = 0;
-                while (i < bestindex) { results[i].DiscardOperator(); i++; }
-                i++;
-                while (i < opCount) { results[i].DiscardOperator(); i++; }
+                int j = 0;
+                while (j < bestindex) { results[j].DiscardOperator(); j++; }
+                j++;
+                while (j < opCount) { results[j].DiscardOperator(); j++; }
 
-                DoSolving(state, iteration++, maxIterations, opCount, noChangeCount, maxNoChange);
+                DoSolving(state, ++iteration, maxIterations, opCount, noChangeCount, maxNoChange);
             }
-            else if (noChangeCount < maxNoChange)
-            {
-                DoSolving(state, iteration++, maxIterations, opCount, noChangeCount++, maxNoChange);
-            }
+            else if (noChangeCount < maxNoChange) DoSolving(state, ++iteration, maxIterations, opCount, ++noChangeCount, maxNoChange);
             else
             {
-                lock (addlock)
-                {
-                    AddScheduleToTop(state);
-                }
+                lock (addlock) { AddScheduleToTop(state); }
+                return;
             }
-            */
         }   
 
         private readonly object addlock = new object();

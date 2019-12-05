@@ -56,7 +56,17 @@ namespace AfvalOphaler
 
         #region Neighbor Operations
         Random rnd;
-        public static Func<Schedule, NeighborResult>[] neighborOperators = { addOperator, deleteOperator, transferOperator, swapOperator };
+        public static Func<Schedule, NeighborResult>[] neighborOperators =
+        {
+            currState => Add(currState),
+            currState => Delete(currState),
+            currState => Transfer(currState),
+            currState => Swap(currState)
+            //addOperator,
+            //deleteOperator, 
+            //transferOperator, 
+            //swapOperator 
+        };
         public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
         public static Func<Schedule, NeighborResult> deleteOperator = (currState) => Delete(currState);
         public static Func<Schedule, NeighborResult> transferOperator = (currState) => Transfer(currState);
@@ -68,7 +78,7 @@ namespace AfvalOphaler
             if (s.bestRatioedOrders.Count == 0)
             {
                 if (s.notPlannedOrders.Count > 0) bestNotPicked = s.notPlannedOrders.Dequeue();
-                else return new ImpossibleResult(s, new double[] { 0 }, null);
+                else return new ImpossibleResult(s, null);
             }
             else bestNotPicked = s.bestRatioedOrders.Pop();
 
@@ -130,7 +140,7 @@ namespace AfvalOphaler
             else
             {
                 Console.WriteLine($"No planning found for order: {bestNotPicked.OrderId}");
-                return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
+                return new ImpossibleResult(s, new List<Order> { bestNotPicked });
             }
 
             // BEST
@@ -363,17 +373,16 @@ namespace AfvalOphaler
     public abstract class NeighborResult
     {
         public Schedule state;
-        public double[] deltas;
-        public double totalDelta;
-        public NeighborResult(Schedule s, double[] d)
+        public NeighborResult(Schedule s)
         {
             state = s;
-            deltas = d;
-            foreach (double delta in deltas) totalDelta += delta;
         }
+
+        public abstract double GetTotalDelta();
 
         public abstract void ApplyOperator();
         public abstract void DiscardOperator();
+
     }
     public class AddResult : NeighborResult
     {
@@ -382,14 +391,23 @@ namespace AfvalOphaler
         int[] loopIndices;
         int[] dayIndices;
         int[] truckIndices;
+        double[] deltas;
 
-        public AddResult(Schedule s, Order order, Node[] nextTos, int[] loopIndices, int[] dayIndices, int[] truckIndices, double[] deltas) : base(s, deltas)
+        public AddResult(Schedule s, Order order, Node[] nextTos, int[] loopIndices, int[] dayIndices, int[] truckIndices, double[] deltas) : base(s)
         {
             this.order = order;
             this.nextTos = nextTos;
             this.loopIndices = loopIndices;
             this.dayIndices = dayIndices;
             this.truckIndices = truckIndices;
+            this.deltas = deltas;
+        }
+
+        public override double GetTotalDelta()
+        {
+            double totalExtraTravelTime = deltas.Sum();
+            double penaltyReduction = 3 * order.Frequency * order.TimeToEmpty;
+            return (totalExtraTravelTime - penaltyReduction);
         }
 
         public override void ApplyOperator()
@@ -409,29 +427,37 @@ namespace AfvalOphaler
     }
     public class DeleteResult : NeighborResult
     {
-        public DeleteResult(Schedule s, double[] d) : base(s, d)
+        public DeleteResult(Schedule s) : base(s)
         {
 
         }
+
+        public override double GetTotalDelta() { throw new NotImplementedException(); }
 
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
         public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class TransferResult : NeighborResult
     {
-        public TransferResult(Schedule s, double[] d) : base(s, d)
+        public TransferResult(Schedule s) : base(s)
         {
 
         }
+
+        public override double GetTotalDelta() { throw new NotImplementedException(); }
+
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
         public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
     public class SwapResult : NeighborResult
     {
-        public SwapResult(Schedule s, double[] d) : base(s, d)
+        public SwapResult(Schedule s) : base(s)
         {
 
         }
+
+        public override double GetTotalDelta() { throw new NotImplementedException(); }
+
         public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
         public override void DiscardOperator() { Console.WriteLine("Hey Jochie"); }
     }
@@ -439,10 +465,16 @@ namespace AfvalOphaler
     public class ImpossibleResult : NeighborResult
     {
         List<Order> failedOrders;
-        public ImpossibleResult(Schedule s, double[] d, List<Order> failed) : base(s, d)
+        public ImpossibleResult(Schedule s, List<Order> failed) : base(s)
         {
             failedOrders = failed;
         }
+
+        public override double GetTotalDelta() 
+        {
+            throw new NotImplementedException();
+        }
+
         public override void ApplyOperator() 
         {
             DiscardOperator();
