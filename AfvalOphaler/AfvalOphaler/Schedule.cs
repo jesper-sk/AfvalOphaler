@@ -26,8 +26,8 @@ namespace AfvalOphaler
         public double CalculateTotalPenalty()
         {
             double total = 0;
-            foreach (Order o in bestRatioedOrders) total += (3 * o.TimeToEmpty);
-            foreach (Order o in notPlannedOrders) total += (3 * o.TimeToEmpty);
+            foreach (Order o in bestRatioedOrders) total +=  o.Frequency * 3 * o.TimeToEmpty;
+            foreach (Order o in notPlannedOrders) total += o.Frequency * 3 * o.TimeToEmpty;
             totalPenalty = total;
             return total;
         }
@@ -65,6 +65,7 @@ namespace AfvalOphaler
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
             Order bestNotPicked;
+            /*
             if (s.bestRatioedOrders.Count == 0) 
             {
                 //Console.WriteLine("Empty stack...");
@@ -75,6 +76,8 @@ namespace AfvalOphaler
                     return new ImpossibleResult(s, new double[] { 0 }, null);
                 }
             }
+            */
+            if (s.bestRatioedOrders.Count == 0) return new ImpossibleResult(s, new double[] { 0 }, null);
             bestNotPicked = s.bestRatioedOrders.Pop();
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
@@ -134,8 +137,7 @@ namespace AfvalOphaler
             }
             else
             {
-                Console.WriteLine("No planning found for order:");
-                Console.WriteLine(bestNotPicked);
+                Console.WriteLine($"No planning found for order: {bestNotPicked.OrderId}");
                 return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
             }
 
@@ -457,6 +459,8 @@ namespace AfvalOphaler
         }
         public override void DiscardOperator()
         {
+            if (failedOrders == null) return;
+            Console.WriteLine($"Enqueing {failedOrders.Count} orders");
             foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
         }
     }
