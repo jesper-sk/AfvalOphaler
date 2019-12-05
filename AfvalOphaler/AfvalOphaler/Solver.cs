@@ -57,7 +57,11 @@ namespace AfvalOphaler
                 }
                 else noChange = 0;
                 if (noChange > maxNoChange) break;
-                if (iter % 100000 == 0) Console.WriteLine(iter);
+                if (iter % 10000 == 0)
+                {
+                    Console.WriteLine(iter);
+                    //Schedule.deleteOperator(state);
+                }
             }
             lock(addlock) { AddScheduleToTop(state); }
         }   

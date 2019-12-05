@@ -22,17 +22,51 @@ namespace AfvalOphaler
          *  (56343016,513026712)
          */
 
-        List<Point> orders;
-        Point dump;
+        List<Point> orderPoints;
+        List<Order> orders;
+        Point dump = new Point(56343016, 513026712);
         Bitmap map;
 
         public RouteVisualizer(List<Point> _orders)
         {
-            orders = _orders;
-            dump = new Point(56343016, 513026712);
+            orderPoints = _orders;
             InitializeComponent();
             Show();
             //RouteVisualizer_SizeChanged(null, null);
+        }
+        public RouteVisualizer(List<Order> _orders, int _clusterCount)
+        {
+            orders = _orders;
+            clusterCount = _clusterCount;
+            InitializeComponent();
+            Show();
+        }
+
+        int clusterCount;
+        void InitializeClusterMap()
+        {
+            Color[] clusterColors = CreateClusterColors();
+            xmap = ClientSize.Width / 3919706.0;
+            ymap = ClientSize.Height / 3194334.0;
+            map = new Bitmap(ClientSize.Width, ClientSize.Height);
+            mapbox.Image = map;
+            foreach (Order o in orders)
+            {
+                Point mapped_o = Map2Map(o.XCoord, o.YCoord);
+                //Console.WriteLine($"Writing pixel: {mapped_o.X},{mapped_o.Y}");
+                map.SetPixel(mapped_o.X, mapped_o.Y, clusterColors[o.Cluster]);
+            }
+            PaintDump();
+        }
+        Color[] CreateClusterColors()
+        {
+            Random rnd = new Random();
+            Color[] colors = new Color[clusterCount];
+            for (int i = 0; i < clusterCount; i++)
+            {
+                colors[i] = Color.FromArgb(rnd.Next(127, 256), rnd.Next(127, 256), rnd.Next(127, 256));
+            }
+            return colors;
         }
 
         void InitializeMap()
@@ -41,7 +75,7 @@ namespace AfvalOphaler
             ymap = ClientSize.Height / 3194334.0;
             map = new Bitmap(ClientSize.Width, ClientSize.Height);
             mapbox.Image = map;
-            foreach (Point o in orders)
+            foreach (Point o in orderPoints)
             {
                 Point mapped_o = Map2Map(o.X, o.Y);
                 //Console.WriteLine($"Writing pixel: {mapped_o.X},{mapped_o.Y}");
@@ -69,7 +103,7 @@ namespace AfvalOphaler
             int y = mapped_dump.Y;
             for (int i = x - dx; i <= x + dx; i++)
                 for (int j = y - dy; j <= y + dy; j++)
-                    map.SetPixel(i, j, Color.Green);
+                    map.SetPixel(i, j, Color.Lime);
         }
 
         public void UpdateMap()
