@@ -214,7 +214,7 @@ namespace AfvalOphaler
             YCoord = int.Parse(row[8]);
             JourneyTimeFromDump = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
             JourneyTimeToDump = GD.JourneyTime[MatrixId, GD.Dump.MatrixId];
-            Score = (JourneyTimeToDump + 1) / TimeToEmpty;
+            Score = JourneyTimeToDump + JourneyTimeFromDump;
         }
 
         public Order() { }

@@ -181,13 +181,13 @@ namespace AfvalOphaler
                     {
                         Loop curr = loops[l];
                         Node ord = curr.Start;
-                        while (!ord.Next.IsDump)
+
+                        do
                         {
-                            b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
                             ord = ord.Next;
-                        }                     
+                            b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
+                        } while (!ord.IsDump);
                     }
-                    b.AppendLine($"{t + 1}; {d + 1}; {global++}; 0");
                 }
             }
             return b.ToString();
