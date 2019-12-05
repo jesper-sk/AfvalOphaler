@@ -31,7 +31,9 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             */
-            LocalSolver solver = new HillClimbLocalSolver();
+
+            //LocalSolver solver = new HillClimbLocalSolver();
+            LocalSolver solver = new SaLocalSolver(0.5, 0.999);
             solver.Init();
             Parallel.ForEach(startSchedules, s => { DoSolving(s, 0, maxIterations, opCount, 0, maxNoChange, solver); });
         }
