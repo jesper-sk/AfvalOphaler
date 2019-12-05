@@ -54,14 +54,21 @@ namespace AfvalOphaler
             Console.WriteLine("done");
             Console.ReadKey();
 
-#else
+#else          
             Console.WriteLine("Hé jochie");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
             GD.JourneyTime = t;
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
             Console.WriteLine("Clustering...");
+            int clustercount = 10;
             Parser.KMeansClusterOrders(orders, 10);
             Console.WriteLine("Hé Ed!");
+
+            RouteVisualizer vis = new RouteVisualizer(orders, clustercount);
+            Application.DoEvents();
+            vis.WindowState = FormWindowState.Maximized;
+            Application.DoEvents();
+
             Console.ReadKey();
 
 #endif

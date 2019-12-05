@@ -115,22 +115,6 @@ namespace AfvalOphaler
                 }
             }
 
-            bool EmptyCluster()
-            {
-                int[] ninc = new int[k];
-                foreach(Order order in orders)
-                {
-                    ninc[order.Cluster]++;
-                }
-                foreach(int i in ninc)
-                {
-                    if (i == 0) return true;
-                }
-                return false;
-            }
-
-            int EucDist(int x, int y, Pointc p2) => Convert.ToInt32(Math.Sqrt(Math.Pow(x - p2.X, 2) + Math.Pow(y - p2.Y, 2)));
-
             bool UpdateClusters()
             {
                 bool changed = false;
@@ -141,6 +125,7 @@ namespace AfvalOphaler
                     for(int i = 0; i < k; i++)
                     {
                         int dist = EucDist(order.XCoord, order.YCoord, clusters[i]);
+                        if (dist < 0) Console.WriteLine("Overflow");
                         if (dist < mind)
                         {
                             mind = dist;
@@ -157,7 +142,23 @@ namespace AfvalOphaler
                 if (EmptyCluster()) return false;
                 return changed;
             }
-            
+
+            int EucDist(int x, int y, Pointc p2) => Convert.ToInt32(Math.Sqrt(Math.Pow(x - p2.X, 2) + Math.Pow(y - p2.Y, 2)));
+
+            bool EmptyCluster()
+            {
+                int[] ninc = new int[k];
+                foreach (Order order in orders)
+                {
+                    ninc[order.Cluster]++;
+                }
+                foreach (int i in ninc)
+                {
+                    if (i == 0) return true;
+                }
+                return false;
+            }
+
         }
 
         public class Pointc

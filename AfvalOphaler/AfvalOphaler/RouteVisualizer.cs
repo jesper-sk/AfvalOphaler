@@ -45,7 +45,20 @@ namespace AfvalOphaler
         int clusterCount;
         void InitializeClusterMap()
         {
-            Color[] clusterColors = CreateClusterColors();
+            //Color[] clusterColors = CreateClusterColors();
+            Color[] clusterColors = new Color[]
+            {
+                Color.Red,
+                Color.Blue,
+                Color.Green,
+                Color.Yellow,
+                Color.Purple,
+                Color.Cyan,
+                Color.Orange,
+                Color.White,
+                Color.Pink,
+                Color.Magenta
+            };
             xmap = ClientSize.Width / 3919706.0;
             ymap = ClientSize.Height / 3194334.0;
             map = new Bitmap(ClientSize.Width, ClientSize.Height);
@@ -114,7 +127,8 @@ namespace AfvalOphaler
         private void RouteVisualizer_SizeChanged(object sender, EventArgs e)
         {
             mapbox.Size = new Size(ClientSize.Width, ClientSize.Height);
-            InitializeMap();
+            //InitializeMap();
+            InitializeClusterMap();
         }
     }
 }
