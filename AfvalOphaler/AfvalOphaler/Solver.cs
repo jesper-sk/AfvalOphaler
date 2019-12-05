@@ -164,14 +164,6 @@ namespace AfvalOphaler
                 }
             }
 
-            for(int i = results.Count - 1; i > bestIndex; i--)
-            {
-                results[i].DiscardOperator();
-            }
-            for(int i = bestIndex - 1; i >= 0; i--)
-            {
-                results[i].DiscardOperator();
-            }
             if (bestIndex == -1) return false;
             results[bestIndex].ApplyOperator();
             return true;
