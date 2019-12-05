@@ -36,7 +36,7 @@ namespace AfvalOphaler
 
         void DoSolving(Schedule state, int iteration, int maxIterations, int opCount, int noChangeCount, int maxNoChange)
         {
-            Console.WriteLine($"Doing iteration {iteration}...");
+            //Console.WriteLine($"Doing iteration {iteration}...");
             if (iteration >= maxIterations) 
             { 
                 lock (addlock) { AddScheduleToTop(state); } 
