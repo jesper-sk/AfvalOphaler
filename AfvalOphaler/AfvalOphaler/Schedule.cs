@@ -203,13 +203,12 @@ namespace AfvalOphaler
         public Day()
         {
             Loops = new List<Loop>() { new Loop() };
-            TimeLeft = 720;
+            TimeLeft = 690;
         }
 
         public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop)
         {
             bestNode = null;
-            double bestTimeLeft = 0;
             bestDeltaTime = double.MaxValue;
             bestLoop = -1;
 
@@ -219,13 +218,11 @@ namespace AfvalOphaler
                 if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
                     //Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
-                    double newTimeLeft = TimeLeft - lTd;
                     //Console.WriteLine($"newtimeleft: {newTimeLeft}");
-                    if (newTimeLeft >= 0 && newTimeLeft > bestTimeLeft)
+                    if (TimeLeft >= lTd && lTd < bestDeltaTime)
                     {
                         //Console.WriteLine("updating best loop...");
                         bestNode = lOpt;
-                        bestTimeLeft = newTimeLeft;
                         bestDeltaTime = lTd;
                         bestLoop = i;
                     }
@@ -233,9 +230,10 @@ namespace AfvalOphaler
             }
             if (bestLoop == -1)
             {
-                if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft)
+                if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) // Check if adding new loop helps
                 {
                     Loops.Add(new Loop());
+                    TimeLeft -= 30;
                     bestLoop = Loops.Count - 1;
                     bestDeltaTime = order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30;
                     bestNode = Loops[bestLoop].Start;
