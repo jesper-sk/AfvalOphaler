@@ -34,6 +34,8 @@ namespace AfvalOphaler
 
             // Bepaal op_count operaties die je gaat doen
             NeighborResult[] results = new NeighborResult[op_count];
+
+            /*
             double[] opChances = new double[] { 0.25, 0.50, 0.75, 1 };
             for (int i = 0; i < op_count; i++)
             {
@@ -42,6 +44,11 @@ namespace AfvalOphaler
                 else if ((opChances[0] < op) && (op < opChances[1])) results[i] = Schedule.neighborOperators[1](state);
                 else if ((opChances[1] < op) && (op < opChances[2])) results[i] = Schedule.neighborOperators[2](state);
                 else if ((opChances[2] < op) && (op < opChances[3])) results[i] = Schedule.neighborOperators[3](state);
+            }
+            */
+            for (int i = 0; i < op_count; i++)
+            {
+                results[i] = Schedule.neighborOperators[0](state);
             }
 
             // Bepaal afhankelijk van zoekalgortime welke je echt doet.

@@ -62,43 +62,50 @@ namespace AfvalOphaler
             Order bestNotPicked = s.bestRatioedOrders.Pop();
 
             // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
-            Node whereToAdd;
-            double bestDeltaTime;
-            int bestLoopIndex;
             // ASAP
-            int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency];
-            bool dayFound = false;
-            int[] days = new int[bestNotPicked.Frequency];
-            int[] trucks = new int[bestNotPicked.Frequency];
-            double[] deltas = new double[bestNotPicked.Frequency];
+            int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency]; // Gives all possible ways to plan the order.
+            List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
+            List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
+            List<int> days = new List<int>(bestNotPicked.Frequency);
+            List<int> trucks = new List<int>(bestNotPicked.Frequency);
+            List<double> deltas = new List<double>(bestNotPicked.Frequency);
+
+            bool planningFound = false;
             for (int c = 0; c < combis.Length; c++)
             {
+                int truckFoundForAllDays = 0;
+
+                nextTos = new List<Node>(bestNotPicked.Frequency);
+                loopIndices = new List<int>(bestNotPicked.Frequency);
+                days = new List<int>(bestNotPicked.Frequency);
+                trucks = new List<int>(bestNotPicked.Frequency);
+                deltas = new List<double>(bestNotPicked.Frequency);
 
                 for (int d = 0; d < combis[c].Length; d++)
                 {
+                    bool truckFound = false;
                     for (int t = 0; t < 2; t++)
                     {
-                        if (s.days[d, t].EvaluateAddition())
+                        if (s.days[d, t].EvaluateAddition(bestNotPicked, out Node where, out double delta, out int loop))
+                        {
+                            nextTos.Add(where);
+                            loopIndices.Add(loop);
+                            days.Add(d);
+                            trucks.Add(t);
+                            deltas.Add(delta);
+
+                            truckFound = true;
+                            truckFoundForAllDays++;
+                            break;
+                        }
                     }
+                    if (!truckFound) break;
                 }
+                if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
             }
-            for (int d = 0; d < 5; d++) 
-            { 
-                int truck = 0; 
-                if (s.days[d, truck].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex) || s.days[d, ++truck].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex)) return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, truck, bestDeltaTime); 
-            }
-            /*
-                if (s.days[d, 0].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex))
-                {
-                    return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, 0, bestDeltaTime);
-                }
-                else if (s.days[d, 1].EvaluateAddition(bestNotPicked, out whereToAdd, out bestDeltaTime, out bestLoopIndex))
-                {
-                    return new AddResult(s, bestNotPicked, whereToAdd, bestLoopIndex, d, 1, bestDeltaTime);
-                }              
-            }
-            */
-            return new ImpossibleResult(s, 0, new List<Order>() { bestNotPicked });
+            if (planningFound) return new AddResult(s, bestNotPicked, nextTos.ToArray(), loopIndices.ToArray(), days.ToArray(), trucks.ToArray(), deltas.ToArray());
+            else return new ImpossibleResult(s, deltas.ToArray(), new List<Order> { bestNotPicked });
+
             // BEST
             /*
             bestDeltaTime = double.MaxValue;
@@ -152,7 +159,6 @@ namespace AfvalOphaler
         {
             return "Hey Jochie";
         }
-
     }
 
     public class Day
