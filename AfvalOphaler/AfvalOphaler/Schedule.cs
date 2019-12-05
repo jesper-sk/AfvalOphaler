@@ -18,7 +18,7 @@ namespace AfvalOphaler
         public double CalculateTotalTime()
         {
             double total = 0;
-            foreach (Day d in days) total += d.totalTime;
+            foreach (Day d in days) total += (720-d.TimeLeft);
             totalTime = total;
             return total;
         }
@@ -38,7 +38,7 @@ namespace AfvalOphaler
         #region Constructor and Clone
         public Schedule(List<Order> orders)
         {
-            orders.Sort((a, b) => a.Score.CompareTo(b.Score));
+            orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
             days = new Day[5, 2];
             for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) days[d, t] = new Day();
             rnd = new Random();
@@ -174,7 +174,6 @@ namespace AfvalOphaler
         public double TimeLeft;
 
         public List<int> loops;
-        public double totalTime;
 
         public Day()
         {
@@ -196,8 +195,10 @@ namespace AfvalOphaler
                 {
                     Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
                     double newTimeLeft = TimeLeft - lTd;
-                    if (newTimeLeft > 0 && newTimeLeft > bestTimeLeft)
+                    Console.WriteLine($"newtimeleft: {newTimeLeft}");
+                    if (newTimeLeft >= 0 && newTimeLeft > bestTimeLeft)
                     {
+                        Console.WriteLine("updating best loop...");
                         bestNode = lOpt;
                         bestTimeLeft = newTimeLeft;
                         bestDeltaTime = lTd;
@@ -212,7 +213,9 @@ namespace AfvalOphaler
 
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
+            Console.WriteLine($"Timeleft before AddOrder: {Loops[loopIndex].Duration}");
             TimeLeft += Loops[loopIndex].Duration;
+
             Node res = Loops[loopIndex].AddOrder(order, nextTo);
             TimeLeft -= Loops[loopIndex].Duration;
             return res;
@@ -245,12 +248,12 @@ namespace AfvalOphaler
                 return false;    //Toevoegen zal de gewichtsconstraint schenden
             }
 
-            int best = GD.JourneyTime[order.MatrixId, Start.Data.MatrixId];
+            double best = GD.JourneyTime[order.MatrixId, Start.Data.MatrixId];
             opt = Start;
             Node curr = Start.Next;
             while (!curr.IsDump)
             {
-                int t = GD.JourneyTime[order.MatrixId, curr.Data.MatrixId];
+                double t = GD.JourneyTime[order.MatrixId, curr.Data.MatrixId];
                 if (t < best)
                 {
                     opt = curr;
@@ -259,29 +262,36 @@ namespace AfvalOphaler
                 curr = curr.Next;
             }
 
-            int tNext = GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId];
-            int tPrev = GD.JourneyTime[order.MatrixId, opt.Prev.Data.MatrixId];
+            double tNext = GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId];
+            double tPrev = GD.JourneyTime[order.MatrixId, opt.Prev.Data.MatrixId];
 
             if (tPrev < tNext) opt = opt.Prev;
 
+            Console.WriteLine($"opt: {opt.Data}");
+            Console.WriteLine($"order: {order}");
+
             // Calculate delta
-            td = order.TimeToEmpty
+            Console.WriteLine($"timetoempty: {order.TimeToEmpty}");
+            Console.WriteLine($"journeytime erbij: {GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]}");
+            Console.WriteLine($"journeytime erbij: {GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]}");
+            Console.WriteLine($"journeytime eraf: {GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]}");
+            td = (order.TimeToEmpty
                 + GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]
-                - GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId];
+                - GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]);
 
             return true;
         }
 
         public Node AddOrder(Order order, Node nextTo)
         {
-            Node n = nextTo.AppendNext(order);
-            Duration += order.TimeToEmpty
+            Duration += (order.TimeToEmpty
                 + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
-                - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId];
+                - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
+            Node n = nextTo.AppendNext(order);
 
-            RoomLeft -= order.NumContainers * order.VolPerContainer * 0.2;
+            RoomLeft -= (order.NumContainers * order.VolPerContainer * 0.2);
             return n;
         }
     }
@@ -320,6 +330,7 @@ namespace AfvalOphaler
         }
     }
 
+    #region Operator Results
     public abstract class NeighborResult
     {
         public Schedule state;
@@ -354,6 +365,7 @@ namespace AfvalOphaler
 
         public override void ApplyOperator()
         {
+            Console.WriteLine("Applying AddOperator...");
             for(int i = 0; i < nextTos.Length; i++)
             {
                 state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
@@ -412,6 +424,6 @@ namespace AfvalOphaler
             foreach (Order f in failedOrders) state.notPlannedOrders.Enqueue(f);
         }
     }
-
+    #endregion
 
 }

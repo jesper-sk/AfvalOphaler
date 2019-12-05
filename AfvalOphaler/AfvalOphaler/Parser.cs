@@ -14,10 +14,11 @@ namespace AfvalOphaler
         // Splitsen op ;
         // DoMagic(overgebleven_dingen)
 
-        public static void ParseDistances(string dir, int nIds, out int[,] dists, out int[,] times)
+        public static void ParseDistances(string dir, int nIds, out int[,] dists, out double[,] times)
         {
             string[] lines = File.ReadAllLines(dir);
-            dists = times = new int[nIds+1, nIds+1];
+            dists = new int[nIds + 1, nIds + 1];
+            times = new double[nIds+1, nIds+1];
             for(int i = 1; i < lines.Length; i++)
             {
                 string[] row = lines[i].Split(';');
@@ -27,7 +28,7 @@ namespace AfvalOphaler
                     rowd[j] = int.Parse(row[j]);
                 }
                 dists[rowd[0], rowd[1]] = rowd[2];
-                times[rowd[0], rowd[1]] = rowd[3];
+                times[rowd[0], rowd[1]] = rowd[3] / 60.0;
             }           
         }
 

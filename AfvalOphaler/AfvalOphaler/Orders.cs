@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -196,7 +197,7 @@ namespace AfvalOphaler
         public int MatrixId;
         public int XCoord;
         public int YCoord;
-        public int JourneyTimeToDump;
+        public double JourneyTimeToDump;
         public double Score;
 
         public Order (string[] row)
@@ -206,7 +207,7 @@ namespace AfvalOphaler
             Frequency = row[2][0] - '0';
             NumContainers = int.Parse(row[3]);
             VolPerContainer = int.Parse(row[4]);
-            TimeToEmpty = double.Parse(row[5]);
+            TimeToEmpty = double.Parse(row[5], CultureInfo.InvariantCulture);
             MatrixId = int.Parse(row[6]);
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);

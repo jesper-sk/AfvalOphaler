@@ -33,7 +33,7 @@ namespace AfvalOphaler
             Console.ReadKey();*/
 
             Console.WriteLine("Parsing dist.txt");
-            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out int[,] t);
+            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
@@ -43,7 +43,7 @@ namespace AfvalOphaler
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
-            solver.StartSolving(10, 1, 1);
+            solver.StartSolving(3, 1, 1);
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("Solving done, score of best schedule:");
             Console.WriteLine(bestSchedule);
@@ -102,7 +102,7 @@ namespace AfvalOphaler
 
     public static class GD
     {
-        public static int[,] JourneyTime;
+        public static double[,] JourneyTime;
         public static Order Dump = new Order()
         {
             OrderId = 0,
