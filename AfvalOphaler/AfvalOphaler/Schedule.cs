@@ -163,7 +163,27 @@ namespace AfvalOphaler
 
         public string ToCheckString()
         {
-            return "Hey Jochie";
+            StringBuilder b = new StringBuilder();
+            for(int t = 0; t < 2; t++)
+            {
+                for(int d = 0; d < 5; d++)
+                {
+                    List<Loop> loops = days[d, t].Loops;
+                    int global = 1;
+                    for(int l = 0; l < loops.Count; l++)
+                    {
+                        Loop curr = loops[l];
+                        Node ord = curr.Start;
+                        while (!ord.Next.IsDump)
+                        {
+                            b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
+                            ord = ord.Next;
+                        }                     
+                    }
+                    b.AppendLine($"{t + 1}; {d + 1}; {global++}; 0");
+                }
+            }
+            return b.ToString();
         }
         #endregion
     }
