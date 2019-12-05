@@ -211,7 +211,7 @@ namespace AfvalOphaler
             XCoord = int.Parse(row[7]);
             YCoord = int.Parse(row[8]);
             JourneyTime = GD.JourneyTime[GD.Dump.MatrixId, MatrixId];
-            Score = Math.Round(((NumContainers * VolPerContainer) + (TimeToEmpty * 100)) / JourneyTime, 3);
+            Score = (JourneyTime + 1) / TimeToEmpty;
         }
 
         public Order() { }

@@ -50,10 +50,10 @@ namespace AfvalOphaler
             double bestdelta = 0;
             for (int i = 1; i < op_count; i++)
             {
-                if (results[i].delta < bestdelta)
+                if (results[i].totalDelta < bestdelta)
                 {
                     bestindex = i;
-                    bestdelta = results[i].delta;
+                    bestdelta = results[i].totalDelta;
                 }
             }
             if (bestdelta < 0)

@@ -33,10 +33,14 @@ namespace AfvalOphaler
         public double Score { get => totalTime + totalPenalty; }
         public double CalculateScore() { return (CalculateTotalTime() + CalculateTotalPenalty()); }
 
-        public Schedule()
+        public Schedule(List<Order> orders)
         {
+            orders.Sort((a, b) => a.Score.CompareTo(b.Score));
             days = new Day[5, 2];
             rnd = new Random();
+
+            bestRatioedOrders = new Stack<Order>(orders);
+            notPlannedOrders = new Queue<Order>();
         }
 
         public Schedule Clone()
@@ -204,8 +208,6 @@ namespace AfvalOphaler
 
     public class Loop
     {
-        //LinkedList van nodes
-
         public double Duration;
         public double RoomLeft;
 
@@ -303,11 +305,13 @@ namespace AfvalOphaler
     public abstract class NeighborResult
     {
         public Schedule state;
-        public double delta;
-        public NeighborResult(Schedule s, double d)
+        public double[] deltas;
+        public double totalDelta;
+        public NeighborResult(Schedule s, double[] d)
         {
             state = s;
-            delta = d;
+            deltas = d;
+            foreach (double delta in deltas) totalDelta += delta;
         }
 
         public abstract void ApplyOperator();
@@ -315,24 +319,38 @@ namespace AfvalOphaler
     }
     public class AddResult : NeighborResult
     {
-        Order toAdd;
-        public AddResult(Schedule s, double d, Order o) : base(s, d)
+        Order order;
+        Node[] nextTos;
+        int[] loopIndices;
+        int[] dayIndices;
+        int[] truckIndices;
+
+        public AddResult(Schedule s, Order order, Node[] nextTos, int[] loopIndices, int[] dayIndices, int[] truckIndices, double[] deltas) : base(s, deltas)
         {
-            toAdd = o;
+            this.order = order;
+            this.nextTos = nextTos;
+            this.loopIndices = loopIndices;
+            this.dayIndices = dayIndices;
+            this.truckIndices = truckIndices;
         }
 
         public override void ApplyOperator()
         {
-
+            for(int i = 0; i < nextTos.Length; i++)
+            {
+                state.days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
+                state.totalTime += deltas[i];
+            }
+            state.totalPenalty -= 3 * order.TimeToEmpty;
         }
         public override void DiscardOperator()
         {
-            state.bestRatioedOrders.Push(toAdd);
+            state.bestRatioedOrders.Push(order);
         }
     }
     public class DeleteResult : NeighborResult
     {
-        public DeleteResult(Schedule s, double d) : base(s, d)
+        public DeleteResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -342,7 +360,7 @@ namespace AfvalOphaler
     }
     public class TransferResult : NeighborResult
     {
-        public TransferResult(Schedule s, double d) : base(s, d)
+        public TransferResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -351,7 +369,7 @@ namespace AfvalOphaler
     }
     public class SwapResult : NeighborResult
     {
-        public SwapResult(Schedule s, double d) : base(s, d)
+        public SwapResult(Schedule s, double[] d) : base(s, d)
         {
 
         }
@@ -362,7 +380,7 @@ namespace AfvalOphaler
     public class ImpossibleResult : NeighborResult
     {
         List<Order> failedOrders;
-        public ImpossibleResult(Schedule s, double d, List<Order> failed) : base(s, d)
+        public ImpossibleResult(Schedule s, double[] d, List<Order> failed) : base(s, d)
         {
             failedOrders = failed;
         }
