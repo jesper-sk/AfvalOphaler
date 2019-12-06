@@ -81,7 +81,28 @@ namespace AfvalOphaler
             int xmin = orders.Min(a => a.XCoord);
             int ymin = orders.Min(a => a.YCoord);
 
-            //Setting clusters
+            int npk = orders.Count / k;
+
+            List<int> ks = new List<int>(k);
+            for (int i = 0; i < k; i++)
+            {
+                clusters.Add(new Pointc());
+                ks.Add(i);
+            }
+
+            ks.Sort((a, b) => rnd.Next(-1, 2));
+
+            int j = 0;
+            for (int i = 0; i < orders.Count; i++)
+            {
+                if (j == k)
+                {
+                    j = 0;
+                    ks.Sort((a, b) => rnd.Next(-1, 2));
+                }
+                orders[i].Cluster = ks[j++];
+            }
+            /*/Setting clusters
             for (int i = 0; i < k; i++)
             {
                 clusters.Add(new Pointc());
@@ -90,10 +111,10 @@ namespace AfvalOphaler
             for (int i = k; i < orders.Count; i++)
             {
                 orders[i].Cluster = rnd.Next(0, k);
-            }
+            }*/
 
             int iter = 0;
-            do { UpdateMeans(); iter++; } while (UpdateClusters() && iter < maxI);
+            do { UpdateMeans(); Console.WriteLine(iter++); } while (UpdateClusters() && iter < maxI);
 
             
             void UpdateMeans()
@@ -144,6 +165,7 @@ namespace AfvalOphaler
                     Console.WriteLine("Empty");
                     //return false;
                 }
+                Console.WriteLine(changed);
                 return changed;
             }
 

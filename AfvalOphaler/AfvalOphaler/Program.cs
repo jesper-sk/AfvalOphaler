@@ -69,7 +69,7 @@ namespace AfvalOphaler
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
             Console.WriteLine("Clustering...");
             int clustercount = 10;
-            Parser.KMeansClusterOrders(orders, 5, 1000);
+            Parser.KMeansClusterOrders(orders, 10, 10000);
             Console.WriteLine("Hé Ed!");
 
             RouteVisualizer vis = new RouteVisualizer(orders, clustercount);

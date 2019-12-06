@@ -1,0 +1,51 @@
+﻿            ADD operator:
+				// ASAP
+				/*
+				List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
+				List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
+				List<int> days = new List<int>(bestNotPicked.Frequency);
+				List<int> trucks = new List<int>(bestNotPicked.Frequency);
+				List<double> deltas = new List<double>(bestNotPicked.Frequency);
+
+				bool planningFound = false;
+				for (int c = 0; c < combis.Length; c++)
+				{
+					int truckFoundForAllDays = 0;
+					nextTos = new List<Node>(bestNotPicked.Frequency);
+					loopIndices = new List<int>(bestNotPicked.Frequency);
+					days = new List<int>(bestNotPicked.Frequency);
+					trucks = new List<int>(bestNotPicked.Frequency);
+					deltas = new List<double>(bestNotPicked.Frequency);
+
+					for (int d = 0; d < combis[c].Length; d++)
+					{
+						bool truckFound = false;
+						for (int t = 0; t < 2; t++)
+						{
+							Node where;
+							if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
+							{
+								nextTos.Add(where);
+								loopIndices.Add(loop);
+								days.Add(combis[c][d]);
+								trucks.Add(t);
+								deltas.Add(delta);
+
+								truckFound = true;
+								truckFoundForAllDays++;
+								break;
+							}
+						}
+						if (!truckFound) break;
+					}
+					if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
+				}
+				if (planningFound)
+				{
+					return new AddResult(s, bestNotPicked, notPickedOrderIndex, nextTos, loopIndices, days, trucks, deltas);
+				}
+				else
+				{
+					return new ImpossibleResult(s, new List<Order> { bestNotPicked });
+				}
+				//*/
