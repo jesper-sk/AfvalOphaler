@@ -39,12 +39,13 @@ namespace AfvalOphaler
 
         void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)
         {
-            Console.WriteLine("Adding...");
-            LocalSolver hc = new HillClimbLocalSolver();
+            //Console.WriteLine("Adding...");
+            LocalSolver hc = new SaLocalSolver(0.9, 0.99999999);
             hc.Init();
             int noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
             {
+                Console.WriteLine(state.CalculateScore());
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for (int i = 0; i < opCount; i++)
                 {
@@ -61,7 +62,10 @@ namespace AfvalOphaler
                 {
                     break;
                 }
+                //Console.WriteLine(state.CalculateScore());
+                //Console.ReadKey();
             }
+
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
             Console.ReadKey();
             Console.WriteLine("Starting Transfering...");
@@ -126,15 +130,23 @@ namespace AfvalOphaler
     public abstract class LocalSolver
     {
         public abstract void Init();
+        public abstract void Init(bool beGreedy);
 
         public abstract bool ApplyAccordingly(List<NeighborResult> results);
     }
 
     public class HillClimbLocalSolver : LocalSolver
     {
-        public override void Init()
+        bool beGreedy;
+        public void Init()
         {
             // Hé jochie
+            beGreedy = false;
+        }
+
+        public override void Init(bool beGreedy)
+        {
+            this.beGreedy = beGreedy;
         }
 
         public override bool ApplyAccordingly(List<NeighborResult> results)
@@ -151,7 +163,9 @@ namespace AfvalOphaler
             }
 
             if (bestIndex == -1 || bestdelta > 0) return false;
+            Console.WriteLine($"best delta: {bestdelta}");
             results[bestIndex].ApplyOperator();
+
             return true;
         }
     }
@@ -184,6 +198,7 @@ namespace AfvalOphaler
                 var curr = results[i];
                 if (curr is ImpossibleResult) continue;
                 double delta = curr.GetTotalDelta();
+                //Console.WriteLine(delta);
                 if (delta < 0)
                 {
                     curr.ApplyOperator();
