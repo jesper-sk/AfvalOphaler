@@ -41,7 +41,7 @@ namespace AfvalOphaler
         public Schedule(List<Order> orders)
         {
             Days = new Day[5, 2];
-            for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) Days[d, t] = new Day(d, t);
+            for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) Days[d, t] = new Day(t, d);
             Rnd = new Random();
 
             //orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
@@ -72,13 +72,15 @@ namespace AfvalOphaler
             currState => Add(currState),
             currState => Delete(currState),
             currState => Transfer(currState),
-            currState => Swap(currState)
+            currState => AddByCluster(currState)
+            //currState => Swap(currState)
         };
         public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
         public static Func<Schedule, NeighborResult> addByClusterOperator = (currState) => AddByCluster(currState);
         public static Func<Schedule, NeighborResult> deleteOperator = (currState) => Delete(currState);
         public static Func<Schedule, NeighborResult> transferOperator = (currState) => Transfer(currState);
         public static Func<Schedule, NeighborResult> swapOperator = (currState) => Swap(currState);
+
         static NeighborResult Add(Schedule s)
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
@@ -177,58 +179,6 @@ namespace AfvalOphaler
             Order bestNotPicked = s.nonPlannedOrders[index];
             int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency];
 
-            #region ASAP
-            /*
-            List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
-            List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
-            List<int> days = new List<int>(bestNotPicked.Frequency);
-            List<int> trucks = new List<int>(bestNotPicked.Frequency);
-            List<double> deltas = new List<double>(bestNotPicked.Frequency);
-
-            bool planningFound = false;
-            for (int c = 0; c < combis.Length; c++)
-            {
-                int truckFoundForAllDays = 0;
-                nextTos = new List<Node>(bestNotPicked.Frequency);
-                loopIndices = new List<int>(bestNotPicked.Frequency);
-                days = new List<int>(bestNotPicked.Frequency);
-                trucks = new List<int>(bestNotPicked.Frequency);
-                deltas = new List<double>(bestNotPicked.Frequency);
-
-                for (int d = 0; d < combis[c].Length; d++)
-                {
-                    bool truckFound = false;
-                    for (int t = 0; t < 2; t++)
-                    {
-                        Node where;
-                        if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop, true))
-                        {
-                            nextTos.Add(where);
-                            loopIndices.Add(loop);
-                            days.Add(combis[c][d]);
-                            trucks.Add(t);
-                            deltas.Add(delta);
-
-                            truckFound = true;
-                            truckFoundForAllDays++;
-                            break;
-                        }
-                    }
-                    if (!truckFound) break;
-                }
-                if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
-            }
-            if (planningFound)
-            {
-                return new AddResult(s, bestNotPicked, index, nextTos, loopIndices, days, trucks, deltas);
-            }
-            else
-            {
-                return new ImpossibleResult(s, new List<Order> { bestNotPicked });
-            }
-            //*/
-            #endregion
-
             #region BEST
             // Tries to plan the order is the most optimal place, not the earliest place.  
             ///*
@@ -305,25 +255,47 @@ namespace AfvalOphaler
             //*/
             #endregion
         }
-
         static NeighborResult Delete(Schedule s)
         {
-            throw new NotImplementedException();
+            // Krijg voor elke dag voor elke truck de meest extreme node.
+            // Pak met kans één van deze nodes met bias naar de slechtste.
+            List<Tuple<Node, double, int, int, int>> worsten = new List<Tuple<Node, double, int, int, int>>(10);
+
+            for (int d = 0; d < 5; d -= -1)
+            {
+                for (int t = 0; t < 2; t -= -1)
+                {
+                    if (s.Days[d, t].EvaluateDeletion(false, out Node worst, out double delta, out int loop))
+                    {
+                        worsten.Add(new Tuple<Node, double, int, int, int>(worst, delta, d, t, loop));
+                    }
+                }
+            }
+
+            if (worsten.Count > 0)
+            {
+                Random rnd = new Random();
+                worsten.Sort((a, b) => (a.Item2.CompareTo(b.Item2)));
+                int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 5.0)));
+                Tuple<Node, double, int, int, int> choosenWorst = worsten[index];
+                return new DeleteResult(s, choosenWorst);
+            }
+            else return new ImpossibleResult(s);
         }
         static NeighborResult Transfer(Schedule s)
         {
             Random rnd = new Random();
             List<Transfer> worsten = new List<Transfer>();
-            for(int d = 0; d < 5; d++)
+            for (int d = 0; d < 5; d++)
             {
-                for(int t = 0; t < 2; t++)
+                for (int t = 0; t < 2; t++)
                 {
                     if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta))
                     {
                         bool high = worst.Data.Frequency > 1;
                         int start = high ? d : 0;
                         int end = high ? d + 1 : 5;
-                        for(int ad = start; ad < end; ad++)
+                        for (int ad = start; ad < end; ad++)
                         {
                             for (int at = 0; at < 2; at++)
                             {
@@ -345,7 +317,6 @@ namespace AfvalOphaler
                     }
                 }
             }
-            
         }
         static NeighborResult Swap(Schedule s)
         {
@@ -472,11 +443,12 @@ namespace AfvalOphaler
             return true;
         }
 
-        public bool EvaluateDeletion(bool isTransfer, out Node worst, out double opt)
+        public bool EvaluateDeletion(bool isTransfer, out Node worst, out double opt, out int loop)
         {
             worst = null;
             opt = double.MaxValue;
-            for(int i = 0; i < Loops.Count; i++)
+            loop = -1;
+            for (int i = 0; i < Loops.Count; i++)
             {
                 Loop curr = Loops[i];
                 if (curr.EvaluteOptimalDeletion(isTransfer, out Node lworst, out double lopt))
@@ -485,6 +457,7 @@ namespace AfvalOphaler
                     {
                         opt = lopt;
                         worst = lworst;
+                        loop = i;
                     }
                 }
             }
@@ -520,11 +493,11 @@ namespace AfvalOphaler
         public double RoomLeft;
         public int Count;
         public int Cluster;
-
-        public readonly int Day;
-        public readonly int Truck;
+        public int Day;
+        public int Truck;
 
         public Node Start; //Order references to Dump
+
 
         public Loop(int day, int truck)
         {
@@ -711,6 +684,8 @@ namespace AfvalOphaler
             this.deltas = deltas;
         }
 
+        public void SetIndex(int i) { this.orderIndex = i; }
+
         public override double GetTotalDelta()
         {
             double totalExtraTravelTime = deltas.Sum();
@@ -720,7 +695,7 @@ namespace AfvalOphaler
 
         public override void ApplyOperator()
         {
-            for(int i = 0; i < nextTos.Count; i++)
+            for (int i = 0; i < nextTos.Count; i++)
             {
                 state.Days[dayIndices[i], truckIndices[i]].AddOrderToLoop(order, nextTos[i], loopIndices[i]);
                 state.totalTime += deltas[i];
@@ -731,29 +706,73 @@ namespace AfvalOphaler
     }
     public class DeleteResult : NeighborResult
     {
-        public DeleteResult(Schedule s) : base(s)
-        {
+        Node toDelete;
+        double delta;
+        int day;
+        int truck;
+        int loop;
 
+        public DeleteResult(Schedule s, Node toDelete, double delta, int day, int truck, int loop) : base(s)
+        {
+            this.toDelete = toDelete;
+            this.delta = delta;
+            this.day = day;
+            this.truck = truck;
+            this.loop = loop;
+        }
+        public DeleteResult(Schedule s, Tuple<Node, double, int, int, int> del) : base(s)
+        {
+            toDelete = del.Item1;
+            delta = del.Item2;
+            day = del.Item3;
+            truck = del.Item4;
+            loop = del.Item5;
         }
 
-        public override double GetTotalDelta() { throw new NotImplementedException(); }
+        public override double GetTotalDelta()
+        {
+            return delta;
+        }
 
-        public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
+        public override void ApplyOperator()
+        {
+            state.Days[day, truck].RemoveNodeFromLoop(toDelete, loop);
+            state.totalTime += delta;
+            Order o = toDelete.Data; // Delta should be only change in drivetime, so should not include the penalty.
+            state.totalPenalty += 3 * o.Frequency * o.TimeToEmpty;
+            state.nonPlannedOrders.Add(toDelete.Data);
+        }
     }
     public class TransferResult : NeighborResult
     {
-        public TransferResult(Schedule s) : base(s)
+        DeleteResult d;
+        AddResult a;
+        public TransferResult(Schedule s, DeleteResult d, AddResult a) : base(s)
         {
-
+            this.d = d;
+            this.a = a;
         }
 
-        public override double GetTotalDelta() { throw new NotImplementedException(); }
+        public override double GetTotalDelta()
+        {
+            return d.GetTotalDelta() + a.GetTotalDelta();
+        }
 
-        public override void ApplyOperator() { Console.WriteLine("Hey Jochie"); }
+        public override void ApplyOperator()
+        {
+            d.ApplyOperator();
+            a.SetIndex(state.nonPlannedOrders.Count - 1);
+            a.ApplyOperator();
+        }
     }
     public class SwapResult : NeighborResult
     {
-        public SwapResult(Schedule s) : base(s)
+        List<DeleteResult> des;
+        List<AddResult> ads;
+        List<int> days;
+        List<int> trucks;
+        List<int> loops;
+        public SwapResult(Schedule s, List<DeleteResult> des, List<AddResult> ads, List<int> days, List<int> trucks, List<int> loops) : base(s)
         {
 
         }
@@ -769,12 +788,12 @@ namespace AfvalOphaler
         {
         }
 
-        public override double GetTotalDelta() 
+        public override double GetTotalDelta()
         {
             throw new NotImplementedException();
         }
 
-        public override void ApplyOperator() 
+        public override void ApplyOperator()
         {
             Console.WriteLine("APPLYING IMPOSSIBLE OPERATOR, DAKANNIEHE!!!");
             //Console.WriteLine("Trying to apply ImpossibleOperator...");

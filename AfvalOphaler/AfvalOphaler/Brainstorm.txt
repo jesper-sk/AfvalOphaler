@@ -68,4 +68,40 @@ SWEETSPOT PARAMETERS:
 
 
 http://178.85.229.78:8067/team/157557372232042770
+
+
+#region Transfer
+class Schedule
+	TransferResult Transfer()
+		foreach (Day d in Days)
+			Node n = EvaluateDeletion(d) // Krijg de node die het beste is om te verwijderen
+		foreach (Possible_Day in n.PossibleDays) // 1 iff n.Freq > 1, else 5
+			Day wheretoAdd = EvaluateAddition(Possible_Day, n)
+		return new TransferResult(n, wheretoAdd, delta)
+	class Day
+		bool EvaluateDeletion(out Node n)
+			foreach (Loop l in Loops)
+				l.EvaluateDeletion()
+		class Loop
+			bool EvaluateDeletion(out Node n)
+				foreach (Node o in Nodes)
+					if (TimefromPrevToO + TimeFromOToNext - TimeFromPrevToNext + (o.TimeToEmpty * 2) > worstTime)
+						Node worst = o
+				return worst
+			class Node
+#endregion
+
+#region Swap
+class Schedule
+	class Day
+		class Loop
+			class Node
+#endregion
+
+#region Iets_Met_Cluster
+class Schedule
+	class Day
+		class Loop
+			class Node
+#endregion
 	
