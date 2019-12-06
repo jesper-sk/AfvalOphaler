@@ -41,7 +41,7 @@ namespace AfvalOphaler
         public Schedule(List<Order> orders)
         {
             Days = new Day[5, 2];
-            for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) Days[d, t] = new Day();
+            for (int d = 0; d < 5; d++) for (int t = 0; t < 2; t++) Days[d, t] = new Day(t, d);
             Rnd = new Random();
 
             //orders.Sort((a, b) => (a.Score.CompareTo(b.Score)) * -1);
@@ -255,7 +255,6 @@ namespace AfvalOphaler
             //*/
             #endregion
         }
-
         static NeighborResult Delete(Schedule s)
         {
             // Krijg voor elke dag voor elke truck de meest extreme node.
@@ -285,24 +284,39 @@ namespace AfvalOphaler
         }
         static NeighborResult Transfer(Schedule s)
         {
-            // Pak een willekeurige node in een loop
-            // voeg deze toe aan de dichtsbijzijnde andere loop
             Random rnd = new Random();
-            List<Tuple<Node, double>> worsten = new List<Tuple<Node, double>>();
+            List<Transfer> worsten = new List<Transfer>();
             for (int d = 0; d < 5; d++)
             {
                 for (int t = 0; t < 2; t++)
                 {
-                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delta))
+                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta))
                     {
-                        worsten.Add(new Tuple<Node, double>(worst, delta));
+                        bool high = worst.Data.Frequency > 1;
+                        int start = high ? d : 0;
+                        int end = high ? d + 1 : 5;
+                        for (int ad = start; ad < end; ad++)
+                        {
+                            for (int at = 0; at < 2; at++)
+                            {
+                                if (s.Days[ad, at].EvaluateAddition(worst.Data, out Node bestNode, out double addDelta, out int loop))
+                                {
+                                    worsten.Add(new Transfer()
+                                    {
+                                        ToTransfer = worst,
+                                        AddDayIndex = ad,
+                                        AddLoopIndex = loop,
+                                        AddTruckIndex = at,
+                                        AddNextTo = bestNode,
+                                        DelDelta = delDelta,
+                                        AddDelta = addDelta
+                                    });
+                                }
+                            }
+                        }
                     }
                 }
             }
-            if (worsten.Count == 0) return new ImpossibleResult(s);
-            worsten.Sort((a, b) => a.Item2.CompareTo(b.Item2));
-            int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 7)));
-            Node curr = worsten[index].Item1;
         }
         static NeighborResult Swap(Schedule s)
         {
@@ -360,15 +374,38 @@ namespace AfvalOphaler
         #endregion
     }
 
+    struct Transfer
+    {
+        public Node ToTransfer;
+        public int AddDayIndex;
+        public int AddLoopIndex;
+        public int AddTruckIndex;
+        public Node AddNextTo;
+        public double DelDelta;
+        public double AddDelta;
+    }
+
     public class Day
     {
         public List<Loop> Loops;
         public double TimeLeft;
 
-        public Day()
+        public readonly int DayIndex;
+        public readonly int Truck;
+
+        public Day(int dind, int trind)
         {
-            Loops = new List<Loop>() { new Loop() };
+            Loops = new List<Loop>() { new Loop(dind, trind) };
             TimeLeft = 690;
+            DayIndex = dind;
+            Truck = trind;
+        }
+
+        public Loop AddLoop()
+        {
+            Loop l = new Loop(DayIndex, Truck);
+            Loops.Add(l);
+            return l;
         }
 
         public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false)
@@ -395,7 +432,7 @@ namespace AfvalOphaler
             {
                 if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) // Check if adding new loop helps
                 {
-                    Loops.Add(new Loop());
+                    AddLoop();
                     TimeLeft -= 30;
                     bestLoop = Loops.Count - 1;
                     bestDeltaTime = order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30;
@@ -404,6 +441,27 @@ namespace AfvalOphaler
                 return false;
             }
             return true;
+        }
+
+        public bool EvaluateDeletion(bool isTransfer, out Node worst, out double opt, out int loop)
+        {
+            worst = null;
+            opt = double.MaxValue;
+            loop = -1;
+            for (int i = 0; i < Loops.Count; i++)
+            {
+                Loop curr = Loops[i];
+                if (curr.EvaluteOptimalDeletion(isTransfer, out Node lworst, out double lopt))
+                {
+                    if (lopt > opt)
+                    {
+                        opt = lopt;
+                        worst = lworst;
+                        loop = i;
+                    }
+                }
+            }
+            return worst == null;
         }
 
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
@@ -435,16 +493,21 @@ namespace AfvalOphaler
         public double RoomLeft;
         public int Count;
         public int Cluster;
+        public int Day;
+        public int Truck;
 
         public Node Start; //Order references to Dump
 
-        public Loop()
+
+        public Loop(int day, int truck)
         {
             Start = new Node();
             Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
             RoomLeft = 20000;       //Gecomprimeerd
             Count = 0;
             Cluster = -1;
+            Day = day;
+            Truck = truck;
         }
 
         public bool EvaluateOptimalAddition(Order order, out Node opt, out double newRoomLeft, out double td)
@@ -488,6 +551,30 @@ namespace AfvalOphaler
                 - GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]);
 
             return true;
+        }
+
+        public bool EvaluteOptimalDeletion(bool isTransfer, out Node worst, out double opt)
+        {
+            Node curr = Start.Next;
+            opt = double.MaxValue;
+            worst = null;
+
+            while (!curr.IsDump)
+            {
+                double to = GD.JourneyTime[curr.Prev.Data.MatrixId, curr.Data.MatrixId];
+                double from = GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
+                double inplace = GD.JourneyTime[curr.Prev.Data.MatrixId, curr.Next.Data.MatrixId];
+                double tte = isTransfer ? 0 : curr.Data.TimeToEmpty;
+                double delta = inplace - (from + to) + tte * 2;
+                if (delta < opt)
+                {
+                    opt = delta;
+                    worst = curr;
+                }
+                curr = curr.Next;
+            }
+
+            return (worst != null);
         }
 
         public Node AddOrder(Order order, Node nextTo)
