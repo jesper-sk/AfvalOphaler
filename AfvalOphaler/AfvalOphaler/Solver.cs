@@ -63,9 +63,11 @@ namespace AfvalOphaler
                 }
             }
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
-            Console.ReadKey();
+            //Console.ReadKey();
+
             Console.WriteLine("Starting Transfering...");
-            solver.Init();
+            solver.Init(true);
+
             int[] distro = { 1, 2, 4 };
             List<Func<Schedule, NeighborResult>> funcs = new List<Func<Schedule, NeighborResult>>();
             for (int i = 0; i < Schedule.neighborOperators.Length; i++)
@@ -103,7 +105,31 @@ namespace AfvalOphaler
                 //Console.ReadKey();
             }
 
-            lock(addlock) { AddScheduleToTop(state); }
+            Console.WriteLine("Adding...");
+            hc.Init();
+            noChange = 0;
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                List<NeighborResult> results = new List<NeighborResult>(opCount);
+                for (int i = 0; i < opCount; i++)
+                {
+                    Func<Schedule, NeighborResult> op = Schedule.addOperator;
+                    NeighborResult res = op(state); // <- { AddResult, ImpossibleResult }
+                    results.Add(res);
+                }
+                if (!hc.ApplyAccordingly(results))
+                {
+                    noChange++;
+                }
+                else noChange = 0;
+                if (noChange > maxNochangeAdd)
+                {
+                    break;
+                }
+            }
+            Console.WriteLine($"Adding done. Result: {state.ToString()}");
+
+            lock (addlock) { AddScheduleToTop(state); }
         }   
 
         private readonly object addlock = new object();
@@ -126,15 +152,23 @@ namespace AfvalOphaler
     public abstract class LocalSolver
     {
         public abstract void Init();
+        public abstract void Init(bool beGreedy);
 
         public abstract bool ApplyAccordingly(List<NeighborResult> results);
     }
 
     public class HillClimbLocalSolver : LocalSolver
     {
+        bool beGreedy;
         public override void Init()
         {
             // Hé jochie
+            beGreedy = false;
+        }
+
+        public override void Init(bool beGreedy)
+        {
+            this.beGreedy = beGreedy;
         }
 
         public override bool ApplyAccordingly(List<NeighborResult> results)
@@ -150,7 +184,7 @@ namespace AfvalOphaler
                 }
             }
 
-            if (bestIndex == -1 || bestdelta > 0) return false;
+            if (bestIndex == -1 || (beGreedy && bestdelta > 0)) return false;
             results[bestIndex].ApplyOperator();
             return true;
         }
@@ -163,6 +197,8 @@ namespace AfvalOphaler
 
         private double c;
         private Random rnd;
+
+        bool beGreedy;
         public SaLocalSolver(double cs, double a)
         {
             this.cs = cs;
@@ -173,6 +209,12 @@ namespace AfvalOphaler
         {
             c = cs;
             rnd = new Random();
+            beGreedy = false;
+        }
+
+        public override void Init(bool beGreedy)
+        {
+            this.beGreedy = beGreedy;
         }
 
         public override bool ApplyAccordingly(List<NeighborResult> results)
