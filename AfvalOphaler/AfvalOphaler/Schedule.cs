@@ -313,13 +313,20 @@ namespace AfvalOphaler
         static NeighborResult Transfer(Schedule s)
         {
             Random rnd = new Random();
-            List<Tuple<Node, double, Day[]>> worsten = new List<Tuple<Node, double, Day[]>>();
+            List<Transfer> worsten = new List<Transfer>();
             for(int d = 0; d < 5; d++)
             {
                 for(int t = 0; t < 2; t++)
                 {
                     if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delta)){
-                        worsten.Add(new Tuple<Node, double, >(worst, delta));
+
+                        if (worst.Data.Frequency > 1)
+                        {
+                            for(int at = 0; at < 2; at++)
+                            {
+                                if (s.Days[d, at].EvaluateAddition(worst.Data, out Node bestNode, out double dt, out int loop))
+                            }
+                        }
 
                     }
                 }
@@ -397,6 +404,16 @@ namespace AfvalOphaler
             return res.ToString();
         }
         #endregion
+    }
+
+    struct Transfer
+    {
+        public Node ToTransfer;
+        public int AddDayIndex;
+        public int AddLoopIndex;
+        public int AddTruckIndex;
+        public double DelDelta;
+        public double AddDelta;
     }
 
     public class Day
