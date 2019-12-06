@@ -62,7 +62,7 @@ namespace AfvalOphaler
                     break;
                 }
             }
-            Console.WriteLine($"Adding done. Result: {state.CalculateScore()}");
+            Console.WriteLine($"Adding done. Result: {state.ToString()}");
             Console.ReadKey();
             Console.WriteLine("Starting Transfering...");
             solver.Init();
@@ -150,7 +150,7 @@ namespace AfvalOphaler
                 }
             }
 
-            if (bestIndex == -1) return false;
+            if (bestIndex == -1 || bestdelta > 0) return false;
             results[bestIndex].ApplyOperator();
             return true;
         }
