@@ -49,8 +49,8 @@ namespace AfvalOphaler
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for (int i = 0; i < opCount; i++)
                 {
-                    Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
-                    //Func<Schedule, NeighborResult> op = Schedule.addByClusterOperator;
+                    //Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
+                    Func<Schedule, NeighborResult> op = Schedule.addByClusterOperator;
                     NeighborResult res = op(state); // <- { AddResult, ImpossibleResult }
                     double delta = (res is ImpossibleResult) ? -10000 : res.GetTotalDelta();
                     results.Add(res);
