@@ -64,7 +64,7 @@ namespace AfvalOphaler
             }
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
             //Console.ReadKey();
-
+            /*
             Console.WriteLine("Starting Transfering...");
             solver.Init(true);
 
@@ -85,7 +85,8 @@ namespace AfvalOphaler
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for(int op = 0; op < opCount; op++)
                 {
-                    Func<Schedule, NeighborResult> func = Schedule.transferOperator;// funcs[rnd.Next(0, funcs.Count)];
+                    //Func<Schedule, NeighborResult> func = Schedule.transferOperator;// funcs[rnd.Next(0, funcs.Count)];
+                    Func<Schedule, NeighborResult> func = funcs[rnd.Next(0, funcs.Count)];
                     NeighborResult res = func(state);
                     results.Add(res);
                 }
@@ -104,7 +105,7 @@ namespace AfvalOphaler
                 }
                 //Console.ReadKey();
             }
-
+            Console.WriteLine($"between done. Result: {state.ToString()}");
             Console.WriteLine("Adding...");
             hc.Init();
             noChange = 0;
@@ -128,7 +129,7 @@ namespace AfvalOphaler
                 }
             }
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
-
+            */
             lock (addlock) { AddScheduleToTop(state); }
         }   
 
@@ -214,6 +215,8 @@ namespace AfvalOphaler
 
         public override void Init(bool beGreedy)
         {
+            c = cs;
+            rnd = new Random();
             this.beGreedy = beGreedy;
         }
 

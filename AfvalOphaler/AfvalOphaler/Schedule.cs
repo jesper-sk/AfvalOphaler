@@ -51,10 +51,10 @@ namespace AfvalOphaler
             //nonPlannedOrders = orders.ToList();
 
             //nonPlannedOrders = orders.OrderBy(o => o.Score).ToList();
-            nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
+            //nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
             //nonPlannedOrders = orders.OrderByDescending(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Slechter resultaat
             
-            //nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Beter resultaat met ClusterAdd en BEST en ASAP
+            nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Beter resultaat met ClusterAdd en BEST en ASAP
             //nonPlannedOrders = orders.OrderBy(o => o.Frequency).ThenBy(o => o.Cluster).ThenBy(o => o.Score).ToList(); // Slechter resultaat met ClusterAdd
 
             CalculateTotalPenalty();
@@ -86,10 +86,10 @@ namespace AfvalOphaler
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
             if (s.nonPlannedOrders.Count == 0) return new ImpossibleResult(s);
-
+            Random Rnd = new Random();
             //int notPickedOrderIndex = (int)(s.nonPlannedOrders.Count * Math.Pow(s.Rnd.NextDouble(), 1.0 / 50.0));
             //int notPickedOrderIndex = s.Rnd.Next(0, s.nonPlannedOrders.Count);
-            int notPickedOrderIndex = s.Rnd.Next(0, (s.nonPlannedOrders.Count / 5));
+            int notPickedOrderIndex = Rnd.Next(0, (s.nonPlannedOrders.Count / 2));
             Order bestNotPicked = s.nonPlannedOrders[notPickedOrderIndex];
             int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency]; // Gives all possible ways to plan the order.
 
@@ -450,8 +450,16 @@ namespace AfvalOphaler
                     }
                 }
             }
-            if (bestLoop == -1)
+            if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft && order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= bestDeltaTime)
             {
+                AddLoop();
+                TimeLeft -= 30;
+                bestLoop = Loops.Count - 1;
+                bestDeltaTime = order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30;
+                bestNode = Loops[bestLoop].Start;
+            }
+            if (bestLoop == -1)
+            {               
                 if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) // Check if adding new loop helps
                 {
                     AddLoop();

@@ -104,4 +104,31 @@ class Schedule
 		class Loop
 			class Node
 #endregion
-	
+
+
+
+Evolutionairy Programming Approach:
+Iterate till convergence || maxiterations || user interupt:
+	Schedule[parentCount] Parents;
+	List<Schedule> Children = new List<Schedule>(to_be_determined);
+	int childrenPerParents = zeg_t_maar;
+	for (int p = 1; p < Parents.Count; p-=-1)
+		List<Schedule> offSpring = GenerateChildren(Parents[p-1], Parents[p], childrenPerParents);
+		Children.Concat(offSpring);
+	Random rnd = new Random()
+	for (int m = 0; m < mutation_count; m-=-1)
+		ApplyMutation(Children[rnd.Next(0, Children.Count)]);
+	Parents = GetBestOffSpring(Children, parentCount);
+
+
+Algemene Thoughts:
+	Mutatie moet te doen zijn, want gwn een random operator toepassen (en die operator een random TOEGESTANE plek laten pakken
+		want fuck heuristiek, tis per slot mutatie).
+
+Moeilijkheden / dingen te bedenken:
+	GenerateChildren gaat lastig worden.
+	Hoe ga je van 2 parents x aantal kinderen maken op basis van de eigenschappen van een parent...
+
+
+
+		
