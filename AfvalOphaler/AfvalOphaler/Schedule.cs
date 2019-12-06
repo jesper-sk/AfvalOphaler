@@ -318,37 +318,34 @@ namespace AfvalOphaler
             {
                 for(int t = 0; t < 2; t++)
                 {
-                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delta)){
-
-                        if (worst.Data.Frequency > 1)
+                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta))
+                    {
+                        bool high = worst.Data.Frequency > 1;
+                        int start = high ? d : 0;
+                        int end = high ? d + 1 : 5;
+                        for(int ad = start; ad < end; ad++)
                         {
-                            for(int at = 0; at < 2; at++)
+                            for (int at = 0; at < 2; at++)
                             {
-                                if (s.Days[d, at].EvaluateAddition(worst.Data, out Node bestNode, out double dt, out int loop))
+                                if (s.Days[ad, at].EvaluateAddition(worst.Data, out Node bestNode, out double addDelta, out int loop))
+                                {
+                                    worsten.Add(new Transfer()
+                                    {
+                                        ToTransfer = worst,
+                                        AddDayIndex = ad,
+                                        AddLoopIndex = loop,
+                                        AddTruckIndex = at,
+                                        AddNextTo = bestNode,
+                                        DelDelta = delDelta,
+                                        AddDelta = addDelta
+                                    });
+                                }
                             }
                         }
-
                     }
                 }
             }
-            if (worsten.Count == 0) return new ImpossibleResult(s);
-            worsten.Sort((a, b) => a.Item2.CompareTo(b.Item2));
-            bool done = false;
-
-            while (!done)
-            {
-                int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 7)));
-                Node curr = worsten[index].Item1;
-                double delta = worsten[index].Item2;
-                worsten.RemoveAt(index);
-
-
-            }
-
-
-
-
-
+            
         }
         static NeighborResult Swap(Schedule s)
         {
@@ -412,6 +409,7 @@ namespace AfvalOphaler
         public int AddDayIndex;
         public int AddLoopIndex;
         public int AddTruckIndex;
+        public Node AddNextTo;
         public double DelDelta;
         public double AddDelta;
     }
@@ -481,7 +479,8 @@ namespace AfvalOphaler
             for(int i = 0; i < Loops.Count; i++)
             {
                 Loop curr = Loops[i];
-                if (curr.EvaluteOptimalDeletion(isTransfer, out Node lworst, out double lopt){
+                if (curr.EvaluteOptimalDeletion(isTransfer, out Node lworst, out double lopt))
+                {
                     if (lopt > opt)
                     {
                         opt = lopt;
