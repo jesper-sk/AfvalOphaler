@@ -292,7 +292,6 @@ namespace AfvalOphaler
                 {
                     if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta, out int delLoop))
                     {
-                        //Console.WriteLine($"Deletion found: day{d} truck{t} loop {delLoop} & delta {delDelta}");
                         bool high = worst.Data.Frequency > 1;
                         int start = high ? d : 0;
                         int end = high ? d + 1 : 5;
@@ -300,7 +299,7 @@ namespace AfvalOphaler
                         {
                             for (int at = 0; at < 2; at++)
                             {
-                                if (s.Days[ad, at].EvaluateAddition(worst.Data, out Node bestNode, out double addDelta, out int addLoop))
+                                if (s.Days[ad, at].EvaluateAdditionTrace(worst.Data, out Node bestNode, out double addDelta, out int addLoop, false, delLoop, d, t))
                                 {
                                     worsten.Add(new Transfer()
                                     {
@@ -429,16 +428,56 @@ namespace AfvalOphaler
             return l;
         }
 
-        public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false)
+        public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false, int excludedLoop = -1, int excludedDay = -1)
         {
+            if (DayIndex != excludedDay) excludedLoop = -1;
             bestNode = null;
             bestDeltaTime = double.MaxValue;
             bestLoop = -1;
 
             for(int i = 0; i < Loops.Count; i++)
             {
+                if (i == excludedLoop) continue;
                 Loop loop = Loops[i];
                 if (evaluateCluster && loop.Cluster != - 1 && loop.Cluster != order.Cluster) continue;
+                if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
+                {
+                    if (TimeLeft >= lTd && lTd < bestDeltaTime)
+                    {
+                        bestNode = lOpt;
+                        bestDeltaTime = lTd;
+                        bestLoop = i;
+                    }
+                }
+            }
+            if (bestLoop == -1)
+            {
+                if (order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30 <= TimeLeft) // Check if adding new loop helps
+                {
+                    AddLoop();
+                    TimeLeft -= 30;
+                    bestLoop = Loops.Count - 1;
+                    bestDeltaTime = order.JourneyTimeFromDump + order.JourneyTimeToDump + order.TimeToEmpty + 30;
+                    bestNode = Loops[bestLoop].Start;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        public bool EvaluateAdditionTrace(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false, int excludedLoop = -1, int excludedDay = -1, int excludedTruck = -1)
+        {
+            //Console.WriteLine($"exc day {excludedDay} truck {excludedTruck} loop {excludedLoop}");
+            if (DayIndex != excludedDay || Truck != excludedTruck) excludedLoop = -1;
+            bestNode = null;
+            bestDeltaTime = double.MaxValue;
+            bestLoop = -1;
+
+            for (int i = 0; i < Loops.Count; i++)
+            {
+                if (i == excludedLoop) continue;
+                Loop loop = Loops[i];
+                if (evaluateCluster && loop.Cluster != -1 && loop.Cluster != order.Cluster) continue;
                 if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
                     if (TimeLeft >= lTd && lTd < bestDeltaTime)
@@ -621,7 +660,14 @@ namespace AfvalOphaler
             Order order = n.Data;
             Duration -= order.TimeToEmpty + GD.JourneyTime[n.Prev.Data.MatrixId, order.MatrixId] + GD.JourneyTime[order.MatrixId, n.Next.Data.MatrixId];
             Duration += GD.JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId];
-            n.Remove();
+            //n.Remove();
+            Node p = n.Next;
+
+
+            n.Next.Prev = n.Prev;
+            n.Prev.Next = n.Next;
+            n.Prev = null;
+            n.Next = null;
 
             RoomLeft += (order.NumContainers * order.VolPerContainer * 0.2);
             Count--;
@@ -670,6 +716,8 @@ namespace AfvalOphaler
         {
             Next.Prev = Prev;
             Prev.Next = Next;
+            Next = null;
+            Prev = null;
         }
     }
 
@@ -690,10 +738,10 @@ namespace AfvalOphaler
     }
     public class AddResult : NeighborResult
     {
-        Order order;
+        public Order order;
         int orderIndex;
-        List<Node> nextTos;
-        List<int> loopIndices;
+        public List<Node> nextTos;
+        public List<int> loopIndices;
         List<int> dayIndices;
         List<int> truckIndices;
         List<double> deltas;
@@ -742,7 +790,7 @@ namespace AfvalOphaler
     }
     public class DeleteResult : NeighborResult
     {
-        Node toDelete;
+        public Node toDelete;
         double delta;
         int day;
         int truck;
@@ -796,7 +844,10 @@ namespace AfvalOphaler
 
         public override void ApplyOperator()
         {
+            Console.WriteLine("deleting " + d.toDelete.Data.OrderId);
             d.ApplyOperator();
+            Console.WriteLine("adding " + a.order.OrderId);
+            Console.WriteLine($"next to {a.nextTos[0].Data.OrderId} (loop {a.loopIndices[0]})\n");
             a.SetIndex(state.nonPlannedOrders.Count - 1);
             a.ApplyOperator();
         }
