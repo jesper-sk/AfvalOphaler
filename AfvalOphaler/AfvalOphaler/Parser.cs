@@ -114,7 +114,7 @@ namespace AfvalOphaler
             }*/
 
             int iter = 0;
-            do { UpdateMeans(); Console.WriteLine(iter++); } while (UpdateClusters() && iter < maxI);
+            do { UpdateMeans(); /*Console.WriteLine(iter++);*/ iter++; } while (UpdateClusters() && iter < maxI);
 
             
             void UpdateMeans()
@@ -162,10 +162,10 @@ namespace AfvalOphaler
                 }
                 if (EmptyCluster())
                 {
-                    Console.WriteLine("Empty");
+                    //Console.WriteLine("Empty");
                     //return false;
                 }
-                Console.WriteLine(changed);
+                //Console.WriteLine(changed);
                 return changed;
             }
 

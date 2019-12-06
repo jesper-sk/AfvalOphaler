@@ -50,6 +50,7 @@ namespace AfvalOphaler
 
             //nonPlannedOrders = orders.ToList();
 
+            //nonPlannedOrders = orders.OrderBy(o => o.Score).ToList();
             nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
             //nonPlannedOrders = orders.OrderByDescending(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Slechter resultaat
             
@@ -72,7 +73,7 @@ namespace AfvalOphaler
             currState => Add(currState),
             currState => Delete(currState),
             currState => Transfer(currState),
-            currState => AddByCluster(currState)
+            //currState => AddByCluster(currState)
             //currState => Swap(currState)
         };
         public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
@@ -277,20 +278,19 @@ namespace AfvalOphaler
                 Random rnd = new Random();
                 worsten.Sort((a, b) => (a.Item2.CompareTo(b.Item2)));
                 int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 5.0)));
-                Tuple<Node, double, int, int, int> choosenWorst = worsten[index];
-                return new DeleteResult(s, choosenWorst);
+                Tuple<Node, double, int, int, int> chosenWorst = worsten[index];
+                return new DeleteResult(s, chosenWorst);
             }
             else return new ImpossibleResult(s);
         }
         static NeighborResult Transfer(Schedule s)
         {
-            Random rnd = new Random();
             List<Transfer> worsten = new List<Transfer>();
             for (int d = 0; d < 5; d++)
             {
                 for (int t = 0; t < 2; t++)
                 {
-                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta))
+                    if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta, out int delLoop))
                     {
                         bool high = worst.Data.Frequency > 1;
                         int start = high ? d : 0;
@@ -299,14 +299,17 @@ namespace AfvalOphaler
                         {
                             for (int at = 0; at < 2; at++)
                             {
-                                if (s.Days[ad, at].EvaluateAddition(worst.Data, out Node bestNode, out double addDelta, out int loop))
+                                if (s.Days[ad, at].EvaluateAddition(worst.Data, out Node bestNode, out double addDelta, out int addLoop))
                                 {
                                     worsten.Add(new Transfer()
                                     {
                                         ToTransfer = worst,
                                         AddDayIndex = ad,
-                                        AddLoopIndex = loop,
+                                        DelDayIndex = d,
+                                        DelLoopIndex = delLoop,
+                                        AddLoopIndex = addLoop,
                                         AddTruckIndex = at,
+                                        DelTruckIndex = t,
                                         AddNextTo = bestNode,
                                         DelDelta = delDelta,
                                         AddDelta = addDelta
@@ -317,6 +320,12 @@ namespace AfvalOphaler
                     }
                 }
             }
+            if (worsten.Count == 0) return new ImpossibleResult(s);
+            worsten.Sort((a, b) => (a.AddDelta + a.DelDelta).CompareTo(b.AddDelta + b.DelDelta));
+            Random rnd = new Random();
+            int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 5.0)));
+            Transfer chosenWorst = worsten[index];
+            return chosenWorst.ToResult(s);
         }
         static NeighborResult Swap(Schedule s)
         {
@@ -377,12 +386,22 @@ namespace AfvalOphaler
     struct Transfer
     {
         public Node ToTransfer;
+        public int DelDayIndex;
+        public int DelLoopIndex;
+        public int DelTruckIndex;
         public int AddDayIndex;
         public int AddLoopIndex;
         public int AddTruckIndex;
         public Node AddNextTo;
         public double DelDelta;
         public double AddDelta;
+
+        public TransferResult ToResult(Schedule s)
+        {
+            AddResult ares = new AddResult(s, ToTransfer.Data, -1, AddNextTo, AddLoopIndex, AddDayIndex, AddTruckIndex, AddDelta);
+            DeleteResult dres = new DeleteResult(s, ToTransfer, DelDelta, DelDayIndex, DelTruckIndex, DelLoopIndex);
+            return new TransferResult(s, dres, ares);
+        }
     }
 
     public class Day
@@ -461,7 +480,7 @@ namespace AfvalOphaler
                     }
                 }
             }
-            return worst == null;
+            return worst != null;
         }
 
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
@@ -682,6 +701,17 @@ namespace AfvalOphaler
             this.dayIndices = dayIndices;
             this.truckIndices = truckIndices;
             this.deltas = deltas;
+        }
+
+        public AddResult(Schedule s, Order order, int orderIndex, Node nextTo, int loopIndex, int dayIndex, int truckIndex, double delta) : base(s)
+        {
+            this.order = order;
+            this.orderIndex = orderIndex;
+            nextTos = new List<Node>() { nextTo };
+            loopIndices = new List<int>() { loopIndex };
+            dayIndices = new List<int>() { dayIndex };
+            truckIndices = new List<int>() { truckIndex };
+            deltas = new List<double>() { delta };
         }
 
         public void SetIndex(int i) { this.orderIndex = i; }

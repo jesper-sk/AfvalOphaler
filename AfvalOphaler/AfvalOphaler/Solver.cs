@@ -20,7 +20,7 @@ namespace AfvalOphaler
             rnd = new Random();
         }
 
-        public void StartSolving(int maxIterations, int opCount, int maxNoChange)
+        public void StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
         {
             top10Schedules = new Schedule[10];
             /*
@@ -34,34 +34,70 @@ namespace AfvalOphaler
 
             LocalSolver solver = new HillClimbLocalSolver();
             //LocalSolver solver = new SaLocalSolver(0.5, 0.9999);
-            solver.Init();
-            Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, solver); });
+            Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver); });
         }
 
-        void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, LocalSolver solver)
+        void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)
         {
+            LocalSolver hc = new HillClimbLocalSolver();
+            hc.Init();
             int noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
             {
-                //Console.WriteLine("iter: " + iter);
-                if (iter % 10000 == 0) Console.WriteLine(iter);
-
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for (int i = 0; i < opCount; i++)
                 {
-                    //Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
-                    Func<Schedule, NeighborResult> op = Schedule.addByClusterOperator;
+                    Func<Schedule, NeighborResult> op = Schedule.addOperator;
                     NeighborResult res = op(state); // <- { AddResult, ImpossibleResult }
-                    double delta = (res is ImpossibleResult) ? -10000 : res.GetTotalDelta();
+                    results.Add(res);
+                }
+                if (!hc.ApplyAccordingly(results))
+                {
+                    noChange++;
+                }
+                else noChange = 0;
+                if (noChange > maxNochangeAdd)
+                {
+                    break;
+                }
+            }
+
+            solver.Init();
+            int[] distro = { 1, 2, 4 };
+            List<Func<Schedule, NeighborResult>> funcs = new List<Func<Schedule, NeighborResult>>();
+            for (int i = 0; i < Schedule.neighborOperators.Length; i++)
+            {
+                for (int j = 0; j < distro[i]; j++)
+                {
+                    funcs.Add(Schedule.neighborOperators[i]);
+                }
+            }
+            Random rnd = new Random();
+            noChange = 0;
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                List<NeighborResult> results = new List<NeighborResult>(opCount);
+                for(int op = 0; op < opCount; op++)
+                {
+                    Func<Schedule, NeighborResult> func = funcs[rnd.Next(0, funcs.Count)];
+                    NeighborResult res = func(state);
                     results.Add(res);
                 }
                 if (!solver.ApplyAccordingly(results))
                 {
                     noChange++;
                 }
-                else noChange = 0;
-                if (noChange > maxNoChange) break;
+                else
+                {
+                    noChange = 0;
+                }
+                if (noChange > maxNoChange)
+                {
+                    Console.WriteLine("Terminated due to noChange");
+                    break;
+                }
             }
+
             lock(addlock) { AddScheduleToTop(state); }
         }   
 
