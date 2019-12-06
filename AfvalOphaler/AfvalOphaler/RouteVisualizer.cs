@@ -57,7 +57,7 @@ namespace AfvalOphaler
                 Color.Orange,
                 Color.White,
                 Color.Pink,
-                Color.Magenta
+                Color.Brown
             };
             xmap = ClientSize.Width / 3919706.0;
             ymap = ClientSize.Height / 3194334.0;

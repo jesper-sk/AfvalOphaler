@@ -49,5 +49,14 @@ Op het eind van de dag gaat de auto weer naar de stort; dit moet je ook aangeven
 1; 1; 3; 0
 1; 1; 4; 30
 
+SWEETSPOT PARAMETERS:
+	nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList();
+	opCount = 20
+	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+	AddByCluster BEST
+
+
+
+
 http://178.85.229.78:8067/team/157557372232042770
 	

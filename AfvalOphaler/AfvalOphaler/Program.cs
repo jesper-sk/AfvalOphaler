@@ -1,5 +1,5 @@
 ﻿//#define FINAL
-//#define TEST
+#define TEST
 
 using System;
 using System.Collections.Generic;
@@ -37,13 +37,21 @@ namespace AfvalOphaler
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
+            bool clusterorders = true;
+            if (clusterorders)
+            {
+                Console.WriteLine("Clustering...");
+                int clustercount = 4;
+                Parser.KMeansClusterOrders(orders, clustercount, 1000);
+            }
 
             // Solving:
-            int threads = 10;
+            int threads = 20;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
-            solver.StartSolving(1000000, 10 , 100000);
+
+            solver.StartSolving(1000000, 20, 100000);
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("===");
             Console.WriteLine("Solving done, score of best schedule:");
@@ -68,7 +76,6 @@ namespace AfvalOphaler
             Application.DoEvents();
             vis.WindowState = FormWindowState.Maximized;
             Application.DoEvents();
-
             Console.ReadKey();
 
 #endif

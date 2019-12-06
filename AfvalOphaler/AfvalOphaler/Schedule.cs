@@ -49,9 +49,12 @@ namespace AfvalOphaler
             //notPlannedOrders = new Queue<Order>();
 
             //nonPlannedOrders = orders.ToList();
-            //nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList();
-            nonPlannedOrders = orders.OrderByDescending(o => o.Frequency).ThenBy(o => o.Score).ToList();
-            //nonPlannedOrders = orders.OrderBy(o => o.XCoord).ThenBy(o => o.YCoord).ThenBy(o => o.Score).ToList();
+
+            nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
+            //nonPlannedOrders = orders.OrderByDescending(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Slechter resultaat
+            
+            //nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Beter resultaat met ClusterAdd en BEST en ASAP
+            //nonPlannedOrders = orders.OrderBy(o => o.Frequency).ThenBy(o => o.Cluster).ThenBy(o => o.Score).ToList(); // Slechter resultaat met ClusterAdd
 
             CalculateTotalPenalty();
         }
@@ -70,12 +73,9 @@ namespace AfvalOphaler
             currState => Delete(currState),
             currState => Transfer(currState),
             currState => Swap(currState)
-            //addOperator,
-            //deleteOperator, 
-            //transferOperator, 
-            //swapOperator 
         };
         public static Func<Schedule, NeighborResult> addOperator = (currState) => Add(currState);
+        public static Func<Schedule, NeighborResult> addByClusterOperator = (currState) => AddByCluster(currState);
         public static Func<Schedule, NeighborResult> deleteOperator = (currState) => Delete(currState);
         public static Func<Schedule, NeighborResult> transferOperator = (currState) => Transfer(currState);
         public static Func<Schedule, NeighborResult> swapOperator = (currState) => Swap(currState);
@@ -86,13 +86,12 @@ namespace AfvalOphaler
 
             //int notPickedOrderIndex = (int)(s.nonPlannedOrders.Count * Math.Pow(s.Rnd.NextDouble(), 1.0 / 50.0));
             //int notPickedOrderIndex = s.Rnd.Next(0, s.nonPlannedOrders.Count);
-            int notPickedOrderIndex = s.Rnd.Next(0, (s.nonPlannedOrders.Count / 10));
+            int notPickedOrderIndex = s.Rnd.Next(0, (s.nonPlannedOrders.Count / 5));
             Order bestNotPicked = s.nonPlannedOrders[notPickedOrderIndex];
             int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency]; // Gives all possible ways to plan the order.
 
-            // voeg deze node aan dichtstbijzijnde onverzadigde loop toe
             // ASAP
-            ///*
+            /*
             List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
             List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
             List<int> days = new List<int>(bestNotPicked.Frequency);
@@ -125,6 +124,7 @@ namespace AfvalOphaler
 
                             truckFound = true;
                             truckFoundForAllDays++;
+                            break;
                         }
                     }
                     if (!truckFound) break;
@@ -143,7 +143,7 @@ namespace AfvalOphaler
 
             // BEST
             // Tries to plan the order is the most optimal place, not the earliest place.  
-            /*
+            ///*
             List<Node> bestnextTos = new List<Node>(bestNotPicked.Frequency);
             List<int> bestloopIndices = new List<int>(bestNotPicked.Frequency);
             List<int> bestdays = new List<int>(bestNotPicked.Frequency);
@@ -214,9 +214,149 @@ namespace AfvalOphaler
             {
                 return new ImpossibleResult(s, new List<Order> { bestNotPicked });
             }
-            */
+            //*/
 
         }
+
+        static NeighborResult AddByCluster(Schedule s)
+        {
+            if (s.nonPlannedOrders.Count == 0) return new ImpossibleResult(s, null);
+
+            Random rnd = new Random();
+            int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+            //int index = 0;
+            Order bestNotPicked = s.nonPlannedOrders[index];
+            int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency];
+
+            #region ASAP
+            /*
+            List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
+            List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
+            List<int> days = new List<int>(bestNotPicked.Frequency);
+            List<int> trucks = new List<int>(bestNotPicked.Frequency);
+            List<double> deltas = new List<double>(bestNotPicked.Frequency);
+
+            bool planningFound = false;
+            for (int c = 0; c < combis.Length; c++)
+            {
+                int truckFoundForAllDays = 0;
+                nextTos = new List<Node>(bestNotPicked.Frequency);
+                loopIndices = new List<int>(bestNotPicked.Frequency);
+                days = new List<int>(bestNotPicked.Frequency);
+                trucks = new List<int>(bestNotPicked.Frequency);
+                deltas = new List<double>(bestNotPicked.Frequency);
+
+                for (int d = 0; d < combis[c].Length; d++)
+                {
+                    bool truckFound = false;
+                    for (int t = 0; t < 2; t++)
+                    {
+                        Node where;
+                        if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop, true))
+                        {
+                            nextTos.Add(where);
+                            loopIndices.Add(loop);
+                            days.Add(combis[c][d]);
+                            trucks.Add(t);
+                            deltas.Add(delta);
+
+                            truckFound = true;
+                            truckFoundForAllDays++;
+                            break;
+                        }
+                    }
+                    if (!truckFound) break;
+                }
+                if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
+            }
+            if (planningFound)
+            {
+                return new AddResult(s, bestNotPicked, index, nextTos, loopIndices, days, trucks, deltas);
+            }
+            else
+            {
+                return new ImpossibleResult(s, new List<Order> { bestNotPicked });
+            }
+            //*/
+            #endregion
+
+            #region BEST
+            // Tries to plan the order is the most optimal place, not the earliest place.  
+            ///*
+            List<Node> bestnextTos = new List<Node>(bestNotPicked.Frequency);
+            List<int> bestloopIndices = new List<int>(bestNotPicked.Frequency);
+            List<int> bestdays = new List<int>(bestNotPicked.Frequency);
+            List<int> besttrucks = new List<int>(bestNotPicked.Frequency);
+            List<double> bestdeltas = new List<double>(bestNotPicked.Frequency);
+
+            bool planningFound = false;
+            double bestDeltaSum = double.MaxValue;
+            for (int c = 0; c < combis.Length; c++)
+            {
+                int truckFoundForAllDays = 0;
+                List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
+                List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
+                List<int> days = new List<int>(bestNotPicked.Frequency);
+                List<int> trucks = new List<int>(bestNotPicked.Frequency);
+                List<double> deltas = new List<double>(bestNotPicked.Frequency);
+
+                for (int d = 0; d < combis[c].Length; d++)
+                {
+                    bool truckFound = false;
+                    double bestTruckDelta = double.MaxValue;
+                    int bestTruck = -1;
+                    Node bestWhere = null;
+                    int bestLoop = -1;
+                    for (int t = 0; t < 2; t++)
+                    {
+                        if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out Node where, out double delta, out int loop, true) && delta < bestTruckDelta)
+                        {
+                            bestWhere = where;
+                            bestLoop = loop;
+                            bestTruck = t;
+                            bestTruckDelta = delta;
+
+                            truckFound = true;
+                        }
+                    }
+                    if (!truckFound) break;
+                    else
+                    {
+                        nextTos.Add(bestWhere);
+                        loopIndices.Add(bestLoop);
+                        days.Add(combis[c][d]);
+                        trucks.Add(bestTruck);
+                        deltas.Add(bestTruckDelta);
+
+                        truckFoundForAllDays++;
+                    }
+
+                }
+                if (truckFoundForAllDays == combis[c].Length)
+                {
+                    if (deltas.Sum() < bestDeltaSum)
+                    {
+                        bestnextTos = nextTos;
+                        bestloopIndices = loopIndices;
+                        bestdays = days;
+                        besttrucks = trucks;
+                        bestdeltas = deltas;
+                        planningFound = true;
+                    }
+                }
+            }
+            if (planningFound)
+            {
+                return new AddResult(s, bestNotPicked, index, bestnextTos, bestloopIndices, bestdays, besttrucks, bestdeltas);
+            }
+            else
+            {
+                return new ImpossibleResult(s, new List<Order> { bestNotPicked });
+            }
+            //*/
+            #endregion
+        }
+
         static NeighborResult Delete(Schedule s)
         {
             // Pak willekeurige node in een loop
@@ -326,7 +466,7 @@ namespace AfvalOphaler
             TimeLeft = 690;
         }
 
-        public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop)
+        public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false)
         {
             bestNode = null;
             bestDeltaTime = double.MaxValue;
@@ -335,13 +475,11 @@ namespace AfvalOphaler
             for(int i = 0; i < Loops.Count; i++)
             {
                 Loop loop = Loops[i];
+                if (evaluateCluster && loop.Cluster != - 1 && loop.Cluster != order.Cluster) continue;
                 if (loop.EvaluateOptimalAddition(order, out Node lOpt, out double _, out double lTd))
                 {
-                    //Console.WriteLine($"EvaluateOptimalAddition == TRUE!!!, lTd = {lTd}");
-                    //Console.WriteLine($"newtimeleft: {newTimeLeft}");
                     if (TimeLeft >= lTd && lTd < bestDeltaTime)
                     {
-                        //Console.WriteLine("updating best loop...");
                         bestNode = lOpt;
                         bestDeltaTime = lTd;
                         bestLoop = i;
@@ -391,6 +529,7 @@ namespace AfvalOphaler
         public double Duration;
         public double RoomLeft;
         public int Count;
+        public int Cluster;
 
         public Node Start; //Order references to Dump
 
@@ -400,19 +539,16 @@ namespace AfvalOphaler
             Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
             RoomLeft = 20000;       //Gecomprimeerd
             Count = 0;
+            Cluster = -1;
         }
 
         public bool EvaluateOptimalAddition(Order order, out Node opt, out double newRoomLeft, out double td)
         {
             td = 0;
             opt = null;
-            newRoomLeft = RoomLeft - (order.NumContainers * order.VolPerContainer) * 0.2; //Het gecomprimeerde gewicht dat erbij zou komen
+            newRoomLeft = RoomLeft - (order.NumContainers * order.VolPerContainer) * 0.2; // Het gecomprimeerde gewicht dat erbij zou komen
 
-            if (newRoomLeft <= 0)
-            {
-                //Console.WriteLine("Can't add cuz it will /schenden/ weightconstraint... ");
-                return false;    //Toevoegen zal de gewichtsconstraint schenden
-            }
+            if (newRoomLeft <= 0) return false;    // Toevoegen zal de gewichtsconstraint schenden
 
             double best = GD.JourneyTime[order.MatrixId, Start.Data.MatrixId];
             opt = Start;
@@ -451,6 +587,7 @@ namespace AfvalOphaler
 
         public Node AddOrder(Order order, Node nextTo)
         {
+            Cluster = order.Cluster;
             Duration += (order.TimeToEmpty
                 + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]

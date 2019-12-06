@@ -43,12 +43,16 @@ namespace AfvalOphaler
             int noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
             {
+                //Console.WriteLine("iter: " + iter);
+                if (iter % 10000 == 0) Console.WriteLine(iter);
+
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for (int i = 0; i < opCount; i++)
                 {
                     Func<Schedule, NeighborResult> op = Schedule.neighborOperators[0];
+                    //Func<Schedule, NeighborResult> op = Schedule.addByClusterOperator;
                     NeighborResult res = op(state); // <- { AddResult, ImpossibleResult }
-
+                    double delta = (res is ImpossibleResult) ? -10000 : res.GetTotalDelta();
                     results.Add(res);
                 }
                 if (!solver.ApplyAccordingly(results))
@@ -57,11 +61,6 @@ namespace AfvalOphaler
                 }
                 else noChange = 0;
                 if (noChange > maxNoChange) break;
-                if (iter % 10000 == 0)
-                {
-                    Console.WriteLine(iter);
-                    //Schedule.deleteOperator(state);
-                }
             }
             lock(addlock) { AddScheduleToTop(state); }
         }   
