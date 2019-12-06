@@ -39,6 +39,7 @@ namespace AfvalOphaler
 
         void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)
         {
+            Console.WriteLine("Adding...");
             LocalSolver hc = new HillClimbLocalSolver();
             hc.Init();
             int noChange = 0;
@@ -61,7 +62,9 @@ namespace AfvalOphaler
                     break;
                 }
             }
-
+            Console.WriteLine($"Adding done. Result: {state.CalculateScore()}");
+            Console.ReadKey();
+            Console.WriteLine("Starting Transfering...");
             solver.Init();
             int[] distro = { 1, 2, 4 };
             List<Func<Schedule, NeighborResult>> funcs = new List<Func<Schedule, NeighborResult>>();
@@ -76,10 +79,11 @@ namespace AfvalOphaler
             noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
             {
+                if(iter % 1000 == 0) Console.WriteLine($"Iteration {iter}");
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for(int op = 0; op < opCount; op++)
                 {
-                    Func<Schedule, NeighborResult> func = funcs[rnd.Next(0, funcs.Count)];
+                    Func<Schedule, NeighborResult> func = Schedule.transferOperator;// funcs[rnd.Next(0, funcs.Count)];
                     NeighborResult res = func(state);
                     results.Add(res);
                 }
@@ -96,6 +100,7 @@ namespace AfvalOphaler
                     Console.WriteLine("Terminated due to noChange");
                     break;
                 }
+                //Console.ReadKey();
             }
 
             lock(addlock) { AddScheduleToTop(state); }

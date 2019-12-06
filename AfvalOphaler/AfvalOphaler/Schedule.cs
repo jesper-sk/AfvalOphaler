@@ -292,6 +292,7 @@ namespace AfvalOphaler
                 {
                     if (s.Days[d, t].EvaluateDeletion(true, out Node worst, out double delDelta, out int delLoop))
                     {
+                        //Console.WriteLine($"Deletion found: day{d} truck{t} loop {delLoop} & delta {delDelta}");
                         bool high = worst.Data.Frequency > 1;
                         int start = high ? d : 0;
                         int end = high ? d + 1 : 5;
@@ -318,6 +319,7 @@ namespace AfvalOphaler
                             }
                         }
                     }
+                   // Console.ReadKey();
                 }
             }
             if (worsten.Count == 0) return new ImpossibleResult(s);
@@ -469,10 +471,12 @@ namespace AfvalOphaler
             loop = -1;
             for (int i = 0; i < Loops.Count; i++)
             {
+               // Console.WriteLine($"Loop {i}");
                 Loop curr = Loops[i];
                 if (curr.EvaluteOptimalDeletion(isTransfer, out Node lworst, out double lopt))
                 {
-                    if (lopt > opt)
+                    //Console.WriteLine($"Found optimal deletion");
+                    if (lopt < opt)
                     {
                         opt = lopt;
                         worst = lworst;
