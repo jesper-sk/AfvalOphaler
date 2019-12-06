@@ -50,11 +50,20 @@ Op het eind van de dag gaat de auto weer naar de stort; dit moet je ook aangeven
 1; 1; 4; 30
 
 SWEETSPOT PARAMETERS:
+	BESTE MET CLUSTER:
+	clusterCount = 4, 5, 6 <- verschilt wann welke beter.
 	nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList();
 	opCount = 20
+	Hillclimb
 	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
 	AddByCluster BEST
 
+	TOT NU TOE BESTE (DUS BETER DAN MET CLUSTER):
+	nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList();
+	opCount = 20
+	Hillclimb
+	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+	Add BEST
 
 
 
