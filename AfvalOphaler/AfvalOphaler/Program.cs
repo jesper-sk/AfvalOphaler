@@ -46,12 +46,12 @@ namespace AfvalOphaler
             }
 
             // Solving:
-            int threads = 1;
+            int threads = 5;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
             Solver solver = new Solver(startStates, threads);
 
-            solver.StartSolving(10000, 10, 10000, 1000);
+            solver.StartSolving(20000, 10, 10000, 10000);
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("===");
             Console.WriteLine("Solving done, score of best schedule:");
