@@ -277,8 +277,8 @@ namespace AfvalOphaler
                 Random rnd = new Random();
                 worsten.Sort((a, b) => (a.Item2.CompareTo(b.Item2)));
                 int index = (int)(worsten.Count * Math.Pow(rnd.NextDouble(), (1.0 / 5.0)));
-                Tuple<Node, double, int, int, int> choosenWorst = worsten[index];
-                return new DeleteResult(s, choosenWorst);
+                Tuple<Node, double, int, int, int> chosenWorst = worsten[index];
+                return new DeleteResult(s, chosenWorst);
             }
             else return new ImpossibleResult(s);
         }
@@ -564,8 +564,10 @@ namespace AfvalOphaler
                 double to = GD.JourneyTime[curr.Prev.Data.MatrixId, curr.Data.MatrixId];
                 double from = GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
                 double inplace = GD.JourneyTime[curr.Prev.Data.MatrixId, curr.Next.Data.MatrixId];
-                double tte = isTransfer ? 0 : curr.Data.TimeToEmpty;
-                double delta = inplace - (from + to) + tte * 2;
+                //double tte = isTransfer ? 0 : curr.Data.TimeToEmpty;
+                //double delta = inplace - (from + to) + tte * 2;
+                double tte = isTransfer ? 0 : (3 * curr.Data.Frequency * curr.Data.TimeToEmpty) - curr.Data.TimeToEmpty;
+                double delta = inplace - (from + to) + tte;
                 if (delta < opt)
                 {
                     opt = delta;
@@ -737,8 +739,8 @@ namespace AfvalOphaler
         public override void ApplyOperator()
         {
             state.Days[day, truck].RemoveNodeFromLoop(toDelete, loop);
-            state.totalTime += delta;
-            Order o = toDelete.Data; // Delta should be only change in drivetime, so should not include the penalty.
+            Order o = toDelete.Data;
+            state.totalTime += (delta - 4 * o.Frequency * o.TimeToEmpty); // Delta should be only change in drivetime, so should not include the penalty.
             state.totalPenalty += 3 * o.Frequency * o.TimeToEmpty;
             state.nonPlannedOrders.Add(toDelete.Data);
         }
