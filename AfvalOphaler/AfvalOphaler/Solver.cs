@@ -23,18 +23,27 @@ namespace AfvalOphaler
         public void StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
         {
             top10Schedules = new Schedule[10];
-            /*
-            var tasks = new Task[threads];            
-            for (int i = 0; i < threads; i++)
-            {
-                tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0, maxIterations, opCount, 0, maxNoChange));
-            }
-            Task.WaitAll(tasks);
-            */
 
             LocalSolver solver = new HillClimbLocalSolver();
             //LocalSolver solver = new SaLocalSolver(0.5, 0.9999);
-            Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver); });
+
+            ///*
+            threads = 10;
+            var tasks = new Task[threads];
+            int i = 0;
+            while (i < threads)
+            {
+                int index = i;
+                tasks[index] = Task.Factory.StartNew(() => DoSolving(startSchedules[index], maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver));
+                //tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0, maxIterations, opCount, 0, maxNoChange));
+
+                i++;
+            }
+
+            Task.WaitAll(tasks);
+            //*/
+
+            //Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver); });
         }
 
         void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)

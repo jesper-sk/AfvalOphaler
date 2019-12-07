@@ -128,6 +128,27 @@ Algemene Thoughts:
 Moeilijkheden / dingen te bedenken:
 	GenerateChildren gaat lastig worden.
 	Hoe ga je van 2 parents x aantal kinderen maken op basis van de eigenschappen van een parent...
+		2 Schedules...
+		Je wilt het lieftst 'de beste eigenschappen' van die 2 en dat op x aantal mogelijkheden combineren.
+		- Je kan alles dat overeenkomt gebruiken als base_child
+			- dan voor elke extra order die is ingepland per parent deze toevoegen aan base_child als nieuw kind.
+				-> voor zover dat toegestaan is
+		- Je kan alles wat ze van elkaar verschillen nemen als child
+		- foreach day, foreach truck pak de loop van de parent met de kleinste time.
+
+---
+Fleshed out werkwijze:
+- Variabelen:
+	population_size = ....
+	parent_amount = ....
+
+- Initialisatie:
+	-> Volledige random add van zoveel mogelijk orders voor population_size aantal schedules.
+		-> als een orders geadd wordt, dan moet de volledige order geadd worden.
+- Iteratie:
+	-> Sorteer populatie op basis van Score.
+	-> Bepaal parent_amount parents uit de populatie.
+		-> 
 
 
 

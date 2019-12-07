@@ -409,9 +409,9 @@ namespace AfvalOphaler
 
     public class Day
     {
+        #region Variables & Constructor
         public List<Loop> Loops;
         public double TimeLeft;
-
         public readonly int DayIndex;
         public readonly int Truck;
 
@@ -422,14 +422,9 @@ namespace AfvalOphaler
             DayIndex = dind;
             Truck = trind;
         }
+        #endregion
 
-        public Loop AddLoop()
-        {
-            Loop l = new Loop(DayIndex, Truck);
-            Loops.Add(l);
-            return l;
-        }
-
+        #region EvaluateAdd/Remove in BEST place
         public bool EvaluateAddition(Order order, out Node bestNode, out double bestDeltaTime, out int bestLoop, bool evaluateCluster = false, Node excluded = null)
         {
             bestNode = null;
@@ -472,8 +467,6 @@ namespace AfvalOphaler
             }
             return true;
         }
-
-
         public bool EvaluateDeletion(bool isTransfer, out Node worst, out double opt, out int loop)
         {
             worst = null;
@@ -496,7 +489,15 @@ namespace AfvalOphaler
             }
             return worst != null;
         }
+        #endregion
 
+        #region Loops Modifications
+        public Loop AddLoop()
+        {
+            Loop l = new Loop(DayIndex, Truck);
+            Loops.Add(l);
+            return l;
+        }
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
             //Console.WriteLine($"Timeleft before AddOrder: {Loops[loopIndex].Duration}");
@@ -506,13 +507,13 @@ namespace AfvalOphaler
             TimeLeft -= Loops[loopIndex].Duration;
             return res;
         }
-
         public void RemoveNodeFromLoop(Node n, int loopIndex)
         {
             TimeLeft += Loops[loopIndex].Duration;
             Loops[loopIndex].RemoveNode(n);
             TimeLeft -= Loops[loopIndex].Duration;
         }
+        #endregion
 
         public override string ToString()
         {
@@ -522,6 +523,7 @@ namespace AfvalOphaler
 
     public class Loop
     {
+        #region Variables & Constructor
         public double Duration;
         public double RoomLeft;
         public int Count;
@@ -530,7 +532,6 @@ namespace AfvalOphaler
         public int Truck;
 
         public Node Start; //Order references to Dump
-
 
         public Loop(int day, int truck)
         {
@@ -542,7 +543,9 @@ namespace AfvalOphaler
             Day = day;
             Truck = truck;
         }
+        #endregion
 
+        #region Evaluate OPTIMAL
         public bool EvaluateOptimalAddition(Order order, out Node opt, out double newRoomLeft, out double td, Node excluded)
         {
             td = 0;
@@ -579,14 +582,6 @@ namespace AfvalOphaler
                 opt = opt.Prev;
             }
 
-            //Console.WriteLine($"opt: {opt.Data}");
-            //Console.WriteLine($"order: {order}");
-
-            // Calculate delta
-            //Console.WriteLine($"timetoempty: {order.TimeToEmpty}");
-            //Console.WriteLine($"journeytime erbij: {GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]}");
-            //Console.WriteLine($"journeytime erbij: {GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]}");
-            //Console.WriteLine($"journeytime eraf: {GD.JourneyTime[opt.Data.MatrixId, opt.Next.Data.MatrixId]}");
             td = (order.TimeToEmpty
                 + GD.JourneyTime[opt.Data.MatrixId, order.MatrixId]
                 + GD.JourneyTime[order.MatrixId, opt.Next.Data.MatrixId]
@@ -594,7 +589,6 @@ namespace AfvalOphaler
 
             return true;
         }
-
         public bool EvaluteOptimalDeletion(bool isTransfer, out Node worst, out double opt)
         {
             Node curr = Start.Next;
@@ -620,7 +614,9 @@ namespace AfvalOphaler
 
             return (worst != null);
         }
+        #endregion
 
+        #region Order Addition/Removal
         public Node AddOrder(Order order, Node nextTo)
         {
             Cluster = order.Cluster;
@@ -634,7 +630,6 @@ namespace AfvalOphaler
             Count++;
             return n;
         }
-
         public void RemoveNode(Node n)
         {
             Order order = n.Data;
@@ -652,6 +647,7 @@ namespace AfvalOphaler
             RoomLeft += (order.NumContainers * order.VolPerContainer * 0.2);
             Count--;
         }
+        #endregion
 
         public override string ToString()
         {
@@ -661,6 +657,7 @@ namespace AfvalOphaler
 
     public class Node
     {
+        #region Variables & Constructors
         public readonly Order Data;
         public readonly bool IsDump;
 
@@ -673,13 +670,14 @@ namespace AfvalOphaler
             Data = GD.Dump;
             Prev = Next = this;
         }
-
         public Node(Order o)
         {
             IsDump = false;
             Data = o;
         }
+        #endregion
 
+        #region Modifications
         public Node AppendNext(Order o)
         {
             Node n = new Node(o)
@@ -691,7 +689,6 @@ namespace AfvalOphaler
             Next = n;
             return n;
         }
-
         public void Remove()
         {
             Next.Prev = Prev;
@@ -699,6 +696,7 @@ namespace AfvalOphaler
             Next = null;
             Prev = null;
         }
+        #endregion
     }
 
     #region Operator Results
