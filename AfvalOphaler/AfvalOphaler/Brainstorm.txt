@@ -65,49 +65,18 @@ SWEETSPOT PARAMETERS:
 	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
 	Add BEST
 
-
-
 http://178.85.229.78:8067/team/157557372232042770
 
+========================
+=== SWS NOG MAKEN!!! ===
+========================
+een algortime die een loop krijgt en die optimaliseert,
+dus de volgorde dusdanig maakt dat de loop het effectiefst is.
+Dit algoritme hoeft alleen maar te kijken naar reistijden want een loop voldoet altijd aan de afval constraints.
 
-#region Transfer
-class Schedule
-	TransferResult Transfer()
-		foreach (Day d in Days)
-			Node n = EvaluateDeletion(d) // Krijg de node die het beste is om te verwijderen
-		foreach (Possible_Day in n.PossibleDays) // 1 iff n.Freq > 1, else 5
-			Day wheretoAdd = EvaluateAddition(Possible_Day, n)
-		return new TransferResult(n, wheretoAdd, delta)
-	class Day
-		bool EvaluateDeletion(out Node n)
-			foreach (Loop l in Loops)
-				l.EvaluateDeletion()
-		class Loop
-			bool EvaluateDeletion(out Node n)
-				foreach (Node o in Nodes)
-					if (TimefromPrevToO + TimeFromOToNext - TimeFromPrevToNext + (o.TimeToEmpty * 2) > worstTime)
-						Node worst = o
-				return worst
-			class Node
-#endregion
-
-#region Swap
-class Schedule
-	class Day
-		class Loop
-			class Node
-#endregion
-
-#region Iets_Met_Cluster
-class Schedule
-	class Day
-		class Loop
-			class Node
-#endregion
-
-
-
-Evolutionairy Programming Approach:
+===========================================
+=== Evolutionairy Programming Approach: ===
+===========================================
 Iterate till convergence || maxiterations || user interupt:
 	Schedule[parentCount] Parents;
 	List<Schedule> Children = new List<Schedule>(to_be_determined);
@@ -136,6 +105,42 @@ Moeilijkheden / dingen te bedenken:
 		- Je kan alles wat ze van elkaar verschillen nemen als child
 		- foreach day, foreach truck pak de loop van de parent met de kleinste time.
 
+=== Genetic representation: === //Een andere manier van searchspace representatie voor Evo-Alg.
+	moet een reeks van cijfers zijn, het liefst bits...
+	Optie 1:
+		de lijst van orders altijd dezelfde volgorde houden
+		een order moet altijd of niet, of volledig ingepland zijn.
+		de reeks cijfers:
+		voor elke order, 
+			voor elke keer dat die ingepland moet worden (dus lenght(freq))
+				0,0 -> niet ingepland
+				d,t,l -> ingepland op dag d, in truck t, in loop l.
+		
+		Offspring genereren:
+			population.OrderBy(p => p.Score)
+			pak de n best en m random schedules uit de population.
+			Pak telkens 2 parents:
+				- basiskind is p1 XOR p2
+				- for elke order (p2 - (p1 XOR p2))
+					nieuwkind = basiskind + order
+				- for elke order (p1 - (p1 XOR p2))
+					nieuwkind = basiskind + order
+		mutation:
+			pak een random kind, maak een kopie waarbij:
+				een order die ingepland is verwijderen
+				een order die ingepland is op een andere plek zetten, met al zn freq of maar 1 inplan.
+				een order die NIET ingepland is inplannen op:
+					NOG BESLISSEN WAT:
+					- random toegestaan moment
+					- beste toegestane moment
+					- eerste/laatste toegestane moment
+			doe dit net zo vaak totdat populationSize == desiredPopSize
+
+
+		Aangezien kinderen sws de orders bevatten die beide ouders gemeen hebben is dit aardig
+			adding biased, drm moet mutation miss wat meer deletion biased worden.
+
+
 ---
 Fleshed out werkwijze:
 - Variabelen:
@@ -149,6 +154,7 @@ Fleshed out werkwijze:
 	-> Sorteer populatie op basis van Score.
 	-> Bepaal parent_amount parents uit de populatie.
 		-> 
+
 
 
 
