@@ -20,7 +20,7 @@ namespace AfvalOphaler
             rnd = new Random();
         }
 
-        public void StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
+        public Task[] StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
         {
             top10Schedules = new Schedule[10];
 
@@ -39,11 +39,7 @@ namespace AfvalOphaler
 
                 i++;
             }
-
-            Task.WaitAll(tasks);
-            //*/
-
-            //Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver); });
+            return tasks;
         }
 
         void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)
