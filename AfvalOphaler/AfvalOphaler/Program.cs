@@ -1,5 +1,7 @@
 ﻿//#define FINAL
+//#define CLUSTER
 #define TEST
+//#define CUSTOM
 
 using System;
 using System.Collections.Generic;
@@ -25,21 +27,13 @@ namespace AfvalOphaler
 
         static void Main(string[] args)
         {
-#if TEST
-            /* RouteVisualizer:
-            RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
-            Application.DoEvents();
-            vis.WindowState = FormWindowState.Maximized;
-            Application.DoEvents();
-            Console.ReadKey();*/
-
             // Getting times and distances:
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
-
+#if CLUSTER
             // Clustering:
             bool clusterorders = true;
             if (clusterorders)
@@ -48,14 +42,48 @@ namespace AfvalOphaler
                 int clustercount = 4;
                 Parser.KMeansClusterOrders(orders, clustercount, 1000);
             }
+#endif
+
+#if TEST
+
+#if CUSTOM
+            orders = orders.OrderBy(o => o.Frequency).ToList();
+            NAfvalOphaler.Schedule customSchedule = new NAfvalOphaler.Schedule(orders);
+            int loopindex = customSchedule.AddLoop(0, 0);
+            NAfvalOphaler.Node curr = customSchedule.dayRoutes[0][0].Loops[loopindex].Start;
+            for (int o = 0; o < 10; o++)
+            {
+                curr = customSchedule.AddOrder(orders[o], curr, loopindex, 0, 0);
+            }
+            Console.WriteLine("Done adding...");
+            File.WriteAllText(@".\beforeOpt.txt", customSchedule.ToCheckString());
+            Console.WriteLine("Before opt saved...");
+            Console.WriteLine("Starting optimalisation...");
+            for (int opt = 0; opt < 10; opt++)
+            {
+                customSchedule.dayRoutes[0][0].Loops[loopindex].OptimizeLoop();
+                Console.WriteLine("Duration: "+ customSchedule.CaculateDuration());
+            }
+            Console.WriteLine("Optimalisation done...");
+            File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
+            Console.WriteLine("Opt results saved...");
+            Console.ReadKey();
+
+#else
+            /* RouteVisualizer:
+            RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
+            Application.DoEvents();
+            vis.WindowState = FormWindowState.Maximized;
+            Application.DoEvents();
+            Console.ReadKey();*/
 
             // Solving:
-            int threads = 10;
+            int threads = 20;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
 
             Solver solver = new Solver(startStates, threads);
-            Task[] tasks = solver.StartSolving(20000, 20, 10000, 10000);
+            Task[] tasks = solver.StartSolving(100000, 20, 10000, 10000);
             Task.WaitAll(tasks);
 
             Schedule bestSchedule = solver.GetBestSchedule();
@@ -63,28 +91,35 @@ namespace AfvalOphaler
             Console.WriteLine("Solving done, score of best schedule:");
             Console.WriteLine(bestSchedule.GetStatistics());
 
+            Console.WriteLine("Starting Optimization:");
+            bestSchedule.OptimizeSchedule();
+            Console.WriteLine("After Optimization:");
+            Console.WriteLine(bestSchedule.GetStatistics());
+
+            solver = new Solver(new Schedule[] { bestSchedule }, 1);
+            Task.WaitAll(solver.StartSolving(100000, 20, 10000, 10000));
+
+            bestSchedule = solver.GetBestSchedule();
+            Console.WriteLine("===");
+            Console.WriteLine("Again solving done, score of best schedule:");
+            Console.WriteLine(bestSchedule.GetStatistics());
+
+            Console.WriteLine("Again starting Optimization:");
+            bestSchedule.OptimizeSchedule();
+            Console.WriteLine("Again after Optimization:");
+            Console.WriteLine(bestSchedule.GetStatistics());
+
+
+
             string bestcheckstring = bestSchedule.ToCheckString();
             File.WriteAllText(@".\result.txt", bestcheckstring);
             //Console.WriteLine(bestcheckstring);
             Console.WriteLine("done");
-            Console.ReadKey();
-
+            Console.ReadKey();    
+#endif
 #else          
-            Console.WriteLine("Hé jochie");
-            Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
-            GD.JourneyTime = t;
-            List<Order> orders = Parser.ParseOrdersArr(ordersDir);
-            Console.WriteLine("Clustering...");
-            int clustercount = 10;
-            Parser.KMeansClusterOrders(orders, 10, 10000);
-            Console.WriteLine("Hé Ed!");
-
-            RouteVisualizer vis = new RouteVisualizer(orders, clustercount);
-            Application.DoEvents();
-            vis.WindowState = FormWindowState.Maximized;
-            Application.DoEvents();
-            Console.ReadKey();
-
+            // HEY JOCHIE !!!
+            // DIT IS VOOR FINAL JOCHIE !!!
 #endif
         }
     }

@@ -18,10 +18,22 @@ namespace AfvalOphaler
         public double totalTime;
         public double CalculateTotalTime()
         {
-            double total = 0;
-            foreach (Day d in Days) total += (720-d.TimeLeft);
-            totalTime = total;
-            return total;
+            double duration = 0;
+            foreach (Day d in Days)
+            {
+                foreach (Loop l in d.Loops)
+                {
+                    duration += 30 + GD.JourneyTime[l.Start.Data.MatrixId, l.Start.Next.Data.MatrixId];
+                    Node curr = l.Start.Next;
+                    while (!curr.IsDump)
+                    {
+                        duration += GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId] + curr.Data.TimeToEmpty;
+                        curr = curr.Next;
+                    }
+                }
+            }
+            totalTime = duration;
+            return duration;
         }
         public double totalPenalty;
         public double CalculateTotalPenalty()
@@ -51,10 +63,10 @@ namespace AfvalOphaler
             //nonPlannedOrders = orders.ToList();
 
             //nonPlannedOrders = orders.OrderBy(o => o.Score).ToList();
-            //nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
+            nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList(); // Redelijk goed resultaat
             //nonPlannedOrders = orders.OrderByDescending(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Slechter resultaat
             
-            nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Beter resultaat met ClusterAdd en BEST en ASAP
+            //nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList(); // Beter resultaat met ClusterAdd en BEST en ASAP
             //nonPlannedOrders = orders.OrderBy(o => o.Frequency).ThenBy(o => o.Cluster).ThenBy(o => o.Score).ToList(); // Slechter resultaat met ClusterAdd
 
             CalculateTotalPenalty();
@@ -86,10 +98,10 @@ namespace AfvalOphaler
         {
             // Pak node die nog niet in loop zit en beste afstand/tijd ratio heeft
             if (s.nonPlannedOrders.Count == 0) return new ImpossibleResult(s);
-            Random Rnd = new Random();
+            //Random Rnd = new Random();
             //int notPickedOrderIndex = (int)(s.nonPlannedOrders.Count * Math.Pow(s.Rnd.NextDouble(), 1.0 / 50.0));
             //int notPickedOrderIndex = s.Rnd.Next(0, s.nonPlannedOrders.Count);
-            int notPickedOrderIndex = Rnd.Next(0, (s.nonPlannedOrders.Count / 2));
+            int notPickedOrderIndex = s.Rnd.Next(0, (s.nonPlannedOrders.Count / 5));
             Order bestNotPicked = s.nonPlannedOrders[notPickedOrderIndex];
             int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency]; // Gives all possible ways to plan the order.
 
@@ -175,7 +187,7 @@ namespace AfvalOphaler
             if (s.nonPlannedOrders.Count == 0) return new ImpossibleResult(s);
 
             Random rnd = new Random();
-            int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+            int index = rnd.Next(0, s.nonPlannedOrders.Count / 2);
             //int index = 0;
             Order bestNotPicked = s.nonPlannedOrders[index];
             int[][] combis = GD.AllowedDayCombinations[bestNotPicked.Frequency];
@@ -338,6 +350,12 @@ namespace AfvalOphaler
         }
         #endregion
 
+        public void OptimizeSchedule()
+        {
+            for (int d = 0; d < 5; d-=-1) for (int t = 0; t < 2; t-=-1) Days[d, t].OptimizeDay();
+            CalculateScore();
+        }
+
         #region To Strings
         public override string ToString()
         {
@@ -385,8 +403,6 @@ namespace AfvalOphaler
         }
         #endregion
     }
-
-
 
     struct Transfer
     {
@@ -516,6 +532,8 @@ namespace AfvalOphaler
             TimeLeft -= Loops[loopIndex].Duration;
         }
         #endregion
+
+        public void OptimizeDay() { foreach (Loop l in Loops) for (int opt = 0; opt < 50; opt++) l.OptimizeLoop(); }
 
         public override string ToString()
         {
@@ -651,6 +669,127 @@ namespace AfvalOphaler
         }
         #endregion
 
+        public Node[] ToList()
+        {
+            Node[] nodes = new Node[Count];
+            Node curr = Start.Next; int i = 0;
+            while (!curr.IsDump)
+            {
+                nodes[i] = curr;
+                curr = curr.Next;
+                i++;
+            }
+            return nodes;
+        }
+
+        #region
+        public void OptimizeLoop()
+        {
+            void Two_Opt_Move(Node[] loop, Node i, Node j)
+            {
+                //Console.WriteLine($"Changing {i} to {i.Next}\nAnd {j} to {j.Next}\nTo: {i}->{j} and\n{i.Next}->{j.Next}");
+
+                // Dit: 0 1 2 3 4 5 6 7 8 9
+                // Moet dit worden: 0 8 7 6 5 4 3 2 1 9
+                // i = 0
+                // j = 8
+
+                Node iplus = i.Next; // 1
+                Node jplus = j.Next; // 9
+                iplus.Prev = i.Next.Next; // 1.prev = 2
+                j.Next = j.Prev;    // 8.next = 7
+                // 0 2 1 2 3 4 5 6 7 8 7 9
+
+                Node curr = i.Next.Next; // curr = 2
+                Node stop = j;           // stop = 8
+
+                //Console.WriteLine($"Stop: {stop}");
+                while (curr != stop)
+                {
+                    //Console.WriteLine($"curr: {curr}");
+                    Node temp = curr.Next;  // temp = 3     // temp = 4
+                    curr.Next = curr.Prev;  // 2.next = 1   // 3.next = 2
+                    curr.Prev = temp;       // 2.prev = 3   // 3.prev = 4
+                    curr = curr.Prev;       // curr = 3     // curr = 4
+                }
+                // 0       8 7 6 5 4 3 2 1.... 9
+
+                i.Next = j;         // 0.next = 8
+                j.Prev = i;         // 8.prev = 0
+                iplus.Next = jplus; // 1.next = 9
+                jplus.Prev = iplus; // 9.prev = 1
+                // 0 8 7 6 5 4 3 2 1 9
+
+                //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+            void Two_Opt_Node_Shift_Move(Node i, Node j)
+            {
+                // Node i is places between Node j and Node j.Next
+                i.Next.Prev = i.Prev;
+                i.Prev.Next = i.Next;
+                i.Next = j.Next;
+                j.Next.Prev = i;
+                j.Next = i;
+                i.Prev = j;
+
+                //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
+                //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+
+            Node[] nodes = ToList();
+            for (int i = 0; i < Count - 2; i++)
+            {
+                Node x1 = nodes[i];
+                Node x2 = nodes[i + 1];
+                for (int j = i + 2; j < Count - 1; j++)
+                {
+                    Node y1 = nodes[j];
+                    Node y2 = nodes[j + 1];
+
+                    double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+                    double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+                    double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+                    if (del_dist - (X1Y1 + X2Y2) > 0)
+                    {
+                        Console.WriteLine("Doing 2-opt move...");
+                        Two_Opt_Move(nodes, x1, y1);
+                        return;
+                    }
+                    else
+                    {
+                        double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+                        Node z1 = nodes[i + 2];
+                        if (z1 != y1)
+                        {
+                            if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                            {
+                                Console.WriteLine("Doing first 2.5-opt move...");
+                                Two_Opt_Node_Shift_Move(x2, y1);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            z1 = nodes[j - 1];
+                            if (z1 != x2)
+                            {
+                                if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                {
+                                    Console.WriteLine("Doing second 2.5-opt move...");
+                                    Two_Opt_Node_Shift_Move(y1, x1);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
         public override string ToString()
         {
             return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
@@ -697,6 +836,22 @@ namespace AfvalOphaler
             Prev.Next = Next;
             Next = null;
             Prev = null;
+        }
+        #endregion
+
+        #region Overrides
+        public override bool Equals(object o)
+        {
+            Node n = (Node)o;
+            return Data.OrderId.Equals(n.Data.OrderId);
+        }
+        public override int GetHashCode()
+        {
+            return Data.OrderId;
+        }
+        public override string ToString()
+        {
+            return "Node: " + Data.ToString();
         }
         #endregion
     }
