@@ -8,20 +8,17 @@ namespace NAfvalOphaler
 {
     class Solver
     {
-        ScheduleResult[] top10;
+        private ScheduleResult[] top10;
         public bool UserInterrupt = false;
 
-        List<Order> orders;
+        private List<Order> orders;
         public Solver(List<Order> orders)
         {
             top10 = new ScheduleResult[10];
             this.orders = orders;
         }
 
-        public Task<ScheduleResult[]> StartSolving(int threads, int maxI, int opCount, int maxNoChange)
-        {
-            return Task.Factory.StartNew(() => Solve(threads, maxI, opCount, maxNoChange));
-        }
+        public Task<ScheduleResult[]> StartSolving(int threads, int maxI, int opCount, int maxNoChange) => Task.Run(() => Solve(threads, maxI, opCount, maxNoChange));
 
         private ScheduleResult[] Solve(int threads, int maxI, int opCount, int maxNoChange)
         {
@@ -148,11 +145,14 @@ namespace NAfvalOphaler
             double opt = double.MaxValue;
             for(int i = 0; i < nOps; i++)
             {
-                double delta = ops[i].Evaluate();
-                if (delta < opt)
+                if (ops[i].Evaluate())
                 {
-                    best = ops[i];
-                    opt = delta;
+                    double delta = ops[i].TotalDelta.Value;
+                    if (delta < opt)
+                    {
+                        best = ops[i];
+                        opt = delta;
+                    }
                 }
             }
             if (best == null) return false;
@@ -179,7 +179,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate() < 0)
+                if (ops[i].Evaluate() && ops[i].TotalDelta < 0)
                 {
                     ops[i].Apply();
                     return true;
@@ -221,21 +221,24 @@ namespace NAfvalOphaler
                 int i = rnd.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
-                double delta = op.Evaluate();
-                if (delta < 0)
+                if (op.Evaluate())
                 {
-                    op.Apply();
-                    return true;
-                }
-                else
-                {
-                    double p = Prob(delta, c);
-                    double r = rnd.NextDouble();
-
-                    if (p > r)
+                    double delta = op.TotalDelta.Value;
+                    if (delta < 0)
                     {
                         op.Apply();
                         return true;
+                    }
+                    else
+                    {
+                        double p = Prob(delta, c);
+                        double r = rnd.NextDouble();
+
+                        if (p > r)
+                        {
+                            op.Apply();
+                            return true;
+                        }
                     }
                 }
             }

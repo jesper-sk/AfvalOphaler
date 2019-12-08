@@ -153,16 +153,19 @@ namespace NAfvalOphaler
                 _Apply();
             }
 
-            public double Evaluate()
+            public bool Evaluate()
             {
-                _Evaluate(out double dT, out double dP);
-                isEvaluated = true;
-                DeltaTime = dT;
-                DeltaPenalty = dP;
-                return TotalDelta.Value;
+                if (_Evaluate(out double dT, out double dP))
+                {
+                    isEvaluated = true;
+                    DeltaTime = dT;
+                    DeltaPenalty = dP;
+                    return true;
+                }
+                else return false;
             }
 
-            protected abstract void _Evaluate(out double deltaTime, out double deltaPenalty);
+            protected abstract bool _Evaluate(out double deltaTime, out double deltaPenalty);
             protected abstract void _Apply();
         }
 
@@ -178,7 +181,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
@@ -195,7 +198,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
@@ -212,7 +215,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
