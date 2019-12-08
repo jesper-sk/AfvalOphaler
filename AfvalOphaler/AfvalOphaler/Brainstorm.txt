@@ -90,7 +90,7 @@ Werking algoritme:
 6. return.
 
 Nog te bepalen:
-- Gezien de layout van alle punten kan een route die links en rechts van de stort gaat beter niet verdeelt worden
+- Gezien de layout van alle punten kan een route die links en rechts van de stort gaat beter niet verdeeld worden
 	qua links/rechts van de stort op basis van X maar op basis van een schuine lijn door de stort met RC=1 (dus zo'n lijn: /)
 - De nieuwe loop is gedefinieerd als: stort -> alle_nodes_1e_helft -> alle_nodes_2e_helft_reversed,
 	wat is de 1e helft en wat is de 2e helft? maakt dat uit?
