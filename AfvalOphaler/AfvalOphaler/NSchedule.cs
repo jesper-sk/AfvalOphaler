@@ -290,6 +290,14 @@ namespace NAfvalOphaler
             RoomLeft = 20000;           //Gecomprimeerd
             Count = 0;
         }
+
+        public Node[] ToList()
+        {
+            Node[] nodes = new Node[Count];
+            Node curr = Start.Next; int i = 0;
+            while (!curr.IsDump) { nodes[i] = curr; curr = curr.Next; } 
+            return nodes;
+        }
         #endregion
 
         #region Order Addition/Removal
@@ -318,6 +326,77 @@ namespace NAfvalOphaler
 
             RoomLeft += (order.NumContainers * order.VolPerContainer * 0.2);
             Count--;
+        }
+        #endregion
+
+        #region
+        public void OptimseLoop()
+        {
+            void Two_Opt_Move(Node[] loop, int i, int j)
+            {
+                // loop[i] -> loop[i+1] becomes loop[i] -> loop[j]
+                // loop[j] -> loop[j+1]    =>   loop[i+1] -> loop[j+1]
+                loop[i].Next = loop[j];
+                loop[j].Prev = loop[i];
+
+                loop[i + 1].Next = loop[j + 1];
+                loop[j + 1].Prev = loop[i + 1];
+            }
+            void Two_Opt_Node_Shift_Move(Node i, Node j)
+            {
+                // Node i is places between Node j and Node j.Next
+                i.Next = j.Next;
+                j.Next.Prev = i;
+
+                j.Next = i;
+                i.Prev = j;
+            }
+            Node[] nodes = ToList();
+            for (int i = 0; i < Count - 2; i++)
+            {
+                Node x1 = nodes[i];
+                Node x2 = nodes[i + 1];
+                for (int j = 0; j < Count; j++)
+                {
+                    Node y1 = nodes[j];
+                    Node y2 = nodes[j + 1];
+
+                    double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+                    double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+                    double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+                    if (del_dist - (X1Y1 + X2Y2) < 0)
+                    {
+                        Two_Opt_Move(nodes, i, j);
+                        return;
+                    } 
+                    else
+                    {
+                        double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+                        Node z1 = nodes[i + 2];
+                        if (z1 != y1)
+                        {
+                            if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                            {
+                                Two_Opt_Node_Shift_Move(x1, y1);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            z1 = nodes[j - 1];
+                            if (z1 != x2)
+                            {
+                                if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                {
+                                    Two_Opt_Node_Shift_Move(y1, x1);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         #endregion
 
@@ -369,6 +448,22 @@ namespace NAfvalOphaler
             Prev.Next = Next;
             Next = null;
             Prev = null;
+        }
+        #endregion
+
+        #region Overrides
+        public override bool Equals(object o)
+        {
+            Node n = (Node)o;
+            return Data.OrderId.Equals(n.Data.OrderId);
+        }
+        public override int GetHashCode()
+        {
+            return Data.OrderId;
+        }
+        public override string ToString()
+        {
+            return "Node: " + Data.ToString();
         }
         #endregion
     }
