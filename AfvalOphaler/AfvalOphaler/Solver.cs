@@ -68,7 +68,7 @@ namespace AfvalOphaler
             Console.WriteLine("Starting Transfering...");
             solver.Init(true);
 
-            int[] distro = { 1, 2, 4 };
+            int[] distro = { 1, 1, 1 };
             List<Func<Schedule, NeighborResult>> funcs = new List<Func<Schedule, NeighborResult>>();
             for (int i = 0; i < Schedule.neighborOperators.Length; i++)
             {
@@ -215,6 +215,8 @@ namespace AfvalOphaler
         public override void Init(bool beGreedy)
         {
             this.beGreedy = beGreedy;
+            c = cs;
+            rnd = new Random();
         }
 
         public override bool ApplyAccordingly(List<NeighborResult> results)

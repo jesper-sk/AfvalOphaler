@@ -613,6 +613,7 @@ namespace AfvalOphaler
             return (worst != null);
         }
 
+
         public Node AddOrder(Order order, Node nextTo)
         {
             Cluster = order.Cluster;
