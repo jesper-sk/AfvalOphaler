@@ -386,6 +386,8 @@ namespace AfvalOphaler
         #endregion
     }
 
+
+
     struct Transfer
     {
         public Node ToTransfer;
