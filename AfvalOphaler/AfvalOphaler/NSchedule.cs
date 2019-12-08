@@ -42,14 +42,61 @@ namespace NAfvalOphaler
             Duration -= route.Duration;
             route.AddOrderToLoop(o, nextTo, loop);
             Duration += route.Duration;
+            Penalty -= 3 * o.Frequency * o.TimeToEmpty;
         }
 
-        public void RemoveOrder(Node toDelete, int loop, int day, int truck)
+        public void RemoveNode(Node toDelete, int loop, int day, int truck)
         {
             DayRoute route = dayRoutes[day][truck];
             Duration -= route.Duration;
             route.RemoveNodeFromLoop(toDelete, loop);
             Duration += route.Duration;
+            Penalty += 3 * toDelete.Data.TimeToEmpty;
+        }
+
+        public override string ToString()
+        {
+            return $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
+        }
+
+        public string ToCheckString()
+        {
+            StringBuilder b = new StringBuilder();
+            for (int t = 0; t < 2; t++)
+            {
+                for (int d = 0; d < 5; d++)
+                {
+                    List<Loop> loops = Days[d, t].Loops;
+                    int global = 1;
+                    for (int l = 0; l < loops.Count; l++)
+                    {
+                        Loop curr = loops[l];
+                        Node ord = curr.Start;
+
+                        do
+                        {
+                            ord = ord.Next;
+                            b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
+                        } while (!ord.IsDump);
+                    }
+                }
+            }
+            return b.ToString();
+        }
+
+        public string GetStatistics()
+        {
+            StringBuilder res = new StringBuilder();
+            res.AppendLine("Score = " + Score);
+            res.AppendLine("TotalTime = " + totalTime);
+            res.AppendLine("TotalPenalty = " + totalPenalty);
+            for (int i = 0; i < 5; i++)
+            {
+                res.AppendLine($"Day {i}:");
+                res.AppendLine($"Truck 1: {Days[i, 0]}");
+                res.AppendLine($"Truck 2: {Days[i, 1]}");
+            }
+            return res.ToString();
         }
     }
 
