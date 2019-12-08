@@ -8,20 +8,17 @@ namespace NAfvalOphaler
 {
     class Solver
     {
-        ScheduleResult[] top10;
-        public bool userInterrupt = false;
+        private ScheduleResult[] top10;
+        public bool UserInterrupt = false;
 
-        List<Order> orders;
+        private List<Order> orders;
         public Solver(List<Order> orders)
         {
             top10 = new ScheduleResult[10];
             this.orders = orders;
         }
 
-        public Task<ScheduleResult[]> GetBestSolutions(int threads, int maxI, int opCount, int maxNoChange)
-        {
-            return Task.Factory.StartNew(() => Solve(threads, maxI, opCount, maxNoChange));
-        }
+        public Task<ScheduleResult[]> StartSolving(int threads, int maxI, int opCount, int maxNoChange) => Task.Run(() => Solve(threads, maxI, opCount, maxNoChange));
 
         private ScheduleResult[] Solve(int threads, int maxI, int opCount, int maxNoChange)
         {
@@ -39,7 +36,7 @@ namespace NAfvalOphaler
         {
             Schedule start = new Schedule(orders);
 
-            LocalSolver solver = new GreedyHillClimbLocalSolver(start);
+            LocalSolver solver = new SteepestHillClimbLocalSolver(start);
 
             bool stop = false;
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
@@ -61,8 +58,8 @@ namespace NAfvalOphaler
                     noChange++;
                 }
                 stop = noChange == maxNoChange
-                    || i++ == maxI
-                    || userInterrupt;
+                    || ++i == maxI
+                    || UserInterrupt;
             }
         }
 
@@ -131,9 +128,9 @@ namespace NAfvalOphaler
         public abstract bool GetNext(double[] probDist, int nOps);
     }
 
-    class GreedyHillClimbLocalSolver : LocalSolver
+    class SteepestHillClimbLocalSolver : LocalSolver
     {
-        public GreedyHillClimbLocalSolver(Schedule s) : base(s)
+        public SteepestHillClimbLocalSolver(Schedule s) : base(s)
         {      
         }
 
@@ -148,11 +145,14 @@ namespace NAfvalOphaler
             double opt = double.MaxValue;
             for(int i = 0; i < nOps; i++)
             {
-                double delta = ops[i].Evaluate();
-                if (delta < opt)
+                if (ops[i].Evaluate())
                 {
-                    best = ops[i];
-                    opt = delta;
+                    double delta = ops[i].TotalDelta.Value;
+                    if (delta < opt)
+                    {
+                        best = ops[i];
+                        opt = delta;
+                    }
                 }
             }
             if (best == null) return false;
@@ -161,10 +161,10 @@ namespace NAfvalOphaler
         }
     }
 
-    class StackedHIllClimbLocalSolver : LocalSolver
+    class RandomHillClimbLocalSolver : LocalSolver
     {
         Random rnd;
-        public StackedHIllClimbLocalSolver(Schedule s) : base(s)
+        public RandomHillClimbLocalSolver(Schedule s) : base(s)
         {
         }
 
@@ -179,7 +179,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate() < 0)
+                if (ops[i].Evaluate() && ops[i].TotalDelta < 0)
                 {
                     ops[i].Apply();
                     return true;
@@ -221,21 +221,24 @@ namespace NAfvalOphaler
                 int i = rnd.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
-                double delta = op.Evaluate();
-                if (delta < 0)
+                if (op.Evaluate())
                 {
-                    op.Apply();
-                    return true;
-                }
-                else
-                {
-                    double p = Prob(delta, c);
-                    double r = rnd.NextDouble();
-
-                    if (p > r)
+                    double delta = op.TotalDelta.Value;
+                    if (delta < 0)
                     {
                         op.Apply();
                         return true;
+                    }
+                    else
+                    {
+                        double p = Prob(delta, c);
+                        double r = rnd.NextDouble();
+
+                        if (p > r)
+                        {
+                            op.Apply();
+                            return true;
+                        }
                     }
                 }
             }

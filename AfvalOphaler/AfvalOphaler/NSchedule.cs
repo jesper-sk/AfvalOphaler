@@ -143,10 +143,12 @@ namespace NAfvalOphaler
             NeighborOperation[] res = new NeighborOperation[nOps];
             for(int j = 0; j < nOps; j++)
             {
+                double acc = 0;
                 double p = rnd.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
-                    if (probDist[i] <= p)
+                    acc += probDist[i];
+                    if (p <= acc)
                     {
                         res[j] = ops[i]();
                         break;
@@ -170,16 +172,19 @@ namespace NAfvalOphaler
                 _Apply();
             }
 
-            public double Evaluate()
+            public bool Evaluate()
             {
-                _Evaluate(out double dT, out double dP);
-                isEvaluated = true;
-                DeltaTime = dT;
-                DeltaPenalty = dP;
-                return TotalDelta.Value;
+                if (_Evaluate(out double dT, out double dP))
+                {
+                    isEvaluated = true;
+                    DeltaTime = dT;
+                    DeltaPenalty = dP;
+                    return true;
+                }
+                else return false;
             }
 
-            protected abstract void _Evaluate(out double deltaTime, out double deltaPenalty);
+            protected abstract bool _Evaluate(out double deltaTime, out double deltaPenalty);
             protected abstract void _Apply();
         }
 
@@ -195,7 +200,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
@@ -212,7 +217,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
@@ -229,7 +234,7 @@ namespace NAfvalOphaler
                 throw new NotImplementedException();
             }
 
-            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 throw new NotImplementedException();
             }
