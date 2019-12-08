@@ -66,7 +66,7 @@ namespace NAfvalOphaler
             {
                 for (int d = 0; d < 5; d++)
                 {
-                    List<Loop> loops = Days[d, t].Loops;
+                    List<Loop> loops = dayRoutes[d][t].Loops;
                     int global = 1;
                     for (int l = 0; l < loops.Count; l++)
                     {
@@ -88,13 +88,13 @@ namespace NAfvalOphaler
         {
             StringBuilder res = new StringBuilder();
             res.AppendLine("Score = " + Score);
-            res.AppendLine("TotalTime = " + totalTime);
-            res.AppendLine("TotalPenalty = " + totalPenalty);
+            res.AppendLine("TotalTime = " + Duration);
+            res.AppendLine("TotalPenalty = " + Penalty);
             for (int i = 0; i < 5; i++)
             {
                 res.AppendLine($"Day {i}:");
-                res.AppendLine($"Truck 1: {Days[i, 0]}");
-                res.AppendLine($"Truck 2: {Days[i, 1]}");
+                res.AppendLine($"Truck 1: {dayRoutes[i][0]}");
+                res.AppendLine($"Truck 2: {dayRoutes[i][1]}");
             }
             return res.ToString();
         }
