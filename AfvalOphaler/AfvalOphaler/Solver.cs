@@ -20,21 +20,26 @@ namespace AfvalOphaler
             rnd = new Random();
         }
 
-        public void StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
+        public Task[] StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
         {
             top10Schedules = new Schedule[10];
-            /*
-            var tasks = new Task[threads];            
-            for (int i = 0; i < threads; i++)
-            {
-                tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0, maxIterations, opCount, 0, maxNoChange));
-            }
-            Task.WaitAll(tasks);
-            */
 
             LocalSolver solver = new HillClimbLocalSolver();
             //LocalSolver solver = new SaLocalSolver(0.5, 0.9999);
-            Parallel.ForEach(startSchedules, s => { DoSolving(s, maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver); });
+
+            ///*
+            threads = 10;
+            var tasks = new Task[threads];
+            int i = 0;
+            while (i < threads)
+            {
+                int index = i;
+                tasks[index] = Task.Factory.StartNew(() => DoSolving(startSchedules[index], maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver));
+                //tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0, maxIterations, opCount, 0, maxNoChange));
+
+                i++;
+            }
+            return tasks;
         }
 
         void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNochangeAdd, LocalSolver solver)
@@ -64,7 +69,7 @@ namespace AfvalOphaler
             }
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
             //Console.ReadKey();
-
+            /*
             Console.WriteLine("Starting Transfering...");
             solver.Init(true);
 
@@ -85,7 +90,8 @@ namespace AfvalOphaler
                 List<NeighborResult> results = new List<NeighborResult>(opCount);
                 for(int op = 0; op < opCount; op++)
                 {
-                    Func<Schedule, NeighborResult> func = Schedule.transferOperator;// funcs[rnd.Next(0, funcs.Count)];
+                    //Func<Schedule, NeighborResult> func = Schedule.transferOperator;// funcs[rnd.Next(0, funcs.Count)];
+                    Func<Schedule, NeighborResult> func = funcs[rnd.Next(0, funcs.Count)];
                     NeighborResult res = func(state);
                     results.Add(res);
                 }
@@ -104,7 +110,7 @@ namespace AfvalOphaler
                 }
                 //Console.ReadKey();
             }
-
+            Console.WriteLine($"between done. Result: {state.ToString()}");
             Console.WriteLine("Adding...");
             hc.Init();
             noChange = 0;
@@ -128,7 +134,7 @@ namespace AfvalOphaler
                 }
             }
             Console.WriteLine($"Adding done. Result: {state.ToString()}");
-
+            */
             lock (addlock) { AddScheduleToTop(state); }
         }   
 
@@ -214,6 +220,8 @@ namespace AfvalOphaler
 
         public override void Init(bool beGreedy)
         {
+            c = cs;
+            rnd = new Random();
             this.beGreedy = beGreedy;
             c = cs;
             rnd = new Random();

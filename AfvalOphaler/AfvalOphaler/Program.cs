@@ -26,17 +26,21 @@ namespace AfvalOphaler
         static void Main(string[] args)
         {
 #if TEST
-            /*RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
+            /* RouteVisualizer:
+            RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
             Application.DoEvents();
             vis.WindowState = FormWindowState.Maximized;
             Application.DoEvents();
             Console.ReadKey();*/
 
+            // Getting times and distances:
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
+
+            // Clustering:
             bool clusterorders = true;
             if (clusterorders)
             {
@@ -46,16 +50,19 @@ namespace AfvalOphaler
             }
 
             // Solving:
-            int threads = 5;
+            int threads = 10;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
-            Solver solver = new Solver(startStates, threads);
 
-            solver.StartSolving(20000, 20, 10000, 10000);
+            Solver solver = new Solver(startStates, threads);
+            Task[] tasks = solver.StartSolving(20000, 20, 10000, 10000);
+            Task.WaitAll(tasks);
+
             Schedule bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("===");
             Console.WriteLine("Solving done, score of best schedule:");
             Console.WriteLine(bestSchedule.GetStatistics());
+
             string bestcheckstring = bestSchedule.ToCheckString();
             File.WriteAllText(@".\result.txt", bestcheckstring);
             //Console.WriteLine(bestcheckstring);
@@ -85,6 +92,7 @@ namespace AfvalOphaler
     public static class GD
     {
         public static double[,] JourneyTime;
+
         public static Order Dump = new Order()
         {
             OrderId = 0,
