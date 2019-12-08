@@ -139,5 +139,22 @@ namespace AfvalOphaler
         };
 
     }
+
+    public class HeyJochieException : Exception
+    {
+        public HeyJochieException()
+        {
+        }
+
+        public HeyJochieException(string message)
+            : base(message)
+        {
+        }
+
+        public HeyJochieException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+    }
 }
 

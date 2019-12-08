@@ -41,15 +41,8 @@ namespace NAfvalOphaler
             {
                 Console.WriteLine($"Iteration {iter}...");
                 //if (iter % 1000 == 0) Console.WriteLine($"Iteration {iter}...");
-
-                List<NeighborResult> results = new List<NeighborResult>(opCount);
-                for (int o = 0; o < opCount; o++)
-                {
-
-                }
-
-
-                bool change = solver.GenerateNextState(state, results);
+                
+                bool change = solver.GenerateNextState(state);
 
                 if (!change)
                 {

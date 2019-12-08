@@ -54,11 +54,11 @@ namespace NAfvalOphaler
             Penalty += 3 * toDelete.Data.TimeToEmpty;
         }
 
+        #region ToStrings
         public override string ToString()
         {
             return $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
         }
-
         public string ToCheckString()
         {
             StringBuilder b = new StringBuilder();
@@ -83,7 +83,6 @@ namespace NAfvalOphaler
             }
             return b.ToString();
         }
-
         public string GetStatistics()
         {
             StringBuilder res = new StringBuilder();
@@ -98,6 +97,34 @@ namespace NAfvalOphaler
             }
             return res.ToString();
         }
+        #endregion
+
+        #region Operations
+        public abstract class NeighborOperation
+        {
+            int deltaTime;
+            int deltaPenalty;
+            public int TotalDelta => deltaTime + deltaPenalty;
+            public NeighborOperation(int dT, int dP)
+            {
+                deltaTime = dT;
+                deltaPenalty = dP;
+            }
+            public abstract void ApplyOperation();
+        }
+        public class AddOperation : NeighborOperation
+        {
+            public AddOperation(int dT, int dP) : base(dT, dP)
+            {
+
+            }
+            public override void ApplyOperation()
+            {
+                throw new AfvalOphaler.HeyJochieException("Nog niet geimplementeerd Ed!");
+            }
+        }
+        
+        #endregion
     }
 
     public class DayRoute
