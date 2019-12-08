@@ -10,7 +10,7 @@ using Order = AfvalOphaler.Order;
 namespace NAfvalOphaler
 {
     public class Schedule
-    {
+    { 
         //Public Variables
         public double Duration = 0;
         public double Penalty;
@@ -19,15 +19,18 @@ namespace NAfvalOphaler
         //Private Variables
         private DayRoute[][] dayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
         private List<Order> orders;
-
+        private Random rnd;
+        
         public Schedule(List<Order> orders)
         {
-            this.orders = orders;
+            this.orders = orders.ToList();
 
             dayRoutes = new DayRoute[5][];
             for (int d = 0; d < 5; d++) dayRoutes[d] = new DayRoute[2];
 
             foreach (Order o in orders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
+
+            rnd = new Random();
         }
 
         public int AddLoop(int day, int truck)
@@ -55,6 +58,15 @@ namespace NAfvalOphaler
         }
 
         #region ToStrings
+        public ScheduleResult ToResult()
+        {
+            return new ScheduleResult()
+            {
+                Score = this.Score,
+                Stats = GetStatistics(),
+                Check = ToCheckString()
+            };
+        }
         public override string ToString()
         {
             return $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
@@ -100,31 +112,117 @@ namespace NAfvalOphaler
         #endregion
 
         #region Operations
+        private Func<NeighborOperation>[] ops =
+        {
+            new Func<NeighborOperation>(() => new RandomAddOperation()),
+            new Func<NeighborOperation>(() => new RandomDeleteOperation()),
+            new Func<NeighborOperation>(() => new RandomTransferOperation())
+        };
+
+        public NeighborOperation[] GetOperations(double[] probDist, int nOps)
+        {
+            NeighborOperation[] res = new NeighborOperation[nOps];
+            for(int j = 0; j < nOps; j++)
+            {
+                double p = rnd.NextDouble();
+                for (int i = 0; i < probDist.Length; i++)
+                {
+                    if (probDist[i] <= p)
+                    {
+                        res[j] = ops[i]();
+                        break;
+                    }
+                }
+            }
+            return res;
+        }
+
         public abstract class NeighborOperation
         {
-            int deltaTime;
-            int deltaPenalty;
-            public int TotalDelta => deltaTime + deltaPenalty;
-            public NeighborOperation(int dT, int dP)
-            {
-                deltaTime = dT;
-                deltaPenalty = dP;
-            }
-            public abstract void ApplyOperation();
-        }
-        public class AddOperation : NeighborOperation
-        {
-            public AddOperation(int dT, int dP) : base(dT, dP)
-            {
+            public bool isEvaluated = false;
+            public double? TotalDelta => DeltaTime + DeltaPenalty;
 
-            }
-            public override void ApplyOperation()
+            public double? DeltaTime = null;
+            public double? DeltaPenalty = null;
+
+            public void Apply()
             {
-                throw new AfvalOphaler.HeyJochieException("Nog niet geimplementeerd Ed!");
+                if (!isEvaluated) throw new InvalidOperationException("Evaluate operation first!");
+                _Apply();
+            }
+
+            public double Evaluate()
+            {
+                _Evaluate(out double dT, out double dP);
+                isEvaluated = true;
+                DeltaTime = dT;
+                DeltaPenalty = dP;
+                return TotalDelta.Value;
+            }
+
+            protected abstract void _Evaluate(out double deltaTime, out double deltaPenalty);
+            protected abstract void _Apply();
+        }
+
+        public class RandomAddOperation : NeighborOperation
+        {
+            public RandomAddOperation()
+            {
+                //Hé jochie
+            }
+
+            protected override void _Apply()
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            {
+                throw new NotImplementedException();
             }
         }
-        
+        public class RandomDeleteOperation : NeighborOperation
+        {
+            public RandomDeleteOperation()
+            {
+                //Hé jochie
+            }
+
+            protected override void _Apply()
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            {
+                throw new NotImplementedException();
+            }
+        }
+        public class RandomTransferOperation : NeighborOperation
+        {
+            public RandomTransferOperation()
+            {
+                //Hé jochie
+            }
+
+            protected override void _Apply()
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void _Evaluate(out double deltaTime, out double deltaPenalty)
+            {
+                throw new NotImplementedException();
+            }
+        }
         #endregion
+    }
+
+    public class ScheduleResult
+    {
+        public double Score;
+        public string Stats;
+        public string Check;
     }
 
     public class DayRoute
@@ -366,14 +464,5 @@ namespace NAfvalOphaler
             return "Node: " + Data.ToString();
         }
         #endregion
-    }
-
-    public abstract class NeighborResult
-    {
-        public NeighborResult()
-        {
-            // Hey Jochie!
-        }
-        public abstract void Apply(Schedule state);
     }
 }

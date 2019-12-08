@@ -1,27 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using NOp = NAfvalOphaler.Schedule.NeighborOperation;
+using Order = AfvalOphaler.Order;
 
 namespace NAfvalOphaler
 {
     class Solver
     {
-        Schedule[] startSchedules;
-        Schedule[] top10Schedules;
-        int threads;
-        Random rnd;
-        public Solver(Schedule[] _startSchedules, int _threads)
+        ScheduleResult[] top10;
+        public bool userInterrupt = false;
+
+        List<Order> orders;
+        public Solver(List<Order> orders)
         {
-            startSchedules = _startSchedules;
-            threads = _threads;
-            rnd = new Random();
+            top10 = new ScheduleResult[10];
+            this.orders = orders;
         }
 
-        public Task[] StartSolving(int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd)
+        public Task<ScheduleResult[]> GetBestSolutions(int threads, int maxI, int opCount, int maxNoChange)
         {
-            LocalSolver solver = new HillClimbLocalSolver();
+            return Task.Factory.StartNew(() => Solve(threads, maxI, opCount, maxNoChange));
+        }
+
+        private ScheduleResult[] Solve(int threads, int maxI, int opCount, int maxNoChange)
+        {
+            Task[] tasks = new Task[threads];
+            for(int i = 0; i < threads; i++)
+            {
+                tasks[i] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange));
+            }
+            Task.WaitAll(tasks);
+
+            return top10;
+        }
+
+        private void SolveOne(int maxI, int opCount, int maxNoChange)
+        {
+            Schedule start = new Schedule(orders);
+
+            LocalSolver solver = new GreedyHillClimbLocalSolver(start);
+
+            bool stop = false;
+            ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
+            int i = 0;
+            int noChange = 0;
+            while (!stop)
+            {
+                if (solver.GetNext(new double[] { 1/3, 1/3, 1/3 }, opCount))
+                {
+                    noChange = 0;
+                    if (solver.schedule.Score < best.Score)
+                    {
+                        best = solver.schedule.ToResult();
+                        lock (addlock) AddScheduleToTop(best);
+                    }
+                }
+                else
+                {
+                    noChange++;
+                }
+                stop = noChange == maxNoChange
+                    || i++ == maxI
+                    || userInterrupt;
+            }
+        }
+
+        #region OLD
+        /*
+        public Task[] nStartSolving(int maxIterations, int opCount, int maxNoChange)
+        {
+            LocalSolver solver = new GreedyHillClimbLocalSolver();
             top10Schedules = new Schedule[10];
 
             var tasks = new Task[threads];
@@ -34,7 +83,7 @@ namespace NAfvalOphaler
             return tasks;
         }
 
-        private void DoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd, LocalSolver solver)
+        private void nDoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd, LocalSolver solver)
         {
             int noChange = 0;
             for (int iter = 0; iter < maxIterations; iter++)
@@ -52,44 +101,147 @@ namespace NAfvalOphaler
             }
             Console.WriteLine("Solving done");
             lock (addlock) { AddScheduleToTop(state); }
-        }
+        }*/
+        #endregion
 
         private readonly object addlock = new object();
-        void AddScheduleToTop(Schedule s)
+        void AddScheduleToTop(ScheduleResult s)
         {
             Console.WriteLine("Pushing schedule to ranking: " + s.Score);
             double s_score = s.Score;
             for (int i = 0; i < 10; i++)
-                if (top10Schedules[i] == null) top10Schedules[i] = s;
-                else if (s_score < top10Schedules[i].Score)
+                if (top10[i] == null) top10[i] = s;
+                else if (s_score < top10[i].Score)
                 {
-                    for (int j = 9; j > i; j--) top10Schedules[j] = top10Schedules[j - 1];
-                    top10Schedules[i] = s;
+                    for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
+                    top10[i] = s;
                 }
         }
-        public Schedule GetBestSchedule() { return top10Schedules[0]; }
     }
 
     abstract class LocalSolver
     {
-        public LocalSolver()
+        public readonly Schedule schedule;
+        public LocalSolver(Schedule s)
         {
-
+            schedule = s;
         }
-        public abstract bool GenerateNextState(Schedule state, List<NeighborResult> neighbors);
+
+        public abstract void Init();
+        public abstract bool GetNext(double[] probDist, int nOps);
     }
 
-    class HillClimbLocalSolver : LocalSolver
+    class GreedyHillClimbLocalSolver : LocalSolver
     {
-        public HillClimbLocalSolver() : base()
-        {
-
+        public GreedyHillClimbLocalSolver(Schedule s) : base(s)
+        {      
         }
 
-        public override bool GenerateNextState(Schedule state, List<NeighborResult> neighbors)
+        public override void Init()
         {
-            neighbors[0].Apply(state);
+        }
+
+        public override bool GetNext(double[] probDist, int nOps)
+        {
+            var ops = schedule.GetOperations(probDist, nOps);
+            NOp best = null;
+            double opt = double.MaxValue;
+            for(int i = 0; i < nOps; i++)
+            {
+                double delta = ops[i].Evaluate();
+                if (delta < opt)
+                {
+                    best = ops[i];
+                    opt = delta;
+                }
+            }
+            if (best == null) return false;
+            best.Apply();
             return true;
         }
+    }
+
+    class StackedHIllClimbLocalSolver : LocalSolver
+    {
+        Random rnd;
+        public StackedHIllClimbLocalSolver(Schedule s) : base(s)
+        {
+        }
+
+        public override void Init()
+        {
+            rnd = new Random();
+        }
+
+        public override bool GetNext(double[] probDist, int nOps)
+        {
+            List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
+            while (ops.Count != 0)
+            {
+                int i = rnd.Next(0, ops.Count);
+                if (ops[i].Evaluate() < 0)
+                {
+                    ops[i].Apply();
+                    return true;
+                }
+                else
+                {
+                    ops.RemoveAt(i);
+                }
+            }
+            return false;
+        }
+    }
+
+    class SaLocalSolver : LocalSolver
+    {
+        public readonly double cs;
+        public readonly double a;
+
+        private double c;
+        private Random rnd;
+
+        public SaLocalSolver(Schedule s, double cs, double a) : base(s)
+        {
+            this.cs = cs;
+            this.a = a;
+        }
+
+        public override void Init()
+        {
+            c = cs;
+            rnd = new Random();
+        }
+
+        public override bool GetNext(double[] probDist, int nOps)
+        {
+            List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
+            while (ops.Count != 0)
+            {
+                int i = rnd.Next(0, ops.Count);
+                NOp op = ops[i];
+                ops.RemoveAt(i);
+                double delta = op.Evaluate();
+                if (delta < 0)
+                {
+                    op.Apply();
+                    return true;
+                }
+                else
+                {
+                    double p = Prob(delta, c);
+                    double r = rnd.NextDouble();
+
+                    if (p > r)
+                    {
+                        op.Apply();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        static double Prob(double delta, double temp) => Math.Exp(-delta / temp);
     }
 }
