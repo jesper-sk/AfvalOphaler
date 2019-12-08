@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace NAfvalOphaler
 {
-    class NSolver
+    class Solver
     {
         Schedule[] startSchedules;
         Schedule[] top10Schedules;
         int threads;
         Random rnd;
-        public NSolver(Schedule[] _startSchedules, int _threads)
+        public Solver(Schedule[] _startSchedules, int _threads)
         {
             startSchedules = _startSchedules;
             threads = _threads;
