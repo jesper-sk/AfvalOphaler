@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NSchedule.cs" />
+    <Compile Include="NSolver.cs" />
     <Compile Include="Orders.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Program.cs" />

@@ -165,7 +165,6 @@ namespace NAfvalOphaler
         }
         #endregion
 
-
         #region Order Addition/Removal
         public Node AddOrder(Order order, Node nextTo)
         {
@@ -245,5 +244,14 @@ namespace NAfvalOphaler
             Prev = null;
         }
         #endregion
+    }
+
+    public abstract class NeighborResult
+    {
+        public NeighborResult()
+        {
+            // Hey Jochie!
+        }
+        public abstract void Apply(Schedule state);
     }
 }

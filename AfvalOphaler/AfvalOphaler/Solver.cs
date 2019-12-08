@@ -151,7 +151,6 @@ namespace AfvalOphaler
                     top10Schedules[i] = s;
                 }
         }
-
         public Schedule GetBestSchedule() { return top10Schedules[0]; }
     }
 
