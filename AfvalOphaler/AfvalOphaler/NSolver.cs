@@ -148,10 +148,11 @@ namespace NAfvalOphaler
             double opt = double.MaxValue;
             for(int i = 0; i < nOps; i++)
             {
-                if (ops[i].Evaluate() < opt)
+                double delta = ops[i].Evaluate();
+                if (delta < opt)
                 {
                     best = ops[i];
-                    opt = ops[i].TotalDelta.Value;
+                    opt = delta;
                 }
             }
             if (best == null) return false;
