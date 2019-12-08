@@ -9,11 +9,11 @@ using Order = AfvalOphaler.Order;
 
 namespace NAfvalOphaler
 {
-    class Schedule
+    public class Schedule
     {
         //Public Variables
-        public double Duration { get; private set; } = 0;
-        public double Penalty { get; private set; }
+        public double Duration = 0;
+        public double Penalty;
         public double Score => Duration + Penalty;
 
         //Private Variables
@@ -29,6 +29,28 @@ namespace NAfvalOphaler
 
             foreach (Order o in orders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
         }
+
+        public int AddLoop(int day, int truck)
+        {
+            Duration += 30;
+            return dayRoutes[day][truck].AddLoop();
+        }
+
+        public void AddOrder(Order o, Node nextTo, int loop, int day, int truck)
+        {
+            DayRoute route = dayRoutes[day][truck];
+            Duration -= route.Duration;
+            route.AddOrderToLoop(o, nextTo, loop);
+            Duration += route.Duration;
+        }
+
+        public void RemoveOrder(Node toDelete, int loop, int day, int truck)
+        {
+            DayRoute route = dayRoutes[day][truck];
+            Duration -= route.Duration;
+            route.RemoveNodeFromLoop(toDelete, loop);
+            Duration += route.Duration;
+        }
     }
 
     public class DayRoute
@@ -38,6 +60,8 @@ namespace NAfvalOphaler
         public double TimeLeft;
         public readonly int DayIndex;
         public readonly int TruckIndex;
+
+        public double Duration => 720 - TimeLeft;
 
         public DayRoute(int dind, int trind)
         {
@@ -49,11 +73,11 @@ namespace NAfvalOphaler
         #endregion
 
         #region Loops Modifications
-        public Loop AddLoop()
+        public int AddLoop()
         {
-            Loop l = new Loop();
-            Loops.Add(l);
-            return l;
+            Loops.Add(new Loop());
+            TimeLeft -= 30;
+            return Loops.Count - 1;
         }
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
