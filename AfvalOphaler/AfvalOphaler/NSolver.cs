@@ -9,7 +9,7 @@ namespace NAfvalOphaler
     class Solver
     {
         ScheduleResult[] top10;
-        public bool userInterrupt = false;
+        public bool UserInterrupt = false;
 
         List<Order> orders;
         public Solver(List<Order> orders)
@@ -18,7 +18,7 @@ namespace NAfvalOphaler
             this.orders = orders;
         }
 
-        public Task<ScheduleResult[]> GetBestSolutions(int threads, int maxI, int opCount, int maxNoChange)
+        public Task<ScheduleResult[]> StartSolving(int threads, int maxI, int opCount, int maxNoChange)
         {
             return Task.Factory.StartNew(() => Solve(threads, maxI, opCount, maxNoChange));
         }
@@ -39,7 +39,7 @@ namespace NAfvalOphaler
         {
             Schedule start = new Schedule(orders);
 
-            LocalSolver solver = new GreedyHillClimbLocalSolver(start);
+            LocalSolver solver = new SteepestHillClimbLocalSolver(start);
 
             bool stop = false;
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
@@ -61,8 +61,8 @@ namespace NAfvalOphaler
                     noChange++;
                 }
                 stop = noChange == maxNoChange
-                    || i++ == maxI
-                    || userInterrupt;
+                    || ++i == maxI
+                    || UserInterrupt;
             }
         }
 
@@ -131,9 +131,9 @@ namespace NAfvalOphaler
         public abstract bool GetNext(double[] probDist, int nOps);
     }
 
-    class GreedyHillClimbLocalSolver : LocalSolver
+    class SteepestHillClimbLocalSolver : LocalSolver
     {
-        public GreedyHillClimbLocalSolver(Schedule s) : base(s)
+        public SteepestHillClimbLocalSolver(Schedule s) : base(s)
         {      
         }
 
@@ -161,10 +161,10 @@ namespace NAfvalOphaler
         }
     }
 
-    class StackedHIllClimbLocalSolver : LocalSolver
+    class RandomHillClimbLocalSolver : LocalSolver
     {
         Random rnd;
-        public StackedHIllClimbLocalSolver(Schedule s) : base(s)
+        public RandomHillClimbLocalSolver(Schedule s) : base(s)
         {
         }
 

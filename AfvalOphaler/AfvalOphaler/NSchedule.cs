@@ -124,10 +124,12 @@ namespace NAfvalOphaler
             NeighborOperation[] res = new NeighborOperation[nOps];
             for(int j = 0; j < nOps; j++)
             {
+                double acc = 0;
                 double p = rnd.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
-                    if (probDist[i] <= p)
+                    acc += probDist[i];
+                    if (p <= acc)
                     {
                         res[j] = ops[i]();
                         break;
