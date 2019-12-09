@@ -270,7 +270,7 @@ namespace NAfvalOphaler
             DayIndex = dind;
             TruckIndex = trind;
 
-            dumps = new List<Node> { new Node(GD.Dump) };
+            dumps = new List<Node> { new Node() };
             roomLefts = new List<double> { 20000 };
         }
         #endregion
@@ -285,21 +285,33 @@ namespace NAfvalOphaler
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
             Node n = null;
-            if (order.MatrixId == 0)
+            TimeLeft -= (order.TimeToEmpty
+                    + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
+                    + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
+                    - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
+
+            n = nextTo.AppendNext(order);
+
+            roomLefts[n.TourIndex] -= (order.NumContainers * order.VolPerContainer * 0.2);
+
+            if (order.OrderId == 0)
             {
+                double nRoom = 0;
+                for (Node curr = n.Next; !curr.IsDump; curr = curr.Next)
+                    nRoom += curr.Data.NumContainers * curr.Data.VolPerContainer * 0.2;
 
+                double oRoom = roomLefts[n.TourIndex] - nRoom;
+                roomLefts[n.TourIndex] = oRoom;
+
+                for (Node curr = n; !curr.IsSentry; curr = curr.Next)
+                {
+                    curr.TourIndex++;
+                }
+
+                dumps.Insert(n.TourIndex, n);
+                roomLefts.Insert(n.TourIndex, nRoom);
             }
-            else
-            {
-                TimeLeft -= (order.TimeToEmpty
-                        + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
-                        + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
-                        - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
 
-                n = nextTo.AppendNext(order);
-
-                roomLefts[loopIndex] -= (order.NumContainers * order.VolPerContainer * 0.2);
-            }
 
             return n;
             //TimeLeft += Loops[loopIndex].Duration;
@@ -547,41 +559,61 @@ namespace NAfvalOphaler
         #region Variables & Constructors
         public readonly Order Data;
         public readonly bool IsDump;
+        public readonly bool IsSentry;
 
         public Node Prev;
         public Node Next;
 
         public int TourIndex;
 
-        public Node()
-        {
-            IsDump = true;
-            Data = GD.Dump;
-            Prev = Next = this;
-        }
+
+
+        //public Node()
+        //{
+        //    IsDump = true;
+        //    Data = GD.Dump;
+        //    Prev = Next = this;
+        //}
         public Node(Order o)
         {
             IsDump = false;
             Data = o;
         }
 
-        public Node(int tourInd)
+        public Node()
         {
             IsDump = true;
+            IsSentry = true;
             Data = GD.Dump;
             Prev = Next = this;
+            TourIndex = 0;
         }
         public Node(Order o, int tourInd)
         {
-            IsDump = false;
+            IsDump = o.OrderId == 0;
             Data = o;
+            TourIndex = tourInd;
+            IsSentry = false;
         }
         #endregion
 
         #region Modifications
+        //public Node AppendNext(Order o)
+        //{
+        //    Node n = new Node(o)
+        //    {
+        //        Prev = this,
+        //        Next = Next
+        //    };
+
+        //    Next.Prev = n;
+        //    Next = n;
+
+        //    return n;
+        //}
         public Node AppendNext(Order o)
         {
-            Node n = new Node(o)
+            Node n = new Node(o, TourIndex)
             {
                 Prev = this,
                 Next = Next
