@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -298,7 +299,7 @@ namespace NAfvalOphaler
         }
     }
 
-    public class Loop
+    public class Loop : IEnumerable
     {
         #region Variables & Constructor
         public double Duration;
@@ -469,6 +470,35 @@ namespace NAfvalOphaler
         public override string ToString()
         {
             return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return new LoopEnumerator(Start);
+        }
+    }
+
+    public class LoopEnumerator : IEnumerator
+    {
+        private readonly Node dump;
+        private Node curr;
+        object IEnumerator.Current => curr;
+
+        public LoopEnumerator(Node dump)
+        {
+            this.dump = dump;
+            curr = dump;
+        }
+
+        bool IEnumerator.MoveNext()
+        {
+            curr = curr.Next;
+            return !curr.Prev.IsDump;
+        }
+
+        void IEnumerator.Reset()
+        {
+            curr = dump;
         }
     }
 
