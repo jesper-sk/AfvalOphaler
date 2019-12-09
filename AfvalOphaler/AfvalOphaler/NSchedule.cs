@@ -20,7 +20,7 @@ namespace NAfvalOphaler
         public double CaculateDuration()
         {
             double duration = 0;
-            foreach (DayRoute[] bigDay in dayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
+            foreach (DayRoute[] bigDay in DayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
             Duration = duration;
             return duration;
             //Loop l = dayRoutes[0][0].Loops[0];
@@ -36,32 +36,33 @@ namespace NAfvalOphaler
         public double CalculatePenalty()
         {
             double penalty = 0;
-            foreach (Order o in orders) penalty += 3 * o.Frequency * o.TimeToEmpty;
+            foreach (Order o in UnScheduledOrders) penalty += 3 * o.Frequency * o.TimeToEmpty;
             Penalty = penalty;
             return penalty;
         }
+
+        public List<Order> UnScheduledOrders;
         #endregion
 
         #region Private Variables
-        public DayRoute[][] dayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
-        private List<Order> orders;
-        private Random rnd;
+        public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
+        private Random Rnd;
         #endregion
 
         #region Constructor(s)
         public Schedule(List<Order> orders)
         {
-            this.orders = orders.ToList();
-            foreach (Order o in this.orders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
+            UnScheduledOrders = orders.ToList();
+            foreach (Order o in UnScheduledOrders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
 
-            dayRoutes = new DayRoute[5][];
+            DayRoutes = new DayRoute[5][];
             for (int d = 0; d < 5; d++)
             {
-                dayRoutes[d] = new DayRoute[2];
-                for (int t = 0; t < 2; t++) dayRoutes[d][t] = new DayRoute(d, t);
+                DayRoutes[d] = new DayRoute[2];
+                for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
             }
 
-            rnd = new Random();
+            Rnd = new Random();
         }
         #endregion
 
@@ -93,7 +94,12 @@ namespace NAfvalOphaler
         #endregion
 
         #region ToStrings
-        public ScheduleResult ToResult() => new ScheduleResult() { Score = Score, Stats = GetStatistics(), Check = ToCheckStringBuilder() };
+        public ScheduleResult ToResult() => new ScheduleResult() 
+        { 
+            Score = Score, 
+            Stats = GetStatistics(), 
+            Check = ToCheckStringBuilder() 
+        };
         public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
         public string ToCheckString() => ToCheckStringBuilder().ToString();
         public StringBuilder ToCheckStringBuilder()
@@ -103,7 +109,8 @@ namespace NAfvalOphaler
                 for (int d = 0; d < 5; d++)
                 {
                     int ordOfDay = 0;
-                    foreach (Node n in dayRoutes[d][t]) b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
+                    foreach (Node n in DayRoutes[d][t]) 
+                        b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
                 }
             //for (int t = 0; t < 2; t++)
             //    for (int d = 0; d < 5; d++)
@@ -134,19 +141,19 @@ namespace NAfvalOphaler
             for (int i = 0; i < 5; i++)
             {
                 res.AppendLine($"Day {i}:");
-                res.AppendLine($"Truck 1: {dayRoutes[i][0]}");
-                res.AppendLine($"Truck 2: {dayRoutes[i][1]}");
+                res.AppendLine($"Truck 1: {DayRoutes[i][0]}");
+                res.AppendLine($"Truck 2: {DayRoutes[i][1]}");
             }
             return res;
         }
         #endregion
 
         #region Operations
-        private Func<NeighborOperation>[] ops =
+        private Func<Schedule, NeighborOperation>[] ops =
         {
-            new Func<NeighborOperation>(() => new RandomAddOperation()),
-            new Func<NeighborOperation>(() => new RandomDeleteOperation()),
-            new Func<NeighborOperation>(() => new RandomTransferOperation())
+            new Func<Schedule, NeighborOperation>((s) => new RandomAddOperation(s)),
+            new Func<Schedule, NeighborOperation>((s) => new RandomDeleteOperation(s)),
+            new Func<Schedule, NeighborOperation>((s) => new RandomTransferOperation(s))
         };
 
         public NeighborOperation[] GetOperations(double[] probDist, int nOps)
@@ -155,13 +162,13 @@ namespace NAfvalOphaler
             for(int j = 0; j < nOps; j++)
             {
                 double acc = 0;
-                double p = rnd.NextDouble();
+                double p = Rnd.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
                     acc += probDist[i];
                     if (p <= acc)
                     {
-                        res[j] = ops[i]();
+                        res[j] = ops[i](this);
                         break;
                     }
                 }
@@ -174,8 +181,17 @@ namespace NAfvalOphaler
             public bool isEvaluated = false;
             public double? TotalDelta => DeltaTime + DeltaPenalty;
 
-            public double? DeltaTime = null;
-            public double? DeltaPenalty = null;
+            //public double? DeltaTime = null;
+            //public double? DeltaPenalty = null;
+            public double DeltaTime = double.NaN;
+            public double DeltaPenalty = double.NaN;
+
+            public Schedule state;
+
+            public NeighborOperation(Schedule s)
+            {
+                state = s;
+            }
 
             public void Apply()
             {
@@ -201,53 +217,93 @@ namespace NAfvalOphaler
 
         public class RandomAddOperation : NeighborOperation
         {
-            public RandomAddOperation()
+            private Order toAdd;
+            private List<double> deltas;
+            private List<Node> whereToAdd;
+
+            public RandomAddOperation(Schedule s) : base(s)
             {
                 //Hé jochie
             }
 
-            protected override void _Apply()
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new NotImplementedException();
+                toAdd = state.UnScheduledOrders[state.Rnd.Next(0, state.UnScheduledOrders.Count)];           
+
+                int[][] combis = GD.AllowedDayCombinations[toAdd.Frequency];
+                int[] combi = combis[state.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
+
+                int everyDayInCombiAllowed = 0;
+                deltas = new List<double>(toAdd.Frequency);
+                whereToAdd = new List<Node>(toAdd.Frequency);
+                foreach (int i in combi)
+                {
+                    int truck = state.Rnd.Next(0, 2);
+                    if (state.DayRoutes[i][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                    {
+                        deltas.Add(delta1);
+                        whereToAdd.Add(where1);
+                        everyDayInCombiAllowed++;
+                        continue;
+                    }
+                    else if (state.DayRoutes[i][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                    {
+                        deltas.Add(delta2);
+                        whereToAdd.Add(where2);
+                        everyDayInCombiAllowed++;
+                    }
+                }
+                if (everyDayInCombiAllowed == toAdd.Frequency)
+                {
+                    deltaTime = deltas.Sum();
+                    deltaPenalty = 3 * toAdd.Frequency * toAdd.TimeToEmpty;
+                    return true;
+                }
+                else
+                {
+                    deltaTime = double.NaN;
+                    deltaPenalty = double.NaN;
+                    return false;
+                }
             }
 
-            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
-            { 
-                throw new NotImplementedException();
+            protected override void _Apply()
+            {
+                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
             }
         }
         public class RandomDeleteOperation : NeighborOperation
         {
-            public RandomDeleteOperation()
+            public RandomDeleteOperation(Schedule s) : base(s)
             {
                 //Hé jochie
             }
 
-            protected override void _Apply()
-            {
-                throw new NotImplementedException();
-            }
-
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new NotImplementedException();
+                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+            }
+
+            protected override void _Apply()
+            {
+                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
             }
         }
         public class RandomTransferOperation : NeighborOperation
         {
-            public RandomTransferOperation()
+            public RandomTransferOperation(Schedule s) : base(s)
             {
                 //Hé jochie
             }
 
-            protected override void _Apply()
-            {
-                throw new NotImplementedException();
-            }
-
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new NotImplementedException();
+                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+            }
+
+            protected override void _Apply()
+            {
+                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
             }
         }
         #endregion
@@ -344,9 +400,27 @@ namespace NAfvalOphaler
         #endregion
 
         #region Evauluate
-        public bool EvaluateRandomAdd(Random rnd)
+        public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
         {
-            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+            deltaTime = double.NaN;
+            whereToAdd = null;
+            if (toAdd.TimeToEmpty > TimeLeft) return false;
+            else 
+            {
+                double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers * 0.2;
+                List<int> candidateTours = new List<int>(roomLefts.Count);
+                for (int i = 0; i < roomLefts.Count; i++) if (roomLefts[i] >= totalSpaceOfOrder) candidateTours.Add(i);
+                List<Node> candidateNodes = new List<Node>();
+                foreach (int i in candidateTours) for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) if (GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId] + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId] - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId] < TimeLeft) candidateNodes.Add(curr);
+                if (candidateNodes.Count > 0)
+                {
+                    Random rnd = new Random();
+                    whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                    deltaTime = GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId] + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId] - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                    return true;
+                }
+                else return false;
+            }
         }
         public bool EvaluateRandomRemove(Random rnd)
         {

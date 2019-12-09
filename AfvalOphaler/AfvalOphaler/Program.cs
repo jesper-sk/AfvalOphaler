@@ -1,9 +1,10 @@
 ﻿#region Definings
-//#define FINAL
-//#define CLUSTER
-//#define TEST
-#define NTEST
-//#define CUSTOM
+//#define FINAL         // Whether to run the final build
+//#define CLUSTER       // Whether to cluster all orders
+//#define VISUALIZER    // Whether to show the visualizer
+//#define TEST          // Whether to use Solver and Schedule
+//#define NTEST         // Whether to use NSolver and NSchedule
+//#define CUSTOM        // Whether to use Own-Defined small testcases
 #endregion
 
 #region Usings
@@ -47,6 +48,7 @@ namespace AfvalOphaler
             int operationCount = 10;
             int maxIterations = 100000;
             int maxNoChange = 10000;
+
 #if CLUSTER
             // Clustering:
             bool clusterorders = true;
@@ -57,90 +59,31 @@ namespace AfvalOphaler
                 Parser.KMeansClusterOrders(orders, clustercount, 1000);
             }
 #endif
-#if FINAL
-            // HEY JOCHIE !!!
-            // DIT IS VOOR FINAL JOCHIE !!!
-#else
-
-#if TEST
-#if CUSTOM
-            orders = orders.OrderBy(o => o.Frequency).ToList();
-            NAfvalOphaler.Schedule customSchedule = new NAfvalOphaler.Schedule(orders);
-            int loopindex = customSchedule.AddLoop(0, 0);
-            NAfvalOphaler.Node curr = customSchedule.dayRoutes[0][0].Loops[loopindex].Start;
-            for (int o = 0; o < 10; o++)
-            {
-                curr = customSchedule.AddOrder(orders[o], curr, loopindex, 0, 0);
-            }
-            Console.WriteLine("Done adding...");
-            File.WriteAllText(@".\beforeOpt.txt", customSchedule.ToCheckString());
-            Console.WriteLine("Before opt saved...");
-            Console.WriteLine("Starting optimalisation...");
-            for (int opt = 0; opt < 10; opt++)
-            {
-                customSchedule.dayRoutes[0][0].Loops[loopindex].OptimizeLoop();
-                Console.WriteLine("Duration: "+ customSchedule.CaculateDuration());
-            }
-            Console.WriteLine("Optimalisation done...");
-            File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
-            Console.WriteLine("Opt results saved...");
-#else
-            /* RouteVisualizer:
+#if VISUALIZER
+            RouteVisualizer:
             RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
             Application.DoEvents();
             vis.WindowState = FormWindowState.Maximized;
             Application.DoEvents();
-            Console.ReadKey();*/
-
-            // Solving:
-            Schedule[] startStates = new Schedule[threads];
-            for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
-
-            Solver solver = new Solver(startStates, threads);
-            Task[] tasks = solver.StartSolving(100000, 20, 10000, 10000);
-            Task.WaitAll(tasks);
-
-            Schedule bestSchedule = solver.GetBestSchedule();
-            Console.WriteLine("===");
-            Console.WriteLine("Solving done, score of best schedule:");
-            Console.WriteLine(bestSchedule.GetStatistics());
-
-            Console.WriteLine("Starting Optimization:");
-            bestSchedule.OptimizeSchedule();
-            Console.WriteLine("After Optimization:");
-            Console.WriteLine(bestSchedule.GetStatistics());
-
-            solver = new Solver(new Schedule[] { bestSchedule }, 1);
-            tasks = solver.StartSolving(100000, 20, 10000, 10000);
-            Task.WaitAll(tasks);
-
-            bestSchedule = solver.GetBestSchedule();
-            Console.WriteLine("===");
-            Console.WriteLine("Again solving done, score of best schedule:");
-            Console.WriteLine(bestSchedule.GetStatistics());
-
-            for (int opt = 0; opt < 50; opt -= -1)
-            {
-                Console.WriteLine("Again starting Optimization:");
-                bestSchedule.OptimizeSchedule();
-                Console.WriteLine("Again after Optimization:");
-                Console.WriteLine(bestSchedule.GetStatistics());
-                Console.WriteLine("===");
-            }
-
-
-            string bestcheckstring = bestSchedule.ToCheckString();
-            File.WriteAllText(@".\result.txt", bestcheckstring);
-            //Console.WriteLine(bestcheckstring);
-            Console.WriteLine("done");
+            Console.ReadKey();
 #endif
-#endif
-#if NTEST
+
+#if FINAL
+            // HEY JOCHIE !!!
+            // DIT IS VOOR FINAL JOCHIE !!!
+#else
+#if TEST
+
+#elif NTEST
             NAfvalOphaler.Solver solver = new NAfvalOphaler.Solver(orders);
             var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);                  
             Task awaitAndPrintResults = Task.Factory.StartNew(() => AwaitAndPrintResults(solver, results));
             Task.WaitAll(new Task[] { awaitAndPrintResults });
+
+#elif CUSTOM
+
 #endif
+
 #endif
             Console.ReadKey();
         }
@@ -175,7 +118,6 @@ namespace AfvalOphaler
             }
         }
         #endregion
-
     }
 
     #region Global Data
