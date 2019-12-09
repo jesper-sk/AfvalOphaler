@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BigLL.cs" />
     <Compile Include="NSchedule.cs" />
     <Compile Include="NSolver.cs" />
     <Compile Include="Orders.cs" />

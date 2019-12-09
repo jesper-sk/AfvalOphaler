@@ -8,6 +8,7 @@ namespace NAfvalOphaler
 {
     class Solver
     {
+        #region Variables & Constructor
         private ScheduleResult[] top10;
         public bool UserInterrupt = false;
 
@@ -17,26 +18,24 @@ namespace NAfvalOphaler
             top10 = new ScheduleResult[10];
             this.orders = orders;
         }
+        #endregion
 
+        #region Solving
         public Task<ScheduleResult[]> StartSolving(int threads, int opCount, int maxI, int maxNoChange) => Task.Run(() => Solve(threads, opCount, maxI, maxNoChange));
-
         private ScheduleResult[] Solve(int threads, int opCount, int maxI, int maxNoChange)
         {
             Task[] tasks = new Task[threads];
             for(int i = 0; i < threads; i++) tasks[i] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange));
             Task.WaitAll(tasks);
-
             return top10;
         }
-
         private void SolveOne(int maxI, int opCount, int maxNoChange)
         {
             Schedule start = new Schedule(orders);
-
             LocalSolver solver = new SteepestHillClimbLocalSolver(start);
+            ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
 
             bool stop = false;
-            ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
             int i = 0;
             int noChange = 0;
             while (!stop)
@@ -59,6 +58,7 @@ namespace NAfvalOphaler
                     || UserInterrupt;
             }
         }
+        #endregion
 
         #region OLD
         /*
@@ -98,6 +98,7 @@ namespace NAfvalOphaler
         }*/
         #endregion
 
+        #region LeaderBoard
         private readonly object addlock = new object();
         void AddScheduleToTop(ScheduleResult s)
         {
@@ -111,8 +112,11 @@ namespace NAfvalOphaler
                     top10[i] = s;
                 }
         }
+        #endregion
+
     }
 
+    #region LocalSolvers
     abstract class LocalSolver
     {
         public readonly Schedule schedule;
@@ -125,6 +129,7 @@ namespace NAfvalOphaler
         public abstract bool GetNext(double[] probDist, int nOps);
     }
 
+    #region Steepest HillClimb : Apply best successor of n random neighbors.
     class SteepestHillClimbLocalSolver : LocalSolver
     {
         public SteepestHillClimbLocalSolver(Schedule s) : base(s)
@@ -158,7 +163,9 @@ namespace NAfvalOphaler
             return true;
         }
     }
+    #endregion
 
+    #region Random HillClimb : Apply random operation, take successor if score decreases.
     class RandomHillClimbLocalSolver : LocalSolver
     {
         Random rnd;
@@ -190,7 +197,9 @@ namespace NAfvalOphaler
             return false;
         }
     }
+    #endregion
 
+    #region Simulated Annealing
     class SaLocalSolver : LocalSolver
     {
         public readonly double cs;
@@ -242,7 +251,10 @@ namespace NAfvalOphaler
             }
             return false;
         }
-
         static double Prob(double delta, double temp) => Math.Exp(-delta / temp);
     }
+    #endregion
+
+    #endregion
+
 }

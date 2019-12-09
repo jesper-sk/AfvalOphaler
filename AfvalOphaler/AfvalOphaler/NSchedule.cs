@@ -10,48 +10,62 @@ using Order = AfvalOphaler.Order;
 
 namespace NAfvalOphaler
 {
+    #region Schedule
     public class Schedule
-    { 
-        //Public Variables
+    {
+        #region Public Variables
         public double Duration = 0;
         public double Penalty;
         public double Score => Duration + Penalty;
-
         public double CaculateDuration()
         {
-            Loop l = dayRoutes[0][0].Loops[0];
-            double duration = 30 + GD.JourneyTime[l.Start.Data.MatrixId, l.Start.Next.Data.MatrixId];
-            Node curr = l.Start.Next;
-            while (!curr.IsDump)
-            {
-                duration += GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
-                curr = curr.Next;
-            }
+            double duration = 0;
+            foreach (DayRoute[] bigDay in dayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
+            Duration = duration;
             return duration;
+            //Loop l = dayRoutes[0][0].Loops[0];
+            //double duration = 30 + GD.JourneyTime[l.Start.Data.MatrixId, l.Start.Next.Data.MatrixId];
+            //Node curr = l.Start.Next;
+            //while (!curr.IsDump)
+            //{
+            //    duration += GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
+            //    curr = curr.Next;
+            //}
+            //return duration;
         }
+        public double CalculatePenalty()
+        {
+            double penalty = 0;
+            foreach (Order o in orders) penalty += 3 * o.Frequency * o.TimeToEmpty;
+            Penalty = penalty;
+            return penalty;
+        }
+        #endregion
 
-        //Private Variables
+        #region Private Variables
         public DayRoute[][] dayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
         private List<Order> orders;
         private Random rnd;
-        
+        #endregion
+
+        #region Constructor(s)
         public Schedule(List<Order> orders)
         {
             this.orders = orders.ToList();
+            foreach (Order o in this.orders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
 
             dayRoutes = new DayRoute[5][];
-            for (int d = 0; d < 5; d++) dayRoutes[d] = new DayRoute[2];
             for (int d = 0; d < 5; d++)
             {
                 dayRoutes[d] = new DayRoute[2];
                 for (int t = 0; t < 2; t++) dayRoutes[d][t] = new DayRoute(d, t);
             }
 
-            foreach (Order o in orders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
-
             rnd = new Random();
         }
+        #endregion
 
+        #region [DEPRICATED] Add/Remove
         //public int AddLoop(int day, int truck)
         //{
         //    Duration += 30;
@@ -76,44 +90,38 @@ namespace NAfvalOphaler
         //    Duration += route.Duration;
         //    Penalty += 3 * toDelete.Data.TimeToEmpty;
         //}
+        #endregion
 
         #region ToStrings
-        public ScheduleResult ToResult()
-        {
-            return new ScheduleResult()
-            {
-                Score = this.Score,
-                Stats = GetStatistics(),
-                Check = ToCheckStringBuilder()
-            };
-        }
-        public override string ToString()
-        {
-            return $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
-        }
+        public ScheduleResult ToResult() => new ScheduleResult() { Score = Score, Stats = GetStatistics(), Check = ToCheckStringBuilder() };
+        public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
         public string ToCheckString() => ToCheckStringBuilder().ToString();
         public StringBuilder ToCheckStringBuilder()
         {
             StringBuilder b = new StringBuilder();
             for (int t = 0; t < 2; t++)
-            {
                 for (int d = 0; d < 5; d++)
                 {
-                    List<Loop> loops = dayRoutes[d][t].Loops;
-                    int global = 1;
-                    for (int l = 0; l < loops.Count; l++)
-                    {
-                        Loop curr = loops[l];
-                        Node ord = curr.Start;
-
-                        do
-                        {
-                            ord = ord.Next;
-                            b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
-                        } while (!ord.IsDump);
-                    }
+                    int ordOfDay = 0;
+                    foreach (Node n in dayRoutes[d][t]) b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
                 }
-            }
+            //for (int t = 0; t < 2; t++)
+            //    for (int d = 0; d < 5; d++)
+            //    {
+            //        List<Loop> loops = dayRoutes[d][t].Loops;
+            //        int global = 1;
+            //        for (int l = 0; l < loops.Count; l++)
+            //        {
+            //            Loop curr = loops[l];
+            //            Node ord = curr.Start;
+
+            //            do
+            //            {
+            //                ord = ord.Next;
+            //                b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
+            //            } while (!ord.IsDump);
+            //        }
+            //    }
             return b;
         }
         public string GetStatistics() => GetStatisticsBuilder().ToString();
@@ -244,7 +252,9 @@ namespace NAfvalOphaler
         }
         #endregion
     }
+    #endregion
 
+    #region ScheduleResult
     public class ScheduleResult
     {
         public double Score;
@@ -252,23 +262,25 @@ namespace NAfvalOphaler
         //public string Check;
         public StringBuilder Check;
     }
+    #endregion
 
-    public class DayRoute
+    #region DayRoute
+    public class DayRoute : IEnumerable
     {
         #region Variables & Constructor
-        public List<Loop> Loops;
         public double TimeLeft;
+        public double Duration => 720 - TimeLeft;
+
         public readonly int DayIndex;
         public readonly int TruckIndex;
+
+        public Node FirstDump => dumps[0];
 
         private List<Node> dumps;
         private List<double> roomLefts;
 
-        public double Duration => 720 - TimeLeft;
-
         public DayRoute(int dind, int trind)
         {
-            Loops = new List<Loop>();
             TimeLeft = 690;
             DayIndex = dind;
             TruckIndex = trind;
@@ -278,7 +290,7 @@ namespace NAfvalOphaler
         }
         #endregion
 
-        #region Loops Modifications
+        #region Tour Modifications
         //public int AddLoop()
         //{
         //    Loops.Add(new Loop());
@@ -324,27 +336,36 @@ namespace NAfvalOphaler
         }
         public void RemoveNodeFromLoop(Node n, int loopIndex)
         {
-            TimeLeft += Loops[loopIndex].Duration;
-            Loops[loopIndex].RemoveNode(n);
-            TimeLeft -= Loops[loopIndex].Duration;
+            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+            //TimeLeft += Loops[loopIndex].Duration;
+            //Loops[loopIndex].RemoveNode(n);
+            //TimeLeft -= Loops[loopIndex].Duration;
         }
         #endregion
 
+        #region Evauluate
         public bool EvaluateRandomAdd(Random rnd)
         {
-            while (true)
-            {
-                Loop curr = Loops[rnd.Next(0, Loops.Count)];
-
-            }
+            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
-
-        public override string ToString()
+        public bool EvaluateRandomRemove(Random rnd)
         {
-            return $"LoopCount={Loops.Count}, timeLeft={TimeLeft}";
+            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
-    }
+        #endregion
 
+        #region Overrides / Inherited Implementations     
+        public override string ToString() => $"TourCount={dumps.Count}, Duration={Duration}";    
+        public IEnumerator GetEnumerator()
+        {
+            if (dumps.Count == 0) return null;
+            return new LoopEnumerator(dumps[0]);
+        }
+        #endregion
+    }
+    #endregion
+
+    #region [DEPRICATED] Loop
     public class Loop : IEnumerable
     {
         #region Variables & Constructor
@@ -532,31 +553,33 @@ namespace NAfvalOphaler
             return new LoopEnumerator(Start);
         }
     }
+    #endregion
 
+    #region Loop Enum
     public class LoopEnumerator : IEnumerator
     {
         private readonly Node dump;
         private Node curr;
-        object IEnumerator.Current => curr;
 
+        object IEnumerator.Current => curr;
         public LoopEnumerator(Node dump)
         {
             this.dump = dump;
             curr = dump;
         }
-
         bool IEnumerator.MoveNext()
         {
             curr = curr.Next;
             return !curr.Prev.IsDump;
         }
-
         void IEnumerator.Reset()
         {
             curr = dump;
         }
     }
+    #endregion
 
+    #region Node
     public class Node
     {
         #region Variables & Constructors
@@ -568,8 +591,6 @@ namespace NAfvalOphaler
         public Node Next;
 
         public int TourIndex;
-
-
 
         //public Node()
         //{
@@ -642,14 +663,9 @@ namespace NAfvalOphaler
             Node n = (Node)o;
             return Data.OrderId.Equals(n.Data.OrderId);
         }
-        public override int GetHashCode()
-        {
-            return base.GetHashCode();
-        }
-        public override string ToString()
-        {
-            return "Node: " + Data.ToString();
-        }
+        public override int GetHashCode() => base.GetHashCode();
+        public override string ToString() => "Node: " + Data.ToString();
         #endregion
     }
+    #endregion
 }

@@ -1,12 +1,14 @@
-﻿To Do:
-	- Loops vervangen voor een ding in dag
-		- Lijst van Storten (oftewel elke loop begint bij een index)
-		- lijst van ruimte over per dump-dump reeks (tour)
-		- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
-		- 2.5-opt: Bij elke switch checken of operatie mag
-		- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
+﻿=============
+=== TO DO ===
+=============
+- Loops vervangen voor een ding in dag
+	- Lijst van Storten (oftewel elke loop begint bij een index)
+	- lijst van ruimte over per dump-dump reeks (tour)
+	- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
+	- 2.5-opt: Bij elke switch checken of operatie mag
+	- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
 	
-	-AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
+-AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
 
 
 
@@ -41,34 +43,6 @@ SWEETSPOT PARAMETERS:
 	Add BEST
 
 http://178.85.229.78:8067/team/157557372232042770
-
-========================
-=== SWS NOG MAKEN!!! ===
-========================
-een algortime die een loop krijgt en die optimaliseert,
-dus de volgorde dusdanig maakt dat de loop het effectiefst is.
-Dit algoritme hoeft alleen maar te kijken naar reistijden want een loop voldoet altijd aan de afval constraints.
-
-Werking algoritme:
-1. Krijg een te optimaliseren loop L
-2. Kijk of alle nodes in L links of rechts zijn van de stort
-3. Zoja ga naar stap 5. <- kunnen we GOTO gebruiken!
-4. Verdeel de nodes in L over een lijst van nodes links en rechts van de stort.
-	Pas op beide lijsten stap 5. toe.
-5. Krijg een lijst van nodes
-	5.1 trek een lijn door deze nodes dusdanig dat de helft van de lijst boven de lijn zit, de andere helft onder de lijn.
-		Als de lijst van nodes oneven is, neem dan deze lijn dusdanig dat deze door een Node snijd én nog steeds
-			de helft van de nodes boven zich heeft en de andere helft onder zich.
-	5.2 Sorteer nu voor elke helft de nodes op volgorde van tijd tot de stort.
-	5.3 maak de nieuwe loop als:
-		stort -> alle_nodes_1e_helft -> alle_nodes_2e_helft_reversed
-6. return.
-
-Nog te bepalen:
-- Gezien de layout van alle punten kan een route die links en rechts van de stort gaat beter niet verdeeld worden
-	qua links/rechts van de stort op basis van X maar op basis van een schuine lijn door de stort met RC=1 (dus zo'n lijn: /)
-- De nieuwe loop is gedefinieerd als: stort -> alle_nodes_1e_helft -> alle_nodes_2e_helft_reversed,
-	wat is de 1e helft en wat is de 2e helft? maakt dat uit?
 
 ===========================================
 === Evolutionairy Programming Approach: ===
