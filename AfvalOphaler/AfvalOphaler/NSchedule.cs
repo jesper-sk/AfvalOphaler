@@ -183,6 +183,8 @@ namespace NAfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
+                Random r = new Random();
+
                 throw new NotImplementedException();
             }
         }
