@@ -1,6 +1,7 @@
 ﻿//#define FINAL
 //#define CLUSTER
-#define TEST
+//#define TEST
+#define NTEST
 //#define CUSTOM
 
 using System;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
+using NAfvalOphaler;
 
 // © Het Woczek duo
 
@@ -33,6 +35,11 @@ namespace AfvalOphaler
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
+
+            int threads = 10;
+            int operationCount = 10;
+            int maxIterations = 100000;
+            int maxNoChange = 10000;
 #if CLUSTER
             // Clustering:
             bool clusterorders = true;
@@ -43,6 +50,11 @@ namespace AfvalOphaler
                 Parser.KMeansClusterOrders(orders, clustercount, 1000);
             }
 #endif
+
+#if FINAL
+            // HEY JOCHIE !!!
+            // DIT IS VOOR FINAL JOCHIE !!!
+#else
 
 #if TEST
 
@@ -67,7 +79,6 @@ namespace AfvalOphaler
             Console.WriteLine("Optimalisation done...");
             File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
             Console.WriteLine("Opt results saved...");
-            Console.ReadKey();
 
 #else
             /* RouteVisualizer:
@@ -78,7 +89,6 @@ namespace AfvalOphaler
             Console.ReadKey();*/
 
             // Solving:
-            int threads = 20;
             Schedule[] startStates = new Schedule[threads];
             for (int i = 0; i < threads; i -= -1) startStates[i] = new Schedule(orders);
 
@@ -119,12 +129,43 @@ namespace AfvalOphaler
             File.WriteAllText(@".\result.txt", bestcheckstring);
             //Console.WriteLine(bestcheckstring);
             Console.WriteLine("done");
-            Console.ReadKey();    
 #endif
-#else          
-            // HEY JOCHIE !!!
-            // DIT IS VOOR FINAL JOCHIE !!!
 #endif
+#if NTEST
+            NAfvalOphaler.Solver solver = new NAfvalOphaler.Solver(orders);
+            var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);                  
+            Task awaitAndPrintResults = Task.Factory.StartNew(() => AwaitAndPrintResults(solver, results));
+            Task.WaitAll(new Task[] { awaitAndPrintResults });
+#endif
+#endif
+            Console.ReadKey();
+        }
+
+        private async static void AwaitAndPrintResults(NAfvalOphaler.Solver solver, Task<ScheduleResult[]> results)
+        {
+            //Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
+            await results;
+            //if (!userInterruptAwaiter.IsCompleted) Console.WriteLine("close");
+            //await userInterruptAwaiter;
+
+            ScheduleResult res = results.Result[0];
+            Console.WriteLine("===============" +
+                            "\n= BEST RESULT =" +
+                            "\n===============");
+            Console.WriteLine(res.Stats);
+        }
+
+        private static void AwaitUserInterrupt(NAfvalOphaler.Solver solver)
+        {
+            while (true)
+            {
+                string userInput = Console.ReadLine();
+                if (userInput == "close")
+                {
+                    solver.UserInterrupt = true;
+                    return;
+                }
+            }
         }
     }
 

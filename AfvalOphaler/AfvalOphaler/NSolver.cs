@@ -18,15 +18,12 @@ namespace NAfvalOphaler
             this.orders = orders;
         }
 
-        public Task<ScheduleResult[]> StartSolving(int threads, int maxI, int opCount, int maxNoChange) => Task.Run(() => Solve(threads, maxI, opCount, maxNoChange));
+        public Task<ScheduleResult[]> StartSolving(int threads, int opCount, int maxI, int maxNoChange) => Task.Run(() => Solve(threads, opCount, maxI, maxNoChange));
 
-        private ScheduleResult[] Solve(int threads, int maxI, int opCount, int maxNoChange)
+        private ScheduleResult[] Solve(int threads, int opCount, int maxI, int maxNoChange)
         {
             Task[] tasks = new Task[threads];
-            for(int i = 0; i < threads; i++)
-            {
-                tasks[i] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange));
-            }
+            for(int i = 0; i < threads; i++) tasks[i] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange));
             Task.WaitAll(tasks);
 
             return top10;
@@ -44,7 +41,7 @@ namespace NAfvalOphaler
             int noChange = 0;
             while (!stop)
             {
-                if (solver.GetNext(new double[] { 1/3, 1/3, 1/3 }, opCount))
+                if (solver.GetNext(new double[] { 1.0/3, 1.0/3, 1.0/3 }, opCount))
                 {
                     noChange = 0;
                     if (solver.schedule.Score < best.Score)
@@ -142,7 +139,8 @@ namespace NAfvalOphaler
         {
             var ops = schedule.GetOperations(probDist, nOps);
             NOp best = null;
-            double opt = double.MaxValue;
+            //double opt = double.MaxValue;
+            double opt = 0;
             for(int i = 0; i < nOps; i++)
             {
                 if (ops[i].Evaluate())

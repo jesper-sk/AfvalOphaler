@@ -84,14 +84,15 @@ namespace NAfvalOphaler
             {
                 Score = this.Score,
                 Stats = GetStatistics(),
-                Check = ToCheckString()
+                Check = ToCheckStringBuilder()
             };
         }
         public override string ToString()
         {
             return $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
         }
-        public string ToCheckString()
+        public string ToCheckString() => ToCheckStringBuilder().ToString();
+        public StringBuilder ToCheckStringBuilder()
         {
             StringBuilder b = new StringBuilder();
             for (int t = 0; t < 2; t++)
@@ -113,9 +114,10 @@ namespace NAfvalOphaler
                     }
                 }
             }
-            return b.ToString();
+            return b;
         }
-        public string GetStatistics()
+        public string GetStatistics() => GetStatisticsBuilder().ToString();
+        public StringBuilder GetStatisticsBuilder()
         {
             StringBuilder res = new StringBuilder();
             res.AppendLine("Score = " + Score);
@@ -127,7 +129,7 @@ namespace NAfvalOphaler
                 res.AppendLine($"Truck 1: {dayRoutes[i][0]}");
                 res.AppendLine($"Truck 2: {dayRoutes[i][1]}");
             }
-            return res.ToString();
+            return res;
         }
         #endregion
 
@@ -249,7 +251,8 @@ namespace NAfvalOphaler
     {
         public double Score;
         public string Stats;
-        public string Check;
+        //public string Check;
+        public StringBuilder Check;
     }
 
     public class DayRoute
