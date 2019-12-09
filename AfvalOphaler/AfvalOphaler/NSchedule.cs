@@ -304,7 +304,7 @@ namespace NAfvalOphaler
                     return true;
                 }
                 // Uncomment below als niet evalueren ook andere truck:
-                else if (state.DayRoutes[d][1- truck].EvaluateRandomRemove(out Node rem2, out double delta2))
+                else if (state.DayRoutes[d][1 - truck].EvaluateRandomRemove(out Node rem2, out double delta2))
                 {
                     toRemove = rem2;
                     day = d;
@@ -389,9 +389,10 @@ namespace NAfvalOphaler
         List<Node> ToList()
         {
             List<Node> nodes = new List<Node>();
-            for (int i = 0; i < dumps.Count; i++) 
-                for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) 
-                    nodes.Add(curr);
+
+            foreach (Node node in this) nodes.Add(node);
+            nodes.RemoveAt(nodes.Count - 1);
+
             return nodes;
         }
         #endregion
@@ -465,58 +466,67 @@ namespace NAfvalOphaler
             deltaTime = double.NaN;
             whereToAdd = null;
             if (toAdd.TimeToEmpty > TimeLeft) return false;
-            else 
+
+            double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers * 0.2;
+            List<int> candidateTours = new List<int>(roomLefts.Count);
+            for (int i = 0; i < roomLefts.Count; i++) if (roomLefts[i] >= totalSpaceOfOrder) candidateTours.Add(i);
+            List<Node> candidateNodes = new List<Node>();
+            foreach (int i in candidateTours) 
+                for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) 
+                    if (toAdd.TimeToEmpty
+                        + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId] 
+                        + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId] 
+                        - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId] 
+                        < TimeLeft) 
+                        candidateNodes.Add(curr);
+
+            if (candidateNodes.Count > 0)
             {
-                double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers * 0.2;
-                List<int> candidateTours = new List<int>(roomLefts.Count);
-                for (int i = 0; i < roomLefts.Count; i++) if (roomLefts[i] >= totalSpaceOfOrder) candidateTours.Add(i);
-                List<Node> candidateNodes = new List<Node>();
-                foreach (int i in candidateTours) for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) if (GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId] + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId] - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId] < TimeLeft) candidateNodes.Add(curr);
-                if (candidateNodes.Count > 0)
-                {
-                    Random rnd = new Random();
-                    whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
-                    deltaTime = GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId] + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId] - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
-                    return true;
-                }
-                else return false;
+                Random rnd = new Random();
+                whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                deltaTime = toAdd.TimeToEmpty
+                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId] 
+                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId] 
+                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                return true;
             }
+            
+            return false;
         }
         public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
         {
             Random rnd = new Random();
             List<Node> candidates = ToList();
             Node theChosenOne = candidates[rnd.Next(0, candidates.Count)];
-            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] - (theChosenOne.Data.TimeToEmpty + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] 
+                - (theChosenOne.Data.TimeToEmpty 
+                    + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] 
+                    + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+
             if (delta <= TimeLeft)
             {
                 deltaTime = delta;
                 if (theChosenOne.IsDump)
                 {
-                    if (roomLefts[theChosenOne.TourIndex - 1] + roomLefts[theChosenOne.TourIndex] < 20000)
+                    if ((roomLefts[theChosenOne.TourIndex - 1] - (20000 - roomLefts[theChosenOne.TourIndex])) > 0)
                     {
                         toRemove = theChosenOne;
                         return true;
                     }
-                    else
-                    {
-                        toRemove = null;
-                        deltaTime = double.NaN;
-                        return false;
-                    }
+
+                    toRemove = null;
+                    deltaTime = double.NaN;
+                    return false;
                 }
-                else
-                {
-                    toRemove = theChosenOne;
-                    return true;
-                }
+
+                toRemove = theChosenOne;
+                return true;
             }
-            else
-            {
-                toRemove = null;
-                deltaTime = double.NaN;
-                return false;
-            }
+
+            toRemove = null;
+            deltaTime = double.NaN;
+            return false;
+
             throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
         #endregion
