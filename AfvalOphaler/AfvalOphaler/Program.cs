@@ -73,7 +73,35 @@ namespace AfvalOphaler
             // DIT IS VOOR FINAL JOCHIE !!!
 #else
 #if TEST
-
+#if CUSTOM
+            orders = orders.OrderBy(o => o.Frequency).ToList();
+            NAfvalOphaler.Schedule customSchedule = new NAfvalOphaler.Schedule(orders);
+            int loopindex = customSchedule.AddLoop(0, 0);
+            NAfvalOphaler.Node curr = customSchedule.dayRoutes[0][0].Loops[loopindex].Start;
+            for (int o = 0; o < 10; o++)
+            {
+                curr = customSchedule.AddOrder(orders[o], curr, loopindex, 0, 0);
+            }
+            Console.WriteLine("Done adding...");
+            File.WriteAllText(@".\beforeOpt.txt", customSchedule.ToCheckString());
+            Console.WriteLine("Before opt saved...");
+            Console.WriteLine("Starting optimalisation...");
+            for (int opt = 0; opt < 10; opt++)
+            {
+                customSchedule.dayRoutes[0][0].Loops[loopindex].OptimizeLoop();
+                Console.WriteLine("Duration: "+ customSchedule.CaculateDuration());
+            }
+            Console.WriteLine("Optimalisation done...");
+            File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
+            Console.WriteLine("Opt results saved...");
+#else
+            /* RouteVisualizer:
+            RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
+            Application.DoEvents();
+            vis.WindowState = FormWindowState.Maximized;
+            Application.DoEvents();
+            Console.ReadKey();*/
+#endif
 #elif NTEST
             NAfvalOphaler.Solver solver = new NAfvalOphaler.Solver(orders);
             var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);                  
@@ -83,8 +111,9 @@ namespace AfvalOphaler
 #elif CUSTOM
 
 #endif
-
 #endif
+
+
             Console.ReadKey();
         }
         #endregion

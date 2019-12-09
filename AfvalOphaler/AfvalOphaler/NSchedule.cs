@@ -97,7 +97,7 @@ namespace NAfvalOphaler
         public ScheduleResult ToResult() => new ScheduleResult() 
         { 
             Score = Score, 
-            Stats = GetStatistics(), 
+            Stats = GetStatisticsBuilder(), 
             Check = ToCheckStringBuilder() 
         };
         public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
@@ -106,12 +106,14 @@ namespace NAfvalOphaler
         {
             StringBuilder b = new StringBuilder();
             for (int t = 0; t < 2; t++)
+            { 
                 for (int d = 0; d < 5; d++)
                 {
                     int ordOfDay = 0;
-                    foreach (Node n in DayRoutes[d][t]) 
+                    foreach (Node n in DayRoutes[d][t])
                         b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
                 }
+            }
             //for (int t = 0; t < 2; t++)
             //    for (int d = 0; d < 5; d++)
             //    {
@@ -225,6 +227,7 @@ namespace NAfvalOphaler
             public RandomAddOperation(Schedule s) : base(s)
             {
                 //Hé jochie
+                
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
@@ -344,7 +347,7 @@ namespace NAfvalOphaler
     public class ScheduleResult
     {
         public double Score;
-        public string Stats;
+        public StringBuilder Stats;
         public StringBuilder Check;
     }
     #endregion
@@ -361,8 +364,8 @@ namespace NAfvalOphaler
 
         public Node FirstDump => dumps[0];
 
-        private List<Node> dumps;
-        private List<double> roomLefts;
+        public List<Node> dumps;
+        public List<double> roomLefts;
 
         public DayRoute(int dind, int trind)
         {
@@ -370,7 +373,13 @@ namespace NAfvalOphaler
             DayIndex = dind;
             TruckIndex = trind;
 
-            dumps = new List<Node> { new Node() };
+            Node dump0 = new Node(0);
+            Node dumpL = new Node();
+
+            dump0.Next = dumpL;
+            dumpL.Prev = dump0;
+
+            dumps = new List<Node> { dump0 };
             roomLefts = new List<double> { 20000 };
         }
 
@@ -383,42 +392,30 @@ namespace NAfvalOphaler
         #endregion
 
         #region Tour Modifications
-        //public int AddLoop()
-        //{
-        //    Loops.Add(new Loop());
-        //    TimeLeft -= 30;
-        //    return Loops.Count - 1;
-        //}
-        public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
+        public Node AddOrder(Order order, Node nextTo)
         {
-            Node n = null;
             TimeLeft -= (order.TimeToEmpty
                     + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
                     + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
                     - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
 
-            n = nextTo.AppendNext(order);
+            Node n = nextTo.AppendNext(order);
 
             roomLefts[n.TourIndex] -= (order.NumContainers * order.VolPerContainer * 0.2);
 
-            if (order.OrderId == 0)
+            if (n.IsDump)
             {
-                double nRoom = 0;
-                for (Node curr = n.Next; !curr.IsDump; curr = curr.Next)
-                    nRoom += curr.Data.NumContainers * curr.Data.VolPerContainer * 0.2;
-
-                double oRoom = roomLefts[n.TourIndex] - nRoom;
-                roomLefts[n.TourIndex] = oRoom;
-
                 for (Node curr = n; !curr.IsSentry; curr = curr.Next)
-                {
                     curr.TourIndex++;
-                }
+
+                double newSpaceTaken = 0;
+                for (Node curr = n.Next; !curr.IsDump; curr = curr.Next)
+                    newSpaceTaken += curr.Data.NumContainers * curr.Data.VolPerContainer * 0.2;
 
                 dumps.Insert(n.TourIndex, n);
-                roomLefts.Insert(n.TourIndex, nRoom);
+                roomLefts.Insert(n.TourIndex, 20000 - newSpaceTaken);
+                roomLefts[n.TourIndex - 1] -= newSpaceTaken;
             }
-
 
             return n;
             //TimeLeft += Loops[loopIndex].Duration;
@@ -426,13 +423,35 @@ namespace NAfvalOphaler
             //TimeLeft -= Loops[loopIndex].Duration;
             //return res;
         }
-        public void RemoveNodeFromLoop(Node n, int loopIndex)
+        public void RemoveNode(Node n)
         {
-            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+            Order order = n.Data;
+
+            TimeLeft += (order.TimeToEmpty 
+                + GD.JourneyTime[n.Prev.Data.MatrixId, order.MatrixId] 
+                + GD.JourneyTime[order.MatrixId, n.Next.Data.MatrixId]
+                - GD.JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId]);
+
+            roomLefts[n.TourIndex] += (order.NumContainers * order.VolPerContainer * 0.2);
+
+            if (n.IsDump)
+            {
+                for (Node curr = n.Next; !curr.IsSentry; curr = curr.Next)
+                    curr.TourIndex--;
+
+                dumps.RemoveAt(n.TourIndex);
+                roomLefts[n.TourIndex - 1] -= 20000 - roomLefts[n.TourIndex];
+                roomLefts.RemoveAt(n.TourIndex);
+            }
+
+            n.Remove();
+
+            //throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
             //TimeLeft += Loops[loopIndex].Duration;
             //Loops[loopIndex].RemoveNode(n);
             //TimeLeft -= Loops[loopIndex].Duration;
         }
+
         #endregion
 
         #region Evauluate
@@ -503,6 +522,16 @@ namespace NAfvalOphaler
         {
             if (dumps.Count == 0) return null;
             return new LoopEnumerator(dumps[0]);
+        }
+
+        public string GetRoute()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach(Node n in this)
+            {
+                sb.AppendLine(n.Data.OrderId.ToString());
+            }
+            return sb.ToString();
         }
         #endregion
     }
@@ -703,6 +732,7 @@ namespace NAfvalOphaler
     {
         private readonly Node dump;
         private Node curr;
+        private Node prev;
 
         object IEnumerator.Current => curr;
         public LoopEnumerator(Node dump)
@@ -712,8 +742,9 @@ namespace NAfvalOphaler
         }
         bool IEnumerator.MoveNext()
         {
+            prev = curr;
             curr = curr.Next;
-            return !curr.Prev.IsDump;
+            return !prev.IsSentry;
         }
         void IEnumerator.Reset()
         {
@@ -741,6 +772,7 @@ namespace NAfvalOphaler
         //    Data = GD.Dump;
         //    Prev = Next = this;
         //}
+
         public Node(Order o)
         {
             IsDump = false;
@@ -752,8 +784,15 @@ namespace NAfvalOphaler
             IsDump = true;
             IsSentry = true;
             Data = GD.Dump;
-            Prev = Next = this;
-            TourIndex = 0;
+            TourIndex = -1;
+            Next = this;
+        }
+        public Node(int dumpId)
+        {
+            IsDump = true;
+            IsSentry = false;
+            Data = GD.Dump;
+            TourIndex = dumpId;
         }
         public Node(Order o, int tourInd)
         {
@@ -778,6 +817,13 @@ namespace NAfvalOphaler
 
         //    return n;
         //}
+        public void Remove()
+        {
+            Next.Prev = Prev;
+            Prev.Next = Next;
+            Next = null;
+            Prev = null;
+        }
         public Node AppendNext(Order o)
         {
             Node n = new Node(o, TourIndex)
@@ -791,13 +837,7 @@ namespace NAfvalOphaler
 
             return n;
         }
-        public void Remove()
-        {
-            Next.Prev = Prev;
-            Prev.Next = Next;
-            Next = null;
-            Prev = null;
-        }
+
         #endregion
 
         #region Overrides
@@ -807,7 +847,7 @@ namespace NAfvalOphaler
             return Data.OrderId.Equals(n.Data.OrderId);
         }
         public override int GetHashCode() => base.GetHashCode();
-        public override string ToString() => "Node: " + Data.ToString();
+        public override string ToString() => $"{(IsSentry ? "Sentry" : "Node")} ti{TourIndex}: {Data}";
         #endregion
     }
     #endregion
