@@ -495,36 +495,35 @@ namespace NAfvalOphaler
             Random rnd = new Random();
             List<Node> candidates = ToList();
             Node theChosenOne = candidates[rnd.Next(0, candidates.Count)];
-            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] - (theChosenOne.Data.TimeToEmpty + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] 
+                - (theChosenOne.Data.TimeToEmpty 
+                    + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] 
+                    + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+
             if (delta <= TimeLeft)
             {
                 deltaTime = delta;
                 if (theChosenOne.IsDump)
                 {
-                    if (roomLefts[theChosenOne.TourIndex - 1] + roomLefts[theChosenOne.TourIndex] < 20000)
+                    if ((roomLefts[theChosenOne.TourIndex - 1] - (20000 - roomLefts[theChosenOne.TourIndex])) > 0)
                     {
                         toRemove = theChosenOne;
                         return true;
                     }
-                    else
-                    {
-                        toRemove = null;
-                        deltaTime = double.NaN;
-                        return false;
-                    }
+
+                    toRemove = null;
+                    deltaTime = double.NaN;
+                    return false;
                 }
-                else
-                {
-                    toRemove = theChosenOne;
-                    return true;
-                }
+
+                toRemove = theChosenOne;
+                return true;
             }
-            else
-            {
-                toRemove = null;
-                deltaTime = double.NaN;
-                return false;
-            }
+
+            toRemove = null;
+            deltaTime = double.NaN;
+            return false;
+
             throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
         #endregion
