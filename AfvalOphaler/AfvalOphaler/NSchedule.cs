@@ -181,7 +181,7 @@ namespace NAfvalOphaler
         public abstract class NeighborOperation
         {
             public bool isEvaluated = false;
-            public double? TotalDelta => DeltaTime + DeltaPenalty;
+            public double TotalDelta => DeltaTime + DeltaPenalty;
 
             //public double? DeltaTime = null;
             //public double? DeltaPenalty = null;
