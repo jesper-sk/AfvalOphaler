@@ -150,7 +150,7 @@ namespace NAfvalOphaler
             {
                 if (ops[i].Evaluate())
                 {
-                    double delta = ops[i].TotalDelta.Value;
+                    double delta = ops[i].TotalDelta;
                     if (delta < opt)
                     {
                         best = ops[i];
@@ -230,7 +230,7 @@ namespace NAfvalOphaler
                 ops.RemoveAt(i);
                 if (op.Evaluate())
                 {
-                    double delta = op.TotalDelta.Value;
+                    double delta = op.TotalDelta;
                     if (delta < 0)
                     {
                         op.Apply();
