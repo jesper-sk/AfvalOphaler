@@ -223,11 +223,11 @@ namespace NAfvalOphaler
             private List<double> deltas;
             private List<Node> whereToAdd;
             private List<int> whereToAddDays;
+            private List<int> whereToAddTrucks;
 
             public RandomAddOperation(Schedule s) : base(s)
             {
-                //Hé jochie
-                
+                //Hé jochie          
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
@@ -241,6 +241,7 @@ namespace NAfvalOphaler
                 deltas = new List<double>(toAdd.Frequency);
                 whereToAdd = new List<Node>(toAdd.Frequency);
                 whereToAddDays = new List<int>(toAdd.Frequency);
+                whereToAddTrucks = new List<int>(toAdd.Frequency);
                 foreach (int day in combi)
                 {
                     int truck = state.Rnd.Next(0, 2);
@@ -249,6 +250,7 @@ namespace NAfvalOphaler
                         deltas.Add(delta1);
                         whereToAdd.Add(where1);
                         whereToAddDays.Add(day);
+                        whereToAddTrucks.Add(truck);
                         everyDayInCombiAllowed++;
                         continue;
                     }
@@ -257,6 +259,7 @@ namespace NAfvalOphaler
                         deltas.Add(delta2);
                         whereToAdd.Add(where2);
                         whereToAddDays.Add(day);
+                        whereToAddTrucks.Add(truck);
                         everyDayInCombiAllowed++;
                     }
                 }
@@ -386,7 +389,9 @@ namespace NAfvalOphaler
         List<Node> ToList()
         {
             List<Node> nodes = new List<Node>();
-            for (int i = 0; i < dumps.Count; i++) for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) nodes.Add(curr);
+            for (int i = 0; i < dumps.Count; i++) 
+                for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) 
+                    nodes.Add(curr);
             return nodes;
         }
         #endregion
