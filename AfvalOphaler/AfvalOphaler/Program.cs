@@ -179,7 +179,8 @@ namespace AfvalOphaler
             Name = "Dump",
             MatrixId = 287,
             XCoord = 56343016,
-            YCoord = 513026712
+            YCoord = 513026712,
+            TimeToEmpty = 30
         };
         public static BigLLNode DumpLLing = new BigLLNode(Dump);
 
