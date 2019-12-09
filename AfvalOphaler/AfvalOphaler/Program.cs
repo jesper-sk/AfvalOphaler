@@ -1,9 +1,9 @@
 ﻿#region Definings
 //#define FINAL
 //#define CLUSTER
-//#define TEST
-#define NTEST
-//#define CUSTOM
+#define TEST
+//#define NTEST
+#define CUSTOM
 #endregion
 
 #region Usings
@@ -64,26 +64,29 @@ namespace AfvalOphaler
 
 #if TEST
 #if CUSTOM
-            orders = orders.OrderBy(o => o.Frequency).ToList();
-            NAfvalOphaler.Schedule customSchedule = new NAfvalOphaler.Schedule(orders);
-            int loopindex = customSchedule.AddLoop(0, 0);
-            NAfvalOphaler.Node curr = customSchedule.dayRoutes[0][0].Loops[loopindex].Start;
-            for (int o = 0; o < 10; o++)
-            {
-                curr = customSchedule.AddOrder(orders[o], curr, loopindex, 0, 0);
-            }
-            Console.WriteLine("Done adding...");
-            File.WriteAllText(@".\beforeOpt.txt", customSchedule.ToCheckString());
-            Console.WriteLine("Before opt saved...");
-            Console.WriteLine("Starting optimalisation...");
-            for (int opt = 0; opt < 10; opt++)
-            {
-                customSchedule.dayRoutes[0][0].Loops[loopindex].OptimizeLoop();
-                Console.WriteLine("Duration: "+ customSchedule.CaculateDuration());
-            }
-            Console.WriteLine("Optimalisation done...");
-            File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
-            Console.WriteLine("Opt results saved...");
+            DayRoute route = new DayRoute(0, 0);
+            //Console.WriteLine(route._dumps[0].Next);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            route.AddOrder(orders[34], route.dumps[0]);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            var p = route.AddOrder(orders[65], route.dumps[0]);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            var q = route.AddOrder(orders[125], route.dumps[0]);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            var dump1 = route.AddOrder(GD.Dump, p);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            route.AddOrder(GD.Dump, q);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+            route.RemoveNode(dump1);
+            foreach (double n in route.spaceLefts) Console.WriteLine(n);
+            Console.WriteLine();
+
 #else
             /* RouteVisualizer:
             RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
