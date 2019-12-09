@@ -222,6 +222,7 @@ namespace NAfvalOphaler
             private Order toAdd;
             private List<double> deltas;
             private List<Node> whereToAdd;
+            private List<int> whereToAddDays;
 
             public RandomAddOperation(Schedule s) : base(s)
             {
@@ -239,27 +240,30 @@ namespace NAfvalOphaler
                 int everyDayInCombiAllowed = 0;
                 deltas = new List<double>(toAdd.Frequency);
                 whereToAdd = new List<Node>(toAdd.Frequency);
-                foreach (int i in combi)
+                whereToAddDays = new List<int>(toAdd.Frequency);
+                foreach (int day in combi)
                 {
                     int truck = state.Rnd.Next(0, 2);
-                    if (state.DayRoutes[i][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                    if (state.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                     {
                         deltas.Add(delta1);
                         whereToAdd.Add(where1);
+                        whereToAddDays.Add(day);
                         everyDayInCombiAllowed++;
                         continue;
                     }
-                    else if (state.DayRoutes[i][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                    else if (state.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
                     {
                         deltas.Add(delta2);
                         whereToAdd.Add(where2);
+                        whereToAddDays.Add(day);
                         everyDayInCombiAllowed++;
                     }
                 }
                 if (everyDayInCombiAllowed == toAdd.Frequency)
                 {
                     deltaTime = deltas.Sum();
-                    deltaPenalty = 3 * toAdd.Frequency * toAdd.TimeToEmpty;
+                    deltaPenalty = -(3 * toAdd.Frequency * toAdd.TimeToEmpty);
                     return true;
                 }
                 else
@@ -277,6 +281,8 @@ namespace NAfvalOphaler
         }
         public class RandomDeleteOperation : NeighborOperation
         {
+            Node toRemove;
+            int day;
             public RandomDeleteOperation(Schedule s) : base(s)
             {
                 //Hé jochie
@@ -284,7 +290,31 @@ namespace NAfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+                int d = state.Rnd.Next(0, 5);
+                int truck = state.Rnd.Next(0, 2);
+                if (state.DayRoutes[d][truck].EvaluateRandomRemove(out Node rem1, out double delta1))
+                {
+                    toRemove = rem1;
+                    day = d;
+                    deltaTime = delta1;
+                    deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
+                    return true;
+                }
+                // Uncomment below als niet evalueren ook andere truck:
+                else if (state.DayRoutes[d][1- truck].EvaluateRandomRemove(out Node rem2, out double delta2))
+                {
+                    toRemove = rem2;
+                    day = d;
+                    deltaTime = delta2;
+                    deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
+                    return true;
+                }
+                else
+                {
+                    deltaTime = double.NaN;
+                    deltaPenalty = double.NaN;
+                    return false;
+                }
             }
 
             protected override void _Apply()
@@ -351,6 +381,13 @@ namespace NAfvalOphaler
 
             dumps = new List<Node> { dump0 };
             roomLefts = new List<double> { 20000 };
+        }
+
+        List<Node> ToList()
+        {
+            List<Node> nodes = new List<Node>();
+            for (int i = 0; i < dumps.Count; i++) for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) nodes.Add(curr);
+            return nodes;
         }
         #endregion
 
@@ -440,8 +477,41 @@ namespace NAfvalOphaler
                 else return false;
             }
         }
-        public bool EvaluateRandomRemove(Random rnd)
+        public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
         {
+            Random rnd = new Random();
+            List<Node> candidates = ToList();
+            Node theChosenOne = candidates[rnd.Next(0, candidates.Count)];
+            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] - (theChosenOne.Data.TimeToEmpty + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+            if (delta <= TimeLeft)
+            {
+                deltaTime = delta;
+                if (theChosenOne.IsDump)
+                {
+                    if (roomLefts[theChosenOne.TourIndex - 1] + roomLefts[theChosenOne.TourIndex] < 20000)
+                    {
+                        toRemove = theChosenOne;
+                        return true;
+                    }
+                    else
+                    {
+                        toRemove = null;
+                        deltaTime = double.NaN;
+                        return false;
+                    }
+                }
+                else
+                {
+                    toRemove = theChosenOne;
+                    return true;
+                }
+            }
+            else
+            {
+                toRemove = null;
+                deltaTime = double.NaN;
+                return false;
+            }
             throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
         #endregion
