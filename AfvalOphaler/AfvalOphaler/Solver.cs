@@ -28,7 +28,6 @@ namespace AfvalOphaler
             //LocalSolver solver = new SaLocalSolver(0.5, 0.9999);
 
             ///*
-            threads = 10;
             var tasks = new Task[threads];
             int i = 0;
             while (i < threads)

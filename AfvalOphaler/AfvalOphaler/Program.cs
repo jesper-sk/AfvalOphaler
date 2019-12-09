@@ -97,18 +97,22 @@ namespace AfvalOphaler
             Console.WriteLine(bestSchedule.GetStatistics());
 
             solver = new Solver(new Schedule[] { bestSchedule }, 1);
-            Task.WaitAll(solver.StartSolving(100000, 20, 10000, 10000));
+            tasks = solver.StartSolving(100000, 20, 10000, 10000);
+            Task.WaitAll(tasks);
 
             bestSchedule = solver.GetBestSchedule();
             Console.WriteLine("===");
             Console.WriteLine("Again solving done, score of best schedule:");
             Console.WriteLine(bestSchedule.GetStatistics());
 
-            Console.WriteLine("Again starting Optimization:");
-            bestSchedule.OptimizeSchedule();
-            Console.WriteLine("Again after Optimization:");
-            Console.WriteLine(bestSchedule.GetStatistics());
-
+            for (int opt = 0; opt < 50; opt -= -1)
+            {
+                Console.WriteLine("Again starting Optimization:");
+                bestSchedule.OptimizeSchedule();
+                Console.WriteLine("Again after Optimization:");
+                Console.WriteLine(bestSchedule.GetStatistics());
+                Console.WriteLine("===");
+            }
 
 
             string bestcheckstring = bestSchedule.ToCheckString();

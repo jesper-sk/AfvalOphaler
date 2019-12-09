@@ -682,7 +682,7 @@ namespace AfvalOphaler
             return nodes;
         }
 
-        #region
+        #region Optimization
         public void OptimizeLoop()
         {
             void Two_Opt_Move(Node[] loop, Node i, Node j)
@@ -754,7 +754,7 @@ namespace AfvalOphaler
 
                     if (del_dist - (X1Y1 + X2Y2) > 0)
                     {
-                        Console.WriteLine("Doing 2-opt move...");
+                        //Console.WriteLine("Doing 2-opt move...");
                         Two_Opt_Move(nodes, x1, y1);
                         return;
                     }
@@ -766,7 +766,7 @@ namespace AfvalOphaler
                         {
                             if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
                             {
-                                Console.WriteLine("Doing first 2.5-opt move...");
+                                //Console.WriteLine("Doing first 2.5-opt move...");
                                 Two_Opt_Node_Shift_Move(x2, y1);
                                 return;
                             }
@@ -778,7 +778,7 @@ namespace AfvalOphaler
                             {
                                 if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
                                 {
-                                    Console.WriteLine("Doing second 2.5-opt move...");
+                                    //Console.WriteLine("Doing second 2.5-opt move...");
                                     Two_Opt_Node_Shift_Move(y1, x1);
                                     return;
                                 }
