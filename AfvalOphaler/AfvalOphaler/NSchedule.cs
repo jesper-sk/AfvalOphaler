@@ -52,30 +52,30 @@ namespace NAfvalOphaler
             rnd = new Random();
         }
 
-        public int AddLoop(int day, int truck)
-        {
-            Duration += 30;
-            return dayRoutes[day][truck].AddLoop();
-        }
+        //public int AddLoop(int day, int truck)
+        //{
+        //    Duration += 30;
+        //    return dayRoutes[day][truck].AddLoop();
+        //}
 
-        public Node AddOrder(Order o, Node nextTo, int loop, int day, int truck)
-        {
-            DayRoute route = dayRoutes[day][truck];
-            Duration -= route.Duration;
-            Node newAdded = route.AddOrderToLoop(o, nextTo, loop);
-            Duration += route.Duration;
-            Penalty -= 3 * o.Frequency * o.TimeToEmpty;
-            return newAdded;
-        }
+        //public Node AddOrder(Order o, Node nextTo, int loop, int day, int truck)
+        //{
+        //    DayRoute route = dayRoutes[day][truck];
+        //    Duration -= route.Duration;
+        //    Node newAdded = route.AddOrderToLoop(o, nextTo, loop);
+        //    Duration += route.Duration;
+        //    Penalty -= 3 * o.Frequency * o.TimeToEmpty;
+        //    return newAdded;
+        //}
 
-        public void RemoveNode(Node toDelete, int loop, int day, int truck)
-        {
-            DayRoute route = dayRoutes[day][truck];
-            Duration -= route.Duration;
-            route.RemoveNodeFromLoop(toDelete, loop);
-            Duration += route.Duration;
-            Penalty += 3 * toDelete.Data.TimeToEmpty;
-        }
+        //public void RemoveNode(Node toDelete, int loop, int day, int truck)
+        //{
+        //    DayRoute route = dayRoutes[day][truck];
+        //    Duration -= route.Duration;
+        //    route.RemoveNodeFromLoop(toDelete, loop);
+        //    Duration += route.Duration;
+        //    Penalty += 3 * toDelete.Data.TimeToEmpty;
+        //}
 
         #region ToStrings
         public ScheduleResult ToResult()
@@ -202,9 +202,7 @@ namespace NAfvalOphaler
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
-            {
-                Random r = new Random();
-
+            { 
                 throw new NotImplementedException();
             }
         }
@@ -260,30 +258,54 @@ namespace NAfvalOphaler
         public readonly int DayIndex;
         public readonly int TruckIndex;
 
+        private List<Node> dumps;
+        private List<double> roomLefts;
+
         public double Duration => 720 - TimeLeft;
 
         public DayRoute(int dind, int trind)
         {
             Loops = new List<Loop>();
-            TimeLeft = 720;
+            TimeLeft = 690;
             DayIndex = dind;
             TruckIndex = trind;
+
+            dumps = new List<Node> { new Node(GD.Dump) };
+            roomLefts = new List<double> { 20000 };
         }
         #endregion
 
         #region Loops Modifications
-        public int AddLoop()
-        {
-            Loops.Add(new Loop());
-            TimeLeft -= 30;
-            return Loops.Count - 1;
-        }
+        //public int AddLoop()
+        //{
+        //    Loops.Add(new Loop());
+        //    TimeLeft -= 30;
+        //    return Loops.Count - 1;
+        //}
         public Node AddOrderToLoop(Order order, Node nextTo, int loopIndex)
         {
-            TimeLeft += Loops[loopIndex].Duration;
-            Node res = Loops[loopIndex].AddOrder(order, nextTo);      
-            TimeLeft -= Loops[loopIndex].Duration;
-            return res;
+            Node n = null;
+            if (order.MatrixId == 0)
+            {
+
+            }
+            else
+            {
+                TimeLeft -= (order.TimeToEmpty
+                        + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
+                        + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
+                        - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
+
+                n = nextTo.AppendNext(order);
+
+                roomLefts[loopIndex] -= (order.NumContainers * order.VolPerContainer * 0.2);
+            }
+
+            return n;
+            //TimeLeft += Loops[loopIndex].Duration;
+            //Node res = Loops[loopIndex].AddOrder(order, nextTo);
+            //TimeLeft -= Loops[loopIndex].Duration;
+            //return res;
         }
         public void RemoveNodeFromLoop(Node n, int loopIndex)
         {
@@ -292,6 +314,15 @@ namespace NAfvalOphaler
             TimeLeft -= Loops[loopIndex].Duration;
         }
         #endregion
+
+        public bool EvaluateRandomAdd(Random rnd)
+        {
+            while (true)
+            {
+                Loop curr = Loops[rnd.Next(0, Loops.Count)];
+
+            }
+        }
 
         public override string ToString()
         {
@@ -359,7 +390,7 @@ namespace NAfvalOphaler
         }
         #endregion
 
-        #region
+        #region Optimization
         public void OptimizeLoop()
         {
             void Two_Opt_Move(Node[] loop, Node i, Node j)
@@ -467,6 +498,15 @@ namespace NAfvalOphaler
         }
         #endregion
 
+        public bool EvaluateRandomAdd(Random rnd)
+        {
+            while (true)
+            {
+                int nodeI = rnd.Next(0, Count);
+
+            }
+        }
+
         public override string ToString()
         {
             return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
@@ -511,6 +551,8 @@ namespace NAfvalOphaler
         public Node Prev;
         public Node Next;
 
+        public int TourIndex;
+
         public Node()
         {
             IsDump = true;
@@ -518,6 +560,18 @@ namespace NAfvalOphaler
             Prev = Next = this;
         }
         public Node(Order o)
+        {
+            IsDump = false;
+            Data = o;
+        }
+
+        public Node(int tourInd)
+        {
+            IsDump = true;
+            Data = GD.Dump;
+            Prev = Next = this;
+        }
+        public Node(Order o, int tourInd)
         {
             IsDump = false;
             Data = o;
@@ -555,7 +609,7 @@ namespace NAfvalOphaler
         }
         public override int GetHashCode()
         {
-            return Data.OrderId;
+            return base.GetHashCode();
         }
         public override string ToString()
         {
