@@ -267,53 +267,52 @@ namespace NAfvalOphaler
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 int[][] combis = GD.AllowedDayCombinations[nAdditions];
-                int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
-
+                //int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
                 //Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
 
-                int everyDayInCombiAllowed = 0;
-                deltas = new List<double>(nAdditions);
-                whereToAdd = new List<Node>(nAdditions);
-                whereToAddDays = new List<int>(nAdditions);
-                whereToAddTrucks = new List<int>(nAdditions);
-                foreach (int day in combi)
+                foreach (int[] combi in combis)
                 {
-                    //Console.WriteLine($"Day {day}");
-                    int truck = State.Rnd.Next(0, 2);
-                    if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                    int everyDayInCombiAllowed = 0;
+                    deltas = new List<double>(nAdditions);
+                    whereToAdd = new List<Node>(nAdditions);
+                    whereToAddDays = new List<int>(nAdditions);
+                    whereToAddTrucks = new List<int>(nAdditions);
+                    foreach (int day in combi)
                     {
-                        //Console.WriteLine($"Truck {truck} Evaluated!");
-                        deltas.Add(delta1);
-                        whereToAdd.Add(where1);
-                        whereToAddDays.Add(day);
-                        whereToAddTrucks.Add(truck);
-                        everyDayInCombiAllowed++;
-                        continue;
+                        //Console.WriteLine($"Day {day}");
+                        int truck = State.Rnd.Next(0, 2);
+                        if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                        {
+                            //Console.WriteLine($"Truck {truck} Evaluated!");
+                            deltas.Add(delta1);
+                            whereToAdd.Add(where1);
+                            whereToAddDays.Add(day);
+                            whereToAddTrucks.Add(truck);
+                            everyDayInCombiAllowed++;
+                            continue;
+                        }
+                        else if (State.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                        {
+                            //Console.WriteLine($"Truck {truck - 1} evaluated!");
+                            deltas.Add(delta2);
+                            whereToAdd.Add(where2);
+                            whereToAddDays.Add(day);
+                            whereToAddTrucks.Add(1 - truck);
+                            everyDayInCombiAllowed++;
+                            continue;
+                        }
+                        //Console.WriteLine("Didn't evaluate, day impossible");
                     }
-                    else if (State.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                    if (everyDayInCombiAllowed == nAdditions)
                     {
-                        //Console.WriteLine($"Truck {truck - 1} evaluated!");
-                        deltas.Add(delta2);
-                        whereToAdd.Add(where2);
-                        whereToAddDays.Add(day);
-                        whereToAddTrucks.Add(1-truck);
-                        everyDayInCombiAllowed++;
-                        continue;
+                        deltaTime = deltas.Sum();
+                        deltaPenalty = -(3 * nAdditions * toAdd.TimeToEmpty);
+                        return true;
                     }
-                    //Console.WriteLine("Didn't evaluate, day impossible");
                 }
-                if (everyDayInCombiAllowed == nAdditions)
-                {
-                    deltaTime = deltas.Sum();
-                    deltaPenalty = -(3 * nAdditions * toAdd.TimeToEmpty);
-                    return true;
-                }
-                else
-                {
-                    deltaTime = double.NaN;
-                    deltaPenalty = double.NaN;
-                    return false;
-                }
+                deltaTime = double.NaN;
+                deltaPenalty = double.NaN;
+                return false;
             }
 
             protected override void _Apply()
@@ -891,107 +890,6 @@ namespace NAfvalOphaler
                     }
                 }
             }
-
-            #region [DEPRICATED]
-            //for (Node x = dumps[0]; !x.Next.Next.IsSentry; x = x.Next)
-            //{
-            //    Node x1 = x;
-            //    Node x2 = x.Next;
-            //    for (Node y = x2.Next; !y.Next.IsSentry; y = y.Next)
-            //    {
-            //        Node y1 = y;
-            //        Node y2 = y.Next;
-
-            //        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
-            //        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
-            //        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
-
-            //        if (del_dist - (X1Y1 + X2Y2) > 0)
-            //        {
-            //            Console.WriteLine("Doing 2-opt move...");
-            //            Two_Opt_Move(x1, y1);
-            //            return;
-            //        }
-            //        else
-            //        {
-            //            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
-            //            Node z1 = x2.Next;
-            //            if (z1 != y1)
-            //            {
-            //                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
-            //                {
-            //                    Console.WriteLine("Doing first 2.5-opt move...");
-            //                    Two_Opt_Node_Shift_Move(x2, y1);
-            //                    return;
-            //                }
-            //            }
-            //            else
-            //            {
-            //                z1 = y1.Prev;
-            //                if (z1 != x2)
-            //                {
-            //                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
-            //                    {
-            //                        Console.WriteLine("Doing second 2.5-opt move...");
-            //                        Two_Opt_Node_Shift_Move(y1, x1);
-            //                        return;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
-            //Node[] nodes = ToList();
-            //for (int i = 0; i < Count - 2; i++)
-            //{
-            //    Node x1 = nodes[i];
-            //    Node x2 = nodes[i + 1];
-            //    for (int j = i + 2; j < Count - 1; j++)
-            //    {
-            //        Node y1 = nodes[j];
-            //        Node y2 = nodes[j + 1];
-
-            //        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
-            //        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
-            //        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
-
-            //        if (del_dist - (X1Y1 + X2Y2) > 0)
-            //        {
-            //            Console.WriteLine("Doing 2-opt move...");
-            //            Two_Opt_Move(x1, y1);
-            //            return;
-            //        }
-            //        else
-            //        {
-            //            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
-            //            Node z1 = nodes[i + 2];
-            //            if (z1 != y1)
-            //            {
-            //                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
-            //                {
-            //                    Console.WriteLine("Doing first 2.5-opt move...");
-            //                    Two_Opt_Node_Shift_Move(x2, y1);
-            //                    return;
-            //                }
-            //            }
-            //            else
-            //            {
-            //                z1 = nodes[j - 1];
-            //                if (z1 != x2)
-            //                {
-            //                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
-            //                    {
-            //                        Console.WriteLine("Doing second 2.5-opt move...");
-            //                        Two_Opt_Node_Shift_Move(y1, x1);
-            //                        return;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-            #endregion
         }
         #endregion
 
