@@ -46,7 +46,13 @@ namespace NAfvalOphaler
         #endregion
 
         #region Score and Penalty Calculation
-        public double CaculateDuration()
+        public double CalculateScore()
+        {
+            double dur = CalculateDuration();
+            double pen = CalculatePenalty();
+            return dur + pen;
+        }
+        public double CalculateDuration()
         {
             double duration = 0;
             foreach (DayRoute[] bigDay in DayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
@@ -431,12 +437,16 @@ namespace NAfvalOphaler
         #region Optimization
         public void OptimizeAllDays()
         {
-            
+            for (int d = 0; d < 5; d -= -1)
+                for (int t = 0; t < 2; t -= -1)
+                    OptimizeDay(d, t);
         }
-        //public void OptimizeDay(int day, int truck)
-        //{
-        //    DayRoutes[day][truck].Optimize();
-        //}
+        public void OptimizeDay(int day, int truck)
+        {
+            Duration -= DayRoutes[day][truck].Duration;
+            DayRoutes[day][truck].Optimize();
+            Duration += DayRoutes[day][truck].Duration;
+        }
         #endregion
 
         #region ToStrings
@@ -750,108 +760,237 @@ namespace NAfvalOphaler
         }
         #endregion
 
-        //#region Optimization
-        //public void Optimize()
-        //{
-        //    void Two_Opt_Move(Node[] loop, Node i, Node j)
-        //    {
-        //        //Console.WriteLine($"Changing {i} to {i.Next}\nAnd {j} to {j.Next}\nTo: {i}->{j} and\n{i.Next}->{j.Next}");
-        //        Node iplus = i.Next;
-        //        Node jplus = j.Next;
-        //        iplus.Prev = i.Next.Next;
-        //        j.Next = j.Prev;
+        #region Optimization
+        public void Optimize()
+        {
+            void Two_Opt_Move(Node i, Node j) // TIME KLOPT NOG NIET
+            {
+                //Console.WriteLine($"Changing {i} to {i.Next}\nAnd {j} to {j.Next}\nTo: {i}->{j} and\n{i.Next}->{j.Next}");
+                // van:     0 1 2 3 4 5 6 7 8 9
+                // naar:    0 8 7 6 5 4 3 2 1 9
+                // met:     i=0, j=8
+                Node iplus = i.Next;        // 1
+                Node jplus = j.Next;        // 9
+                iplus.Prev = i.Next.Next;  
+                j.Next = j.Prev;
 
-        //        Node curr = i.Next.Next;
-        //        Node stop = j;
+                TimeLeft = TimeLeft
+                    + GD.JourneyTime[i.Data.MatrixId, iplus.Data.MatrixId]          // 0-1 eraf
+                    + GD.JourneyTime[iplus.Data.MatrixId, iplus.Next.Data.MatrixId] // 1-2 eraf
+                    + GD.JourneyTime[j.Data.MatrixId, jplus.Data.MatrixId];         // 8-9 eraf
 
-        //        while (curr != stop)
-        //        {
-        //            Node temp = curr.Next;
-        //            curr.Next = curr.Prev;
-        //            curr.Prev = temp;
-        //            curr = curr.Prev;
-        //        }
+                Node curr = i.Next.Next;    // 2
+                Node stop = j;              // 8
 
-        //        i.Next = j;
-        //        j.Prev = i;
-        //        iplus.Next = jplus;
-        //        jplus.Prev = iplus;
-        //        //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
-        //        //Console.WriteLine("---");
-        //    }
-        //    void Two_Opt_Node_Shift_Move(Node i, Node j)
-        //    {
-        //        // Node i is placed between Node j and Node j.Next
-        //        i.Next.Prev = i.Prev;
-        //        i.Prev.Next = i.Next;
-        //        i.Next = j.Next;
-        //        j.Next.Prev = i;
-        //        j.Next = i;
-        //        i.Prev = j;
-        //        //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
-        //        //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
-        //        //Console.WriteLine("---");
-        //    }
+                while (curr != stop)
+                {
+                    Node temp = curr.Next;
+                    TimeLeft = TimeLeft
+                        + GD.JourneyTime[curr.Data.MatrixId, temp.Data.MatrixId];
+                    curr.Next = curr.Prev;
+                    TimeLeft = TimeLeft
+                        - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
+                    curr.Prev = temp;
+                    curr = curr.Prev;
+                }
 
-        //    foreach (var tour in Tours)
-        //    {
-        //        foreach (Node curr in tour)
-        //        {
+                i.Next = j;
+                j.Prev = i;
+                iplus.Next = jplus;
+                jplus.Prev = iplus;
+                // van:     0 1 2 3 4 5 6 7 8 9
+                // naar:    0 8 7 6 5 4 3 2 1 9
+                // met:     i=0, j=8
+                TimeLeft = TimeLeft
+                    - GD.JourneyTime[i.Data.MatrixId, j.Data.MatrixId]          // 0-8 erbij
+                    - GD.JourneyTime[j.Data.MatrixId, j.Next.Data.MatrixId]     // 8-7 erbij
+                    - GD.JourneyTime[iplus.Data.MatrixId, jplus.Data.MatrixId]; // 1-9 erbij
+                //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+            // IETS MET DURATION EN AFVAL DOEN
+            void Two_Opt_Node_Shift_Move(Node i, Node j)
+            {
+                // i is placed between j and j.next
+                Node iprev = i.Prev;
+                Node inext = i.Next;
 
-        //        }
-        //    }
+                Node jnext = j.Next;
 
-        //    Node[] nodes = ToList();
-        //    for (int i = 0; i < Count - 2; i++)
-        //    {
-        //        Node x1 = nodes[i];
-        //        Node x2 = nodes[i + 1];
-        //        for (int j = i + 2; j < Count - 1; j++)
-        //        {
-        //            Node y1 = nodes[j];
-        //            Node y2 = nodes[j + 1];
+                iprev.Next = inext;
+                inext.Prev = iprev;
 
-        //            double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
-        //            double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
-        //            double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+                j.Next = i;
+                i.Next = jnext;
+                i.Prev = j;
+                jnext.Prev = i;
 
-        //            if (del_dist - (X1Y1 + X2Y2) > 0)
-        //            {
-        //                Console.WriteLine("Doing 2-opt move...");
-        //                Two_Opt_Move(nodes, x1, y1);
-        //                return;
-        //            }
-        //            else
-        //            {
-        //                double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
-        //                Node z1 = nodes[i + 2];
-        //                if (z1 != y1)
-        //                {
-        //                    if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
-        //                    {
-        //                        Console.WriteLine("Doing first 2.5-opt move...");
-        //                        Two_Opt_Node_Shift_Move(x2, y1);
-        //                        return;
-        //                    }
-        //                }
-        //                else
-        //                {
-        //                    z1 = nodes[j - 1];
-        //                    if (z1 != x2)
-        //                    {
-        //                        if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
-        //                        {
-        //                            Console.WriteLine("Doing second 2.5-opt move...");
-        //                            Two_Opt_Node_Shift_Move(y1, x1);
-        //                            return;
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-        //#endregion
+                TimeLeft = TimeLeft
+                    + GD.JourneyTime[iprev.Data.MatrixId, i.Data.MatrixId]
+                    + GD.JourneyTime[i.Data.MatrixId, inext.Data.MatrixId] 
+                    + GD.JourneyTime[j.Data.MatrixId, jnext.Data.MatrixId]
+                    - GD.JourneyTime[iprev.Data.MatrixId, inext.Data.MatrixId] 
+                    - GD.JourneyTime[j.Data.MatrixId, i.Data.MatrixId] 
+                    - GD.JourneyTime[i.Data.MatrixId, jnext.Data.MatrixId];
+                //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
+                //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+
+            for (int i = 0; i < dumps.Count; i++) 
+            {
+                for (Node x = dumps[i]; !(x.Next.IsDump || x.Next.Next.IsDump); x = x.Next) // <- last x: (... -> x -> dumps[i+1])
+                {
+                    Node x1 = x;                    
+                    Node x2 = x.Next;
+                    for (Node y = x2.Next; !(y.IsDump || y.Next.IsDump); y = y.Next)
+                    {
+                        Node y1 = y;
+                        Node y2 = y.Next;
+
+                        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+                        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+                        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+                        if (del_dist - (X1Y1 + X2Y2) > 0)
+                        {
+                            //Console.WriteLine("Doing 2-opt move...");
+                            Two_Opt_Move(x1, y1);
+                            return;
+                        }
+                        else
+                        {
+                            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+                            Node z1 = x2.Next;
+                            if (z1 != y1)
+                            {
+                                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                {
+                                    //Console.WriteLine("Doing first 2.5-opt move...");
+                                    Two_Opt_Node_Shift_Move(x2, y1);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                z1 = y1.Prev;
+                                if (z1 != x2)
+                                {
+                                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                    {
+                                        //Console.WriteLine("Doing second 2.5-opt move...");
+                                        Two_Opt_Node_Shift_Move(y1, x1);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            #region [DEPRICATED]
+            //for (Node x = dumps[0]; !x.Next.Next.IsSentry; x = x.Next)
+            //{
+            //    Node x1 = x;
+            //    Node x2 = x.Next;
+            //    for (Node y = x2.Next; !y.Next.IsSentry; y = y.Next)
+            //    {
+            //        Node y1 = y;
+            //        Node y2 = y.Next;
+
+            //        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+            //        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+            //        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+            //        if (del_dist - (X1Y1 + X2Y2) > 0)
+            //        {
+            //            Console.WriteLine("Doing 2-opt move...");
+            //            Two_Opt_Move(x1, y1);
+            //            return;
+            //        }
+            //        else
+            //        {
+            //            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+            //            Node z1 = x2.Next;
+            //            if (z1 != y1)
+            //            {
+            //                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+            //                {
+            //                    Console.WriteLine("Doing first 2.5-opt move...");
+            //                    Two_Opt_Node_Shift_Move(x2, y1);
+            //                    return;
+            //                }
+            //            }
+            //            else
+            //            {
+            //                z1 = y1.Prev;
+            //                if (z1 != x2)
+            //                {
+            //                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+            //                    {
+            //                        Console.WriteLine("Doing second 2.5-opt move...");
+            //                        Two_Opt_Node_Shift_Move(y1, x1);
+            //                        return;
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
+            //Node[] nodes = ToList();
+            //for (int i = 0; i < Count - 2; i++)
+            //{
+            //    Node x1 = nodes[i];
+            //    Node x2 = nodes[i + 1];
+            //    for (int j = i + 2; j < Count - 1; j++)
+            //    {
+            //        Node y1 = nodes[j];
+            //        Node y2 = nodes[j + 1];
+
+            //        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+            //        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+            //        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+            //        if (del_dist - (X1Y1 + X2Y2) > 0)
+            //        {
+            //            Console.WriteLine("Doing 2-opt move...");
+            //            Two_Opt_Move(x1, y1);
+            //            return;
+            //        }
+            //        else
+            //        {
+            //            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+            //            Node z1 = nodes[i + 2];
+            //            if (z1 != y1)
+            //            {
+            //                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+            //                {
+            //                    Console.WriteLine("Doing first 2.5-opt move...");
+            //                    Two_Opt_Node_Shift_Move(x2, y1);
+            //                    return;
+            //                }
+            //            }
+            //            else
+            //            {
+            //                z1 = nodes[j - 1];
+            //                if (z1 != x2)
+            //                {
+            //                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+            //                    {
+            //                        Console.WriteLine("Doing second 2.5-opt move...");
+            //                        Two_Opt_Node_Shift_Move(y1, x1);
+            //                        return;
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+            #endregion
+        }
+        #endregion
 
         #region Overrides / Inherited Implementations     
         public override string ToString()

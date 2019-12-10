@@ -47,7 +47,7 @@ namespace AfvalOphaler
             int threads = 10;
             int operationCount = 10;
             int maxIterations = 1000000;
-            int maxNoChange = 1000000;
+            int maxNoChange = 10000;
 
 #if CLUSTER
             // Clustering:
@@ -109,11 +109,34 @@ namespace AfvalOphaler
             Task.WaitAll(new Task[] { awaitAndPrintResults });
 
 #elif CUSTOM
-
+            Stack<Order> toPlan = new Stack<Order>(orders.OrderBy(o => o.Frequency));
+            NAfvalOphaler.Schedule schedule = new NAfvalOphaler.Schedule(orders);
+            NAfvalOphaler.Node next = schedule.DayRoutes[0][0].dumps[0];
+            Console.WriteLine($"Unscheduled Orders: {schedule.UnScheduledOrders.Count}");
+            for (int i = 0; i < 50; i++)
+            {
+                Order o = toPlan.Pop();
+                next = schedule.DayRoutes[0][0].AddOrder(o, next);
+                schedule.UnScheduledOrders.Remove(o);
+            }
+            next = schedule.DayRoutes[0][0].AddOrder(GD.Dump, next);
+            for (int i = 50; i < 100; i++)
+            {
+                Order o = toPlan.Pop();
+                next = schedule.DayRoutes[0][0].AddOrder(o, next);
+                schedule.UnScheduledOrders.Remove(o);
+            }
+            Console.WriteLine($"Unscheduled Orders: {schedule.UnScheduledOrders.Count}");
+            schedule.CalculateScore();
+            PrintResult(schedule.ToResult(), fileName: "beforeOpt");
+            for (int opt = 0; opt < 1000; opt -= -1)
+            {
+                schedule.OptimizeAllDays();
+            }
+            schedule.CalculateScore();
+            PrintResult(schedule.ToResult(), fileName: "afterOpt");
 #endif
 #endif
-
-
             Console.ReadKey();
         }
         #endregion
@@ -125,14 +148,8 @@ namespace AfvalOphaler
             await results;
             //if (!userInterruptAwaiter.IsCompleted) Console.WriteLine("close");
             //await userInterruptAwaiter;
-
             ScheduleResult res = results.Result[0];
-            Console.WriteLine("===============" +
-                            "\n= BEST RESULT =" +
-                            "\n===============");
-            Console.WriteLine(res.Stats);
-
-            File.WriteAllText(@".\result.txt", res.Check.ToString());
+            PrintResult(res);           
         }
         private static void AwaitUserInterrupt(NAfvalOphaler.Solver solver)
         {
@@ -145,6 +162,17 @@ namespace AfvalOphaler
                     return;
                 }
             }
+        }
+        private static void PrintResult(ScheduleResult res, bool writeToFile = true, string fileName = "result")
+        {
+            Console.WriteLine("===============" +
+                            "\n= BEST RESULT =" +
+                            "\n===============");
+            Console.WriteLine(res.Stats);
+
+            if (writeToFile) File.WriteAllText($@".\{fileName}.txt", res.Check.ToString());
+
+            Console.WriteLine("===============");
         }
         #endregion
     }
