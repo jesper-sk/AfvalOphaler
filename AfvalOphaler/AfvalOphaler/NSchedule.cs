@@ -553,9 +553,11 @@ namespace NAfvalOphaler
             Node dump1 = new Node(1);
 
             dump0.Next = dump1;
+
             dump1.Next = dumpL;
             dump1.Prev = dump0;
-            dumpL.Prev = dump0;
+
+            dumpL.Prev = dump1;
 
             dumps = new List<Node> { dump0, dump1 };
             roomLefts = new List<double> { 100000, 100000 };
@@ -595,7 +597,7 @@ namespace NAfvalOphaler
             if (firstAdd)
             {
                 firstAdd = false;
-                TimeLeft -= 30;
+                TimeLeft -= 60;
             }
 
             TimeLeft -= (order.TimeToEmpty
