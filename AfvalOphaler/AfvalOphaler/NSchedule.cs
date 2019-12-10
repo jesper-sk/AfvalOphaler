@@ -5,11 +5,8 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using GD = AfvalOphaler.GD;
-using Order = AfvalOphaler.Order;
-using Util = AfvalOphaler.Util;
 
-namespace NAfvalOphaler
+namespace AfvalOphaler
 {
     #region Schedule
     public class Schedule
@@ -458,7 +455,8 @@ namespace NAfvalOphaler
         {
             Score = Score,
             Stats = GetStatisticsBuilder(),
-            Check = ToCheckStringBuilder()
+            Check = ToCheckStringBuilder(),
+            String = ToString()
         };
         public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
         public string ToCheckString() => ToCheckStringBuilder().ToString();
@@ -525,6 +523,7 @@ namespace NAfvalOphaler
         public double Score;
         public StringBuilder Stats;
         public StringBuilder Check;
+        public string String = "";
     }
     #endregion
 

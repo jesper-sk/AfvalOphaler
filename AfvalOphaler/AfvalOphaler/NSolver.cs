@@ -1,24 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NOp = NAfvalOphaler.Schedule.NeighborOperation;
-using Order = AfvalOphaler.Order;
-using Util = AfvalOphaler.Util;
+using System.Windows.Forms;
+using NOp = AfvalOphaler.Schedule.NeighborOperation;
 
-namespace NAfvalOphaler
+namespace AfvalOphaler
 {
     class Solver
     {
         #region Variables & Constructor
         private ScheduleResult[] top10;
         private ScheduleResult top;
+        private bool showBest;
         public bool UserInterrupt = false;
 
         private List<Order> orders;
-        public Solver(List<Order> orders)
+        public Solver(List<Order> orders, bool sBest = false)
         {
+            Application.EnableVisualStyles();
             top10 = new ScheduleResult[10];
+            top = new ScheduleResult() { Score = double.MaxValue };
             this.orders = orders;
+
+            showBest = sBest;
+            showBest = true; // <- to be wegcommented in the future
         }
         #endregion
 
@@ -37,7 +42,7 @@ namespace NAfvalOphaler
         }
         private void SolveOne(int maxI, int opCount, int maxNoChange, int TaskID)
         {
-            Console.WriteLine($"Task {TaskID} started.");
+            //Console.WriteLine($"Task {TaskID} started.");
             Schedule start = new Schedule(orders);
             //LocalSolver solver = new RandomHillClimbLocalSolver(start);
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
@@ -67,21 +72,24 @@ namespace NAfvalOphaler
                     if (solver.schedule.Score < best.Score)
                     {                     
                         best = solver.schedule.ToResult();
-                        lock (addlock) AddScheduleToTop(best);
+                        lock (addlock)
+                        {
+                            AddScheduleToTop(best);
+                        }
                     }
                 }
                 else
                 {
                     noChange++;
                 }
-                if (i % 1000 == 0) for (int opt = 0; opt < 100; opt++) solver.schedule.OptimizeAllDays();
-                if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
+                if (i % 500 == 0) for (int opt = 0; opt < 25; opt++) solver.schedule.OptimizeAllDays();
+                //if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
                 if (i % 15000 == 0) s = 1 - s;
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
             }
-            Console.WriteLine($"Task {TaskID} done.");
+            //Console.WriteLine($"Task {TaskID} done.");
         }
         #endregion
 
@@ -125,6 +133,7 @@ namespace NAfvalOphaler
 
         #region LeaderBoard
         private readonly object addlock = new object();
+
         void AddScheduleToTop(ScheduleResult s)
         {
             ////Console.WriteLine("Pushing schedule to ranking: " + s.Score);
@@ -136,12 +145,16 @@ namespace NAfvalOphaler
             //        for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
             //        top10[i] = s;
             //    }
-            if (top == null || s.Score < top.Score) top = s;
+            if (s.Score < top.Score)
+            {
+                top = s;
+                if (showBest) Console.Write($"\r{s.String}");
+            }
         }
         #endregion
 
     }
-
+    
     #region LocalSolvers
     abstract class LocalSolver
     {

@@ -15,7 +15,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
-using NAfvalOphaler;
 #endregion
 
 // © Het Woczek duo
@@ -46,8 +45,8 @@ namespace AfvalOphaler
 
             int threads = 10;
             int operationCount = 10;
-            int maxIterations = 1000000;
-            int maxNoChange = 10000;
+            int maxIterations = 30000;
+            int maxNoChange = 3000;
 
 #if CLUSTER
             // Clustering:
@@ -103,38 +102,12 @@ namespace AfvalOphaler
             Console.ReadKey();*/
 #endif
 #elif NTEST
-            NAfvalOphaler.Solver solver = new NAfvalOphaler.Solver(orders);
+            Solver solver = new Solver(orders);
             var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);                  
             Task awaitAndPrintResults = Task.Factory.StartNew(() => AwaitAndPrintResults(solver, results));
             Task.WaitAll(new Task[] { awaitAndPrintResults });
 
 #elif CUSTOM
-            Stack<Order> toPlan = new Stack<Order>(orders.OrderBy(o => o.Frequency));
-            NAfvalOphaler.Schedule schedule = new NAfvalOphaler.Schedule(orders);
-            NAfvalOphaler.Node next = schedule.DayRoutes[0][0].dumps[0];
-            Console.WriteLine($"Unscheduled Orders: {schedule.UnScheduledOrders.Count}");
-            for (int i = 0; i < 50; i++)
-            {
-                Order o = toPlan.Pop();
-                next = schedule.DayRoutes[0][0].AddOrder(o, next);
-                schedule.UnScheduledOrders.Remove(o);
-            }
-            next = schedule.DayRoutes[0][0].AddOrder(GD.Dump, next);
-            for (int i = 50; i < 100; i++)
-            {
-                Order o = toPlan.Pop();
-                next = schedule.DayRoutes[0][0].AddOrder(o, next);
-                schedule.UnScheduledOrders.Remove(o);
-            }
-            Console.WriteLine($"Unscheduled Orders: {schedule.UnScheduledOrders.Count}");
-            schedule.CalculateScore();
-            PrintResult(schedule.ToResult(), fileName: "beforeOpt");
-            for (int opt = 0; opt < 1000; opt -= -1)
-            {
-                schedule.OptimizeAllDays();
-            }
-            schedule.CalculateScore();
-            PrintResult(schedule.ToResult(), fileName: "afterOpt");
 #endif
 #endif
             Console.ReadKey();
@@ -142,7 +115,7 @@ namespace AfvalOphaler
         #endregion
 
         #region Await Solver/User Then Print Results
-        private async static void AwaitAndPrintResults(NAfvalOphaler.Solver solver, Task<ScheduleResult> results)
+        private async static void AwaitAndPrintResults(Solver solver, Task<ScheduleResult> results)
         {
             //Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
             await results;
@@ -151,7 +124,7 @@ namespace AfvalOphaler
             ScheduleResult res = results.Result;
             PrintResult(res);           
         }
-        private static void AwaitUserInterrupt(NAfvalOphaler.Solver solver)
+        private static void AwaitUserInterrupt(Solver solver)
         {
             while (true)
             {
