@@ -255,8 +255,9 @@ namespace NAfvalOphaler
             public AddOperation(Schedule s, int orderIndex) : base(s)
             {
                 this.orderIndex = orderIndex;
-                toAdd = State.UnScheduledOrders[orderIndex];
-                nAdditions = toAdd.Frequency;
+                if (State.UnScheduledOrders.Count == 0) toAdd = null;
+                else toAdd = State.UnScheduledOrders[orderIndex];
+                nAdditions = toAdd?.Frequency ?? -1;
             }
             public AddOperation(Schedule s, Order toAdd) : base(s)
             {
@@ -266,6 +267,10 @@ namespace NAfvalOphaler
             }
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
+                deltaTime = double.NaN;
+                deltaPenalty = double.NaN;
+                if (toAdd == null) return false;
+
                 List<int[]> combis = GD.AllowedDayCombinations[nAdditions].ToList();
                 //int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
                 //Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
@@ -312,8 +317,6 @@ namespace NAfvalOphaler
                     }
                     combis.Remove(combi);
                 }
-                deltaTime = double.NaN;
-                deltaPenalty = double.NaN;
                 return false;
             }
 

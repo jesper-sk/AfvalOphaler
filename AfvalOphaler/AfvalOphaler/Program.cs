@@ -142,13 +142,13 @@ namespace AfvalOphaler
         #endregion
 
         #region Await Solver/User Then Print Results
-        private async static void AwaitAndPrintResults(NAfvalOphaler.Solver solver, Task<ScheduleResult[]> results)
+        private async static void AwaitAndPrintResults(NAfvalOphaler.Solver solver, Task<ScheduleResult> results)
         {
             //Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
             await results;
             //if (!userInterruptAwaiter.IsCompleted) Console.WriteLine("close");
             //await userInterruptAwaiter;
-            ScheduleResult res = results.Result[0];
+            ScheduleResult res = results.Result;
             PrintResult(res);           
         }
         private static void AwaitUserInterrupt(NAfvalOphaler.Solver solver)
