@@ -98,63 +98,6 @@ namespace NAfvalOphaler
         //}
         #endregion
 
-        #region ToStrings
-        public ScheduleResult ToResult() => new ScheduleResult() 
-        { 
-            Score = Score, 
-            Stats = GetStatisticsBuilder(), 
-            Check = ToCheckStringBuilder() 
-        };
-        public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
-        public string ToCheckString() => ToCheckStringBuilder().ToString();
-        public StringBuilder ToCheckStringBuilder()
-        {
-            StringBuilder b = new StringBuilder();
-            for (int t = 0; t < 2; t++)
-            { 
-                for (int d = 0; d < 5; d++)
-                {
-                    int ordOfDay = 0;
-                    foreach (Node n in DayRoutes[d][t])
-                        b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
-                }
-            }
-            //for (int t = 0; t < 2; t++)
-            //    for (int d = 0; d < 5; d++)
-            //    {
-            //        List<Loop> loops = dayRoutes[d][t].Loops;
-            //        int global = 1;
-            //        for (int l = 0; l < loops.Count; l++)
-            //        {
-            //            Loop curr = loops[l];
-            //            Node ord = curr.Start;
-
-            //            do
-            //            {
-            //                ord = ord.Next;
-            //                b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
-            //            } while (!ord.IsDump);
-            //        }
-            //    }
-            return b;
-        }
-        public string GetStatistics() => GetStatisticsBuilder().ToString();
-        public StringBuilder GetStatisticsBuilder()
-        {
-            StringBuilder res = new StringBuilder();
-            res.AppendLine("Score = " + Score);
-            res.AppendLine("TotalTime = " + Duration);
-            res.AppendLine("TotalPenalty = " + Penalty);
-            for (int i = 0; i < 5; i++)
-            {
-                res.AppendLine($"Day {i}:");
-                res.AppendLine($"Truck 1: {DayRoutes[i][0]}");
-                res.AppendLine($"Truck 2: {DayRoutes[i][1]}");
-            }
-            return res;
-        }
-        #endregion
-
         #region Operations
         private Func<Schedule, NeighborOperation>[] ops =
         {
@@ -479,6 +422,74 @@ namespace NAfvalOphaler
             public override string ToString() => $"RandomTransferOperation, Evaluated: {IsEvaluated}";
         }
         #endregion
+
+        #region Optimization
+        public void OptimizeAllDays()
+        {
+            
+        }
+        public void OptimizeDay(int day, int truck)
+        {
+            DayRoutes[day][truck].Optimize();
+        }
+        #endregion
+
+        #region ToStrings
+        public ScheduleResult ToResult() => new ScheduleResult()
+        {
+            Score = Score,
+            Stats = GetStatisticsBuilder(),
+            Check = ToCheckStringBuilder()
+        };
+        public override string ToString() => $"Score: {Score}, Total time: {Duration}, Total Penalty: {Penalty}";
+        public string ToCheckString() => ToCheckStringBuilder().ToString();
+        public StringBuilder ToCheckStringBuilder()
+        {
+            StringBuilder b = new StringBuilder();
+            for (int t = 0; t < 2; t++)
+            {
+                for (int d = 0; d < 5; d++)
+                {
+                    int ordOfDay = 0;
+                    foreach (Node n in DayRoutes[d][t])
+                        b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
+                }
+            }
+            //for (int t = 0; t < 2; t++)
+            //    for (int d = 0; d < 5; d++)
+            //    {
+            //        List<Loop> loops = dayRoutes[d][t].Loops;
+            //        int global = 1;
+            //        for (int l = 0; l < loops.Count; l++)
+            //        {
+            //            Loop curr = loops[l];
+            //            Node ord = curr.Start;
+
+            //            do
+            //            {
+            //                ord = ord.Next;
+            //                b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
+            //            } while (!ord.IsDump);
+            //        }
+            //    }
+            return b;
+        }
+        public string GetStatistics() => GetStatisticsBuilder().ToString();
+        public StringBuilder GetStatisticsBuilder()
+        {
+            StringBuilder res = new StringBuilder();
+            res.AppendLine("Score = " + Score);
+            res.AppendLine("TotalTime = " + Duration);
+            res.AppendLine("TotalPenalty = " + Penalty);
+            for (int i = 0; i < 5; i++)
+            {
+                res.AppendLine($"Day {i}:");
+                res.AppendLine($"Truck 1: {DayRoutes[i][0]}");
+                res.AppendLine($"Truck 2: {DayRoutes[i][1]}");
+            }
+            return res;
+        }
+        #endregion
     }
     #endregion
 
@@ -721,6 +732,109 @@ namespace NAfvalOphaler
         }
         #endregion
 
+        #region Optimization
+        public void Optimize()
+        {
+            void Two_Opt_Move(Node[] loop, Node i, Node j)
+            {
+                //Console.WriteLine($"Changing {i} to {i.Next}\nAnd {j} to {j.Next}\nTo: {i}->{j} and\n{i.Next}->{j.Next}");
+                Node iplus = i.Next;
+                Node jplus = j.Next;
+                iplus.Prev = i.Next.Next;
+                j.Next = j.Prev;
+
+                Node curr = i.Next.Next;
+                Node stop = j;
+
+                while (curr != stop)
+                {
+                    Node temp = curr.Next;
+                    curr.Next = curr.Prev;
+                    curr.Prev = temp;
+                    curr = curr.Prev;
+                }
+
+                i.Next = j;
+                j.Prev = i;
+                iplus.Next = jplus;
+                jplus.Prev = iplus;
+                //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+            void Two_Opt_Node_Shift_Move(Node i, Node j)
+            {
+                // Node i is placed between Node j and Node j.Next
+                i.Next.Prev = i.Prev;
+                i.Prev.Next = i.Next;
+                i.Next = j.Next;
+                j.Next.Prev = i;
+                j.Next = i;
+                i.Prev = j;
+                //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
+                //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
+                //Console.WriteLine("---");
+            }
+
+            foreach (var tour in Tours)
+            {
+                foreach (Node curr in tour)
+                {
+
+                }
+            }
+
+            Node[] nodes = ToList();
+            for (int i = 0; i < Count - 2; i++)
+            {
+                Node x1 = nodes[i];
+                Node x2 = nodes[i + 1];
+                for (int j = i + 2; j < Count - 1; j++)
+                {
+                    Node y1 = nodes[j];
+                    Node y2 = nodes[j + 1];
+
+                    double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+                    double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+                    double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+
+                    if (del_dist - (X1Y1 + X2Y2) > 0)
+                    {
+                        Console.WriteLine("Doing 2-opt move...");
+                        Two_Opt_Move(nodes, x1, y1);
+                        return;
+                    }
+                    else
+                    {
+                        double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+                        Node z1 = nodes[i + 2];
+                        if (z1 != y1)
+                        {
+                            if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                            {
+                                Console.WriteLine("Doing first 2.5-opt move...");
+                                Two_Opt_Node_Shift_Move(x2, y1);
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            z1 = nodes[j - 1];
+                            if (z1 != x2)
+                            {
+                                if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                {
+                                    Console.WriteLine("Doing second 2.5-opt move...");
+                                    Two_Opt_Node_Shift_Move(y1, x1);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
         #region Overrides / Inherited Implementations     
         public override string ToString() => $"TourCount={dumps.Count}, Duration={Duration}";    
         public IEnumerator GetEnumerator()
@@ -803,113 +917,7 @@ namespace NAfvalOphaler
         }
         #endregion
 
-        #region Optimization
-        public void OptimizeLoop()
-        {
-            void Two_Opt_Move(Node[] loop, Node i, Node j)
-            {
-                //Console.WriteLine($"Changing {i} to {i.Next}\nAnd {j} to {j.Next}\nTo: {i}->{j} and\n{i.Next}->{j.Next}");
 
-                // Dit: 0 1 2 3 4 5 6 7 8 9
-                // Moet dit worden: 0 8 7 6 5 4 3 2 1 9
-                // i = 0
-                // j = 8
-
-                Node iplus = i.Next; // 1
-                Node jplus = j.Next; // 9
-                iplus.Prev = i.Next.Next; // 1.prev = 2
-                j.Next = j.Prev;    // 8.next = 7
-                // 0 2 1 2 3 4 5 6 7 8 7 9
-
-                Node curr = i.Next.Next; // curr = 2
-                Node stop = j;           // stop = 8
-
-                //Console.WriteLine($"Stop: {stop}");
-                while (curr != stop)
-                {
-                    //Console.WriteLine($"curr: {curr}");
-                    Node temp = curr.Next;  // temp = 3     // temp = 4
-                    curr.Next = curr.Prev;  // 2.next = 1   // 3.next = 2
-                    curr.Prev = temp;       // 2.prev = 3   // 3.prev = 4
-                    curr = curr.Prev;       // curr = 3     // curr = 4
-                }
-                // 0       8 7 6 5 4 3 2 1.... 9
-
-                i.Next = j;         // 0.next = 8
-                j.Prev = i;         // 8.prev = 0
-                iplus.Next = jplus; // 1.next = 9
-                jplus.Prev = iplus; // 9.prev = 1
-                // 0 8 7 6 5 4 3 2 1 9
-
-                //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
-                //Console.WriteLine("---");
-            }
-            void Two_Opt_Node_Shift_Move(Node i, Node j)
-            {
-                // Node i is places between Node j and Node j.Next
-                i.Next.Prev = i.Prev;
-                i.Prev.Next = i.Next;
-                i.Next = j.Next;
-                j.Next.Prev = i;
-                j.Next = i;
-                i.Prev = j;
-            
-                //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
-                //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
-                //Console.WriteLine("---");
-            }
-
-            Node[] nodes = ToList();
-            for (int i = 0; i < Count - 2; i++)
-            {
-                Node x1 = nodes[i];
-                Node x2 = nodes[i + 1];
-                for (int j = i + 2; j < Count - 1; j++)
-                {
-                    Node y1 = nodes[j];
-                    Node y2 = nodes[j + 1];
-
-                    double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
-                    double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
-                    double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
-
-                    if (del_dist - (X1Y1 + X2Y2) > 0)
-                    {
-                        Console.WriteLine("Doing 2-opt move...");
-                        Two_Opt_Move(nodes, x1, y1);
-                        return;
-                    } 
-                    else
-                    {
-                        double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
-                        Node z1 = nodes[i + 2];
-                        if (z1 != y1)
-                        {
-                            if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
-                            {
-                                Console.WriteLine("Doing first 2.5-opt move...");
-                                Two_Opt_Node_Shift_Move(x2, y1);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            z1 = nodes[j - 1];
-                            if (z1 != x2)
-                            {
-                                if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
-                                {
-                                    Console.WriteLine("Doing second 2.5-opt move...");
-                                    Two_Opt_Node_Shift_Move(y1, x1);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        #endregion
 
         public bool EvaluateRandomAdd(Random rnd)
         {
