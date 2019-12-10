@@ -544,12 +544,15 @@ namespace NAfvalOphaler
 
             Node dump0 = new Node(0);
             Node dumpL = new Node();
+            Node dump1 = new Node(1);
 
-            dump0.Next = dumpL;
+            dump0.Next = dump1;
+            dump1.Next = dumpL;
+            dump1.Prev = dump0;
             dumpL.Prev = dump0;
 
-            dumps = new List<Node> { dump0 };
-            roomLefts = new List<double> { 100000 };
+            dumps = new List<Node> { dump0, dump1 };
+            roomLefts = new List<double> { 100000, 100000 };
 
             Tours = new TourEnumerableIndexer(this);
         }
