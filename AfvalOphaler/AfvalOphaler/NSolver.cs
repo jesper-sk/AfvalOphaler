@@ -75,7 +75,7 @@ namespace NAfvalOphaler
                 }
                 if (i % 100 == 0) for (int opt = 0; opt < 10; opt++) solver.schedule.OptimizeAllDays();
                 if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
-                //if (i % 5000 == 0) s = 1 - s;
+                if (i % 5000 == 0) s = 1 - s;
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
@@ -215,7 +215,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate() && ops[i].TotalDelta < 0)
+                if (ops[i].Evaluate()) //&& ops[i].TotalDelta < 0)
                 {
                     ops[i].Apply();
                     return true;

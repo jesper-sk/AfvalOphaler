@@ -717,18 +717,21 @@ namespace NAfvalOphaler
             if (candidateNodes.Count > 0)
             {
                 Random rnd = new Random();
-                int add = rnd.Next(0, candidateNodes.Count);
-                whereToAdd = candidateNodes[add];
-                deltaTime = toAdd.TimeToEmpty
-                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
-                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
-                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                while (!(candidateNodes.Count == 0))
+                {
+                    int add = rnd.Next(0, candidateNodes.Count);
+                    whereToAdd = candidateNodes[add];
+                    deltaTime = toAdd.TimeToEmpty
+                        + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
+                        + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
+                        - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                    if (whereToAdd.Data.OrderId == toAdd.OrderId) candidateNodes[add].Remove();
+                    else return true;
+                }
 
                 //Console.WriteLine($"Adding next to {whereToAdd}");
                 //Console.WriteLine($"Room left: {roomLefts[whereToAdd.TourIndex] - totalSpaceOfOrder}");
-                return true;
             }
-
             return false;
         }
         public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
