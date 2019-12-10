@@ -414,7 +414,7 @@ namespace NAfvalOphaler
         #region Optimization
         public void OptimizeAllDays()
         {
-
+            
         }
         public void OptimizeDay(int day, int truck)
         {
