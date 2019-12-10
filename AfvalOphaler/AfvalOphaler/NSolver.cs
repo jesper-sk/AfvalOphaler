@@ -63,7 +63,7 @@ namespace NAfvalOphaler
                 {
                     noChange++;
                 }
-                if (i % 100000 == 0) s = 1 - s;
+                //if (i % 100000 == 0) s = 1 - s;
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
@@ -202,7 +202,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
+                if (ops[i].Evaluate() && ops[i].TotalDelta < 0)
                 {
                     ops[i].Apply();
                     return true;

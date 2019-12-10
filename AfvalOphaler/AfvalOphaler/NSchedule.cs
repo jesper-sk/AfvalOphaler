@@ -883,7 +883,7 @@ namespace NAfvalOphaler
     }
     #endregion
 
-    #region [DEPRICATED] Loop
+    #region [DEPRECATED] Loop
     public class Loop : IEnumerable
     {
         #region Variables & Constructor
