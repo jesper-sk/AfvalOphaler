@@ -266,12 +266,13 @@ namespace NAfvalOphaler
             }
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int[][] combis = GD.AllowedDayCombinations[nAdditions];
+                List<int[]> combis = GD.AllowedDayCombinations[nAdditions].ToList();
                 //int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
                 //Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
 
-                foreach (int[] combi in combis)
+                while (!(combis.Count == 0)) 
                 {
+                    int[] combi = combis[State.Rnd.Next(0, combis.Count)];
                     int everyDayInCombiAllowed = 0;
                     deltas = new List<double>(nAdditions);
                     whereToAdd = new List<Node>(nAdditions);
@@ -309,6 +310,7 @@ namespace NAfvalOphaler
                         deltaPenalty = -(3 * nAdditions * toAdd.TimeToEmpty);
                         return true;
                     }
+                    combis.Remove(combi);
                 }
                 deltaTime = double.NaN;
                 deltaPenalty = double.NaN;
