@@ -46,7 +46,7 @@ namespace NAfvalOphaler
                 new SteepestHillClimbLocalSolver(start)
             };
             foreach (LocalSolver ss in solvs) ss.Init();
-            int s = 0;
+            int s = 1;
             //Console.WriteLine(start.GetStatistics());
 
             LocalSolver solver = new SaLocalSolver(start, 0.7, 0.99999);
