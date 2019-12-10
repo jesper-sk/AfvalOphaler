@@ -180,24 +180,22 @@ namespace NAfvalOphaler
 
         public abstract class NeighborOperation
         {
-            public bool isEvaluated = false;
+            public bool IsEvaluated { get; protected set; } = false;
+
             public double TotalDelta => DeltaTime + DeltaPenalty;
+            public double DeltaTime { get; protected set; } = double.NaN;
+            public double DeltaPenalty { get; protected set; } = double.NaN;
 
-            //public double? DeltaTime = null;
-            //public double? DeltaPenalty = null;
-            public double DeltaTime = double.NaN;
-            public double DeltaPenalty = double.NaN;
-
-            public Schedule state;
+            public Schedule State;
 
             public NeighborOperation(Schedule s)
             {
-                state = s;
+                State = s;
             }
 
             public void Apply()
             {
-                if (!isEvaluated) throw new InvalidOperationException("Evaluate operation first!");
+                if (!IsEvaluated) throw new InvalidOperationException("Evaluate operation first!");
                 _Apply();
             }
 
@@ -205,7 +203,7 @@ namespace NAfvalOphaler
             {
                 if (_Evaluate(out double dT, out double dP))
                 {
-                    isEvaluated = true;
+                    IsEvaluated = true;
                     DeltaTime = dT;
                     DeltaPenalty = dP;
                     return true;
@@ -220,10 +218,11 @@ namespace NAfvalOphaler
         public class RandomAddOperation : NeighborOperation
         {
             private Order toAdd;
-            private List<double> deltas;
-            private List<Node> whereToAdd;
-            private List<int> whereToAddDays;
-            private List<int> whereToAddTrucks;
+            private AddOperation Operation;
+            //private List<double> deltas;
+            //private List<Node> whereToAdd;
+            //private List<int> whereToAddDays;
+            //private List<int> whereToAddTrucks;
 
             public RandomAddOperation(Schedule s) : base(s)
             {
@@ -232,10 +231,76 @@ namespace NAfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                toAdd = state.UnScheduledOrders[state.Rnd.Next(0, state.UnScheduledOrders.Count)];           
+                toAdd = State.UnScheduledOrders[State.Rnd.Next(0, State.UnScheduledOrders.Count)];
+                Operation = new AddOperation(State, toAdd);
+                bool possible = Operation.Evaluate();
+                deltaTime = Operation.DeltaTime;
+                deltaPenalty = Operation.DeltaPenalty;
+                return possible;
 
+                #region deprecated
+                //int[][] combis = GD.AllowedDayCombinations[toAdd.Frequency];
+                //int[] combi = combis[state.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
+
+                //int everyDayInCombiAllowed = 0;
+                //deltas = new List<double>(toAdd.Frequency);
+                //whereToAdd = new List<Node>(toAdd.Frequency);
+                //whereToAddDays = new List<int>(toAdd.Frequency);
+                //whereToAddTrucks = new List<int>(toAdd.Frequency);
+                //foreach (int day in combi)
+                //{
+                //    int truck = state.Rnd.Next(0, 2);
+                //    if (state.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                //    {
+                //        deltas.Add(delta1);
+                //        whereToAdd.Add(where1);
+                //        whereToAddDays.Add(day);
+                //        whereToAddTrucks.Add(truck);
+                //        everyDayInCombiAllowed++;
+                //        continue;
+                //    }
+                //    else if (state.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                //    {
+                //        deltas.Add(delta2);
+                //        whereToAdd.Add(where2);
+                //        whereToAddDays.Add(day);
+                //        whereToAddTrucks.Add(truck);
+                //        everyDayInCombiAllowed++;
+                //    }
+                //}
+                //if (everyDayInCombiAllowed == toAdd.Frequency)
+                //{
+                //    deltaTime = deltas.Sum();
+                //    deltaPenalty = -(3 * toAdd.Frequency * toAdd.TimeToEmpty);
+                //    return true;
+                //}
+                //else
+                //{
+                //    deltaTime = double.NaN;
+                //    deltaPenalty = double.NaN;
+                //    return false;
+                //}
+                #endregion
+            }
+
+            protected override void _Apply() => Operation.Apply();
+        }
+
+        public class AddOperation : NeighborOperation
+        {
+            private readonly Order toAdd;
+            private List<double> deltas;
+            private List<Node> whereToAdd;
+            private List<int> whereToAddDays;
+            private List<int> whereToAddTrucks;
+            public AddOperation(Schedule s, Order toAdd) : base(s)
+            {
+                this.toAdd = toAdd;
+            }
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
+            {
                 int[][] combis = GD.AllowedDayCombinations[toAdd.Frequency];
-                int[] combi = combis[state.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
+                int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
 
                 int everyDayInCombiAllowed = 0;
                 deltas = new List<double>(toAdd.Frequency);
@@ -244,8 +309,8 @@ namespace NAfvalOphaler
                 whereToAddTrucks = new List<int>(toAdd.Frequency);
                 foreach (int day in combi)
                 {
-                    int truck = state.Rnd.Next(0, 2);
-                    if (state.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
+                    int truck = State.Rnd.Next(0, 2);
+                    if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                     {
                         deltas.Add(delta1);
                         whereToAdd.Add(where1);
@@ -254,7 +319,7 @@ namespace NAfvalOphaler
                         everyDayInCombiAllowed++;
                         continue;
                     }
-                    else if (state.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
+                    else if (State.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
                     {
                         deltas.Add(delta2);
                         whereToAdd.Add(where2);
@@ -279,35 +344,41 @@ namespace NAfvalOphaler
 
             protected override void _Apply()
             {
-                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+                for(int i = 0; i < whereToAdd.Count; i++)
+                    State.DayRoutes[whereToAddDays[i]][whereToAddTrucks[i]].AddOrder(toAdd, whereToAdd[i]);
             }
         }
+
         public class RandomDeleteOperation : NeighborOperation
         {
+            public Order OrderToRemove { get; private set; }
+
             Node toRemove;
             int day;
+            int truck;
             public RandomDeleteOperation(Schedule s) : base(s)
             {
                 //Hé jochie
             }
-
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int d = state.Rnd.Next(0, 5);
-                int truck = state.Rnd.Next(0, 2);
-                if (state.DayRoutes[d][truck].EvaluateRandomRemove(out Node rem1, out double delta1))
+                int d = State.Rnd.Next(0, 5);
+                int t = State.Rnd.Next(0, 2);
+                if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
                 {
-                    toRemove = rem1;
+                    SetToRemove(rem1);
                     day = d;
+                    truck = t;
                     deltaTime = delta1;
                     deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
                     return true;
                 }
                 // Uncomment below als niet evalueren ook andere truck:
-                else if (state.DayRoutes[d][1 - truck].EvaluateRandomRemove(out Node rem2, out double delta2))
+                else if (State.DayRoutes[d][1 - t].EvaluateRandomRemove(out Node rem2, out double delta2))
                 {
-                    toRemove = rem2;
+                    SetToRemove(rem2);
                     day = d;
+                    truck = t;
                     deltaTime = delta2;
                     deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
                     return true;
@@ -320,26 +391,47 @@ namespace NAfvalOphaler
                 }
             }
 
+            private void SetToRemove(Node r)
+            {
+                toRemove = r;
+                OrderToRemove = r.Data;
+            }
             protected override void _Apply()
             {
-                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+                State.DayRoutes[day][truck].RemoveNode(toRemove);
             }
         }
         public class RandomTransferOperation : NeighborOperation
         {
+            RandomDeleteOperation delOp;
+            AddOperation addOp;
             public RandomTransferOperation(Schedule s) : base(s)
             {
                 //Hé jochie
+                delOp = new RandomDeleteOperation(s);
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+                deltaTime = double.NaN;
+                deltaPenalty = double.NaN;
+
+                //Weet niet of dit goed gaat als Evaluate van del en add maar een mogelijkheid proberen, 
+                //miss voor transfer beetje weinig
+                if (!delOp.Evaluate()) return false;
+                addOp = new AddOperation(State, delOp.OrderToRemove);
+                if (!addOp.Evaluate()) return false;
+
+                deltaTime = delOp.DeltaTime + addOp.DeltaTime;
+                deltaPenalty = delOp.DeltaPenalty + addOp.DeltaPenalty;
+
+                return true;
             }
 
             protected override void _Apply()
             {
-                throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
+                delOp.Apply();
+                addOp.Apply();
             }
         }
         #endregion
