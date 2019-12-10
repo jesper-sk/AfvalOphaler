@@ -36,6 +36,8 @@ namespace NAfvalOphaler
             LocalSolver solver = new SteepestHillClimbLocalSolver(start);
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
 
+            Console.WriteLine(start.GetStatistics());
+
             bool stop = false;
             int i = 0;
             int noChange = 0;
@@ -57,7 +59,6 @@ namespace NAfvalOphaler
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
-                Console.ReadKey();
             }
         }
         #endregion
@@ -150,11 +151,11 @@ namespace NAfvalOphaler
             double opt = 0;
             for(int i = 0; i < nOps; i++)
             {
-                Console.WriteLine($"operation: {ops[i]}");
+                //Console.WriteLine($"operation: {ops[i]}");
                 if (ops[i].Evaluate())
                 {
                     double delta = ops[i].TotalDelta;
-                    Console.WriteLine($"Evaluated, delta = {delta}");
+                    //Console.WriteLine($"Evaluated, delta = {delta}");
                     if (delta < opt)
                     {
                         best = ops[i];
@@ -164,7 +165,7 @@ namespace NAfvalOphaler
             }
             if (best == null)
             {
-                Console.WriteLine("none evaluated...");
+                //Console.WriteLine("none evaluated...");
                 return false;
             }
             best.Apply();

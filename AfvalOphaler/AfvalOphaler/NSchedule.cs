@@ -29,9 +29,10 @@ namespace NAfvalOphaler
         public Schedule(List<Order> orders)
         {
             UnScheduledOrders = orders.ToList();
-            UnScheduledOrders.Add(GD.Dump);
 
             foreach (Order o in UnScheduledOrders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
+
+            UnScheduledOrders.Add(GD.Dump);
 
             DayRoutes = new DayRoute[5][];
             for (int d = 0; d < 5; d++)
@@ -221,7 +222,6 @@ namespace NAfvalOphaler
 
         public class RandomAddOperation : NeighborOperation
         {
-            private Order toAdd;
             private AddOperation Operation;
             //private List<double> deltas;
             //private List<Node> whereToAdd;
@@ -235,11 +235,11 @@ namespace NAfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                toAdd = State.UnScheduledOrders[State.Rnd.Next(0, State.UnScheduledOrders.Count)];
-                Console.WriteLine($"Try to add {toAdd}");
-                Operation = new AddOperation(State, toAdd);
+                int ind = State.Rnd.Next(0, State.UnScheduledOrders.Count);
+                //Console.WriteLine($"Try to add {toAdd}");
+                Operation = new AddOperation(State, ind);
                 bool possible = Operation.Evaluate();
-                Console.WriteLine($"Possible: {possible}");
+                //Console.WriteLine($"Possible: {possible}");
                 deltaTime = Operation.DeltaTime;
                 deltaPenalty = Operation.DeltaPenalty;
                 return possible;
@@ -296,34 +296,44 @@ namespace NAfvalOphaler
 
         public class AddOperation : NeighborOperation
         {
+            private readonly int orderIndex;
             private readonly Order toAdd;
+            private readonly int nAdditions;
             private List<double> deltas;
             private List<Node> whereToAdd;
             private List<int> whereToAddDays;
             private List<int> whereToAddTrucks;
+            public AddOperation(Schedule s, int orderIndex) : base(s)
+            {
+                this.orderIndex = orderIndex;
+                toAdd = State.UnScheduledOrders[orderIndex];
+                nAdditions = toAdd.Frequency;
+            }
             public AddOperation(Schedule s, Order toAdd) : base(s)
             {
+                orderIndex = -1;
                 this.toAdd = toAdd;
+                nAdditions = 1;
             }
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int[][] combis = GD.AllowedDayCombinations[toAdd.Frequency];
+                int[][] combis = GD.AllowedDayCombinations[nAdditions];
                 int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
 
-                Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
+                //Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
 
                 int everyDayInCombiAllowed = 0;
-                deltas = new List<double>(toAdd.Frequency);
-                whereToAdd = new List<Node>(toAdd.Frequency);
-                whereToAddDays = new List<int>(toAdd.Frequency);
-                whereToAddTrucks = new List<int>(toAdd.Frequency);
+                deltas = new List<double>(nAdditions);
+                whereToAdd = new List<Node>(nAdditions);
+                whereToAddDays = new List<int>(nAdditions);
+                whereToAddTrucks = new List<int>(nAdditions);
                 foreach (int day in combi)
                 {
-                    Console.WriteLine($"Day {day}");
+                    //Console.WriteLine($"Day {day}");
                     int truck = State.Rnd.Next(0, 2);
                     if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                     {
-                        Console.WriteLine($"Truck {truck} Evaluated!");
+                        //Console.WriteLine($"Truck {truck} Evaluated!");
                         deltas.Add(delta1);
                         whereToAdd.Add(where1);
                         whereToAddDays.Add(day);
@@ -333,7 +343,7 @@ namespace NAfvalOphaler
                     }
                     else if (State.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
                     {
-                        Console.WriteLine($"Truck {truck - 1} evaluated!");
+                        //Console.WriteLine($"Truck {truck - 1} evaluated!");
                         deltas.Add(delta2);
                         whereToAdd.Add(where2);
                         whereToAddDays.Add(day);
@@ -341,12 +351,12 @@ namespace NAfvalOphaler
                         everyDayInCombiAllowed++;
                         continue;
                     }
-                    Console.WriteLine("Didn't evaluate, day impossible");
+                    //Console.WriteLine("Didn't evaluate, day impossible");
                 }
-                if (everyDayInCombiAllowed == toAdd.Frequency)
+                if (everyDayInCombiAllowed == nAdditions)
                 {
                     deltaTime = deltas.Sum();
-                    deltaPenalty = -(3 * toAdd.Frequency * toAdd.TimeToEmpty);
+                    deltaPenalty = -(3 * nAdditions * toAdd.TimeToEmpty);
                     return true;
                 }
                 else
@@ -359,14 +369,16 @@ namespace NAfvalOphaler
 
             protected override void _Apply()
             {
+                Console.WriteLine($"Adding {toAdd}");
                 for(int i = 0; i < whereToAdd.Count; i++)
                 {
                     DayRoute curr = State.DayRoutes[whereToAddDays[i]][whereToAddTrucks[i]];
                     State.Duration -= curr.Duration;
                     curr.AddOrder(toAdd, whereToAdd[i]);
                     State.Duration += curr.Duration;
-                    State.Penalty -= 3 * toAdd.Frequency * toAdd.TimeToEmpty;
                 }
+                State.Penalty -= 3 * nAdditions * toAdd.TimeToEmpty;
+                if (orderIndex != -1) State.UnScheduledOrders.RemoveAt(orderIndex);
             }
 
             public override string ToString() => $"AddOperation, Evaluated: {IsEvaluated}";
@@ -496,6 +508,8 @@ namespace NAfvalOphaler
         public List<Node> dumps;
         public List<double> roomLefts;
 
+        private bool firstAdd = true;
+
         public DayRoute(int dind, int trind)
         {
             TimeLeft = 690;
@@ -543,6 +557,12 @@ namespace NAfvalOphaler
         #region Tour Modifications
         public Node AddOrder(Order order, Node nextTo)
         {
+            if (firstAdd)
+            {
+                firstAdd = false;
+                TimeLeft -= 30;
+            }
+
             TimeLeft -= (order.TimeToEmpty
                     + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
                     + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
@@ -606,39 +626,39 @@ namespace NAfvalOphaler
         #region Evauluate
         public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
         {
-            Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
+            //Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
             deltaTime = double.NaN;
             whereToAdd = null;
             if (toAdd.TimeToEmpty > TimeLeft)
             {
-                Console.WriteLine("Not enough time left, returning false...");
+                //Console.WriteLine("Not enough time left, returning false...");
                 return false;
             }
 
             double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers * 0.2;
-            Console.WriteLine($"Space needed: {totalSpaceOfOrder}");
+            //Console.WriteLine($"Space needed: {totalSpaceOfOrder}");
             List<int> candidateTours = new List<int>(roomLefts.Count);
             for (int i = 0; i < roomLefts.Count; i++) if (roomLefts[i] >= totalSpaceOfOrder) candidateTours.Add(i);
-            Console.WriteLine($"Candidate tourIndices: {Util.ListToString(candidateTours)}");
+            //Console.WriteLine($"Candidate tourIndices: {Util.ListToString(candidateTours)}");
             List<Node> candidateNodes = new List<Node>();
             foreach (int i in candidateTours)
             {
-                Console.WriteLine($"Tour {i}");
+                //Console.WriteLine($"Tour {i}");
                 foreach(Node curr in Tours[i])
                 {
-                    Console.WriteLine($"Node {curr.Data.OrderId}");
+                    //Console.WriteLine($"Node {curr.Data.OrderId}");
                     if (TimeLeft > 
                             toAdd.TimeToEmpty
                                 + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
                                 + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
                                 - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
                     {
-                        Console.WriteLine($"found candidate, adding to list");
+                        //Console.WriteLine($"found candidate, adding to list");
                         candidateNodes.Add(curr);
                     }
                     else
                     {
-                        Console.WriteLine($"Nog enough time left in day...");
+                        //Console.WriteLine($"Nog enough time left in day...");
                     }
 
                 }
