@@ -33,17 +33,24 @@ namespace NAfvalOphaler
         private void SolveOne(int maxI, int opCount, int maxNoChange)
         {
             Schedule start = new Schedule(orders);
-            LocalSolver solver = new SteepestHillClimbLocalSolver(start);
+            //LocalSolver solver = new RandomHillClimbLocalSolver(start);
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
-
-            Console.WriteLine(start.GetStatistics());
+            LocalSolver[] solvs = new LocalSolver[]
+            {
+                new RandomHillClimbLocalSolver(start),
+                new SteepestHillClimbLocalSolver(start)
+            };
+            foreach (LocalSolver ss in solvs) ss.Init();
+            int s = 0;
+            //Console.WriteLine(start.GetStatistics());
 
             bool stop = false;
             int i = 0;
             int noChange = 0;
             while (!stop)
             {
-                if (solver.GetNext(new double[] { 1, 0, 0 }, opCount))
+                LocalSolver solver = solvs[s];
+                if (solver.GetNext(new double[] { 1, 0, 0 }, opCount)) //Add, Delete, Transfer
                 {
                     noChange = 0;
                     if (solver.schedule.Score < best.Score)
@@ -56,6 +63,7 @@ namespace NAfvalOphaler
                 {
                     noChange++;
                 }
+                if (i % 100000 == 0) s = 1 - s;
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
@@ -105,7 +113,7 @@ namespace NAfvalOphaler
         private readonly object addlock = new object();
         void AddScheduleToTop(ScheduleResult s)
         {
-            Console.WriteLine("Pushing schedule to ranking: " + s.Score);
+            //Console.WriteLine("Pushing schedule to ranking: " + s.Score);
             double s_score = s.Score;
             for (int i = 0; i < 10; i++)
                 if (top10[i] == null) top10[i] = s;
@@ -168,6 +176,7 @@ namespace NAfvalOphaler
                 //Console.WriteLine("none evaluated...");
                 return false;
             }
+            //Console.WriteLine($"\n{schedule.GetStatistics()}");
             best.Apply();
             return true;
         }
@@ -193,7 +202,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate() && ops[i].TotalDelta < 0)
+                if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
                     return true;
