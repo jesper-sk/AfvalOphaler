@@ -45,7 +45,7 @@ namespace AfvalOphaler
 
         public override string ToString()
         {
-            return $"oid{OrderId}; mid{MatrixId}; s{Score}; jt{JourneyTimeToDump}; f{Frequency}PWK; nc{NumContainers}; vpc{VolPerContainer}; tte{TimeToEmpty}; x{XCoord}; y{YCoord}; {Name}";
+            return $"oid{OrderId}; mid{MatrixId}; s{Score}; jttd{JourneyTimeToDump}; jtfd{JourneyTimeFromDump}; f{Frequency}PWK; nc{NumContainers}; vpc{VolPerContainer}; tte{TimeToEmpty}; x{XCoord}; y{YCoord}; {Name}";
         }
     }
 }

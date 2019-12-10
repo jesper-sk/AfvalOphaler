@@ -3,7 +3,7 @@
 //#define CLUSTER       // Whether to cluster all orders
 //#define VISUALIZER    // Whether to show the visualizer
 //#define TEST          // Whether to use Solver and Schedule
-//#define NTEST         // Whether to use NSolver and NSchedule
+#define NTEST         // Whether to use NSolver and NSchedule
 //#define CUSTOM        // Whether to use Own-Defined small testcases
 #endregion
 
@@ -44,8 +44,8 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 10;
-            int operationCount = 10;
+            int threads = 1;
+            int operationCount = 1;
             int maxIterations = 100000;
             int maxNoChange = 10000;
 
@@ -149,60 +149,6 @@ namespace AfvalOphaler
         #endregion
     }
 
-    #region Global Data
-    public static class GD
-    {
-        public static double[,] JourneyTime;
-
-        public static Order Dump = new Order()
-        {
-            OrderId = 0,
-            Name = "Dump",
-            MatrixId = 287,
-            XCoord = 56343016,
-            YCoord = 513026712,
-            TimeToEmpty = 30
-        };
-        //public static BigLLNode DumpLLing = new BigLLNode(Dump);
-
-        #region Allowed Combinations for Order Scheduling
-        // [Frequentie, aantal_combinaties, allowed_days_in_combi]
-        public static readonly int[][][] AllowedDayCombinations =
-        {
-            new int[][] { new int[] {} },
-            new int[][]
-            {
-                new int[] {0},
-                new int[] {1},
-                new int[] {2},
-                new int[] {3},
-                new int[] {4}
-            },
-            new int[][]
-            {
-                new int[] {0, 3},
-                new int[] {1, 4}
-            },
-            new int[][]
-            {
-                new int[] {0, 2, 4}
-            },
-            new int[][]
-            {
-                new int[] {1,2,3,4}, //ma niet
-                new int[] {0,2,3,4}, //di niet
-                new int[] {0,1,3,4}, //wo niet
-                new int[] {0,1,2,4}, //do niet
-                new int[] {0,1,2,3}  //vr niet
-            },
-            new int[][]
-            {
-                new int[] {0,1,2,3,4}
-            }
-        };
-        #endregion
-    }
-    #endregion
 
     #region Custom Exception
     [Serializable]

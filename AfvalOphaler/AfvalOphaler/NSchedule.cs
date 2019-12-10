@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using GD = AfvalOphaler.GD;
 using Order = AfvalOphaler.Order;
+using Util = AfvalOphaler.Util;
 
 namespace NAfvalOphaler
 {
@@ -17,6 +18,33 @@ namespace NAfvalOphaler
         public double Duration = 0;
         public double Penalty;
         public double Score => Duration + Penalty;
+
+        public List<Order> UnScheduledOrders;
+
+        public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
+        private Random Rnd;
+        #endregion
+
+        #region Constructor(s)
+        public Schedule(List<Order> orders)
+        {
+            UnScheduledOrders = orders.ToList();
+            UnScheduledOrders.Add(GD.Dump);
+
+            foreach (Order o in UnScheduledOrders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
+
+            DayRoutes = new DayRoute[5][];
+            for (int d = 0; d < 5; d++)
+            {
+                DayRoutes[d] = new DayRoute[2];
+                for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
+            }
+
+            Rnd = new Random();
+        }
+        #endregion
+
+        #region Score and Penalty Calculation
         public double CaculateDuration()
         {
             double duration = 0;
@@ -39,30 +67,6 @@ namespace NAfvalOphaler
             foreach (Order o in UnScheduledOrders) penalty += 3 * o.Frequency * o.TimeToEmpty;
             Penalty = penalty;
             return penalty;
-        }
-
-        public List<Order> UnScheduledOrders;
-        #endregion
-
-        #region Private Variables
-        public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
-        private Random Rnd;
-        #endregion
-
-        #region Constructor(s)
-        public Schedule(List<Order> orders)
-        {
-            UnScheduledOrders = orders.ToList();
-            foreach (Order o in UnScheduledOrders) Penalty += 3 * o.Frequency * o.TimeToEmpty;
-
-            DayRoutes = new DayRoute[5][];
-            for (int d = 0; d < 5; d++)
-            {
-                DayRoutes[d] = new DayRoute[2];
-                for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
-            }
-
-            Rnd = new Random();
         }
         #endregion
 
@@ -124,7 +128,6 @@ namespace NAfvalOphaler
         public abstract class NeighborOperation
         {
             public bool IsEvaluated { get; protected set; } = false;
-
             public double TotalDelta => DeltaTime + DeltaPenalty;
             public double DeltaTime { get; protected set; } = double.NaN;
             public double DeltaPenalty { get; protected set; } = double.NaN;
@@ -156,6 +159,7 @@ namespace NAfvalOphaler
 
             protected abstract bool _Evaluate(out double deltaTime, out double deltaPenalty);
             protected abstract void _Apply();
+            public abstract override string ToString();
         }
 
         public class RandomAddOperation : NeighborOperation
@@ -175,8 +179,10 @@ namespace NAfvalOphaler
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
                 toAdd = State.UnScheduledOrders[State.Rnd.Next(0, State.UnScheduledOrders.Count)];
+                Console.WriteLine($"Try to add {toAdd}");
                 Operation = new AddOperation(State, toAdd);
                 bool possible = Operation.Evaluate();
+                Console.WriteLine($"Possible: {possible}");
                 deltaTime = Operation.DeltaTime;
                 deltaPenalty = Operation.DeltaPenalty;
                 return possible;
@@ -227,6 +233,8 @@ namespace NAfvalOphaler
             }
 
             protected override void _Apply() => Operation.Apply();
+
+            public override string ToString() => $"RandomAddOperation, Evaluated: {IsEvaluated}";
         }
 
         public class AddOperation : NeighborOperation
@@ -245,6 +253,8 @@ namespace NAfvalOphaler
                 int[][] combis = GD.AllowedDayCombinations[toAdd.Frequency];
                 int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
 
+                Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
+
                 int everyDayInCombiAllowed = 0;
                 deltas = new List<double>(toAdd.Frequency);
                 whereToAdd = new List<Node>(toAdd.Frequency);
@@ -252,9 +262,11 @@ namespace NAfvalOphaler
                 whereToAddTrucks = new List<int>(toAdd.Frequency);
                 foreach (int day in combi)
                 {
+                    Console.WriteLine($"Day {day}");
                     int truck = State.Rnd.Next(0, 2);
                     if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                     {
+                        Console.WriteLine($"Truck {truck} Evaluated!");
                         deltas.Add(delta1);
                         whereToAdd.Add(where1);
                         whereToAddDays.Add(day);
@@ -264,12 +276,15 @@ namespace NAfvalOphaler
                     }
                     else if (State.DayRoutes[day][1 - truck].EvaluateRandomAdd(toAdd, out double delta2, out Node where2))
                     {
+                        Console.WriteLine($"Truck {truck - 1} evaluated!");
                         deltas.Add(delta2);
                         whereToAdd.Add(where2);
                         whereToAddDays.Add(day);
                         whereToAddTrucks.Add(truck);
                         everyDayInCombiAllowed++;
+                        continue;
                     }
+                    Console.WriteLine("Didn't evaluate, day impossible");
                 }
                 if (everyDayInCombiAllowed == toAdd.Frequency)
                 {
@@ -288,8 +303,16 @@ namespace NAfvalOphaler
             protected override void _Apply()
             {
                 for(int i = 0; i < whereToAdd.Count; i++)
-                    State.DayRoutes[whereToAddDays[i]][whereToAddTrucks[i]].AddOrder(toAdd, whereToAdd[i]);
+                {
+                    DayRoute curr = State.DayRoutes[whereToAddDays[i]][whereToAddTrucks[i]];
+                    State.Duration -= curr.Duration;
+                    curr.AddOrder(toAdd, whereToAdd[i]);
+                    State.Duration += curr.Duration;
+                    State.Penalty -= 3 * toAdd.Frequency * toAdd.TimeToEmpty;
+                }
             }
+
+            public override string ToString() => $"AddOperation, Evaluated: {IsEvaluated}";
         }
 
         public class RandomDeleteOperation : NeighborOperation
@@ -332,17 +355,24 @@ namespace NAfvalOphaler
                     deltaPenalty = double.NaN;
                     return false;
                 }
+
+                void SetToRemove(Node r)
+                {
+                    toRemove = r;
+                    OrderToRemove = r.Data;
+                }
             }
 
-            private void SetToRemove(Node r)
-            {
-                toRemove = r;
-                OrderToRemove = r.Data;
-            }
             protected override void _Apply()
             {
-                State.DayRoutes[day][truck].RemoveNode(toRemove);
+                DayRoute curr = State.DayRoutes[day][truck];
+                State.Duration -= curr.Duration;
+                curr.RemoveNode(toRemove);
+                State.Duration += curr.Duration;
+                State.Penalty += 3 * toRemove.Data.TimeToEmpty;
             }
+
+            public override string ToString() => $"RandomDeleteOperation, Evaluated: {IsEvaluated}";
         }
         public class RandomTransferOperation : NeighborOperation
         {
@@ -376,6 +406,8 @@ namespace NAfvalOphaler
                 delOp.Apply();
                 addOp.Apply();
             }
+
+            public override string ToString() => $"RandomTransferOperation, Evaluated: {IsEvaluated}";
         }
         #endregion
 
@@ -468,6 +500,8 @@ namespace NAfvalOphaler
         public readonly int DayIndex;
         public readonly int TruckIndex;
 
+        public TourEnumerableIndexer Tours { get; private set; }
+
         public Node FirstDump => dumps[0];
 
         public List<Node> dumps;
@@ -487,6 +521,8 @@ namespace NAfvalOphaler
 
             dumps = new List<Node> { dump0 };
             roomLefts = new List<double> { 20000 };
+
+            Tours = new TourEnumerableIndexer(this);
         }
 
         List<Node> ToList()
@@ -497,6 +533,21 @@ namespace NAfvalOphaler
             nodes.RemoveAt(nodes.Count - 1);
 
             return nodes;
+        }
+
+        public class TourEnumerableIndexer
+        {
+            private DayRoute owner;
+
+            public TourEnumerableIndexer(DayRoute o)
+            {
+                owner = o;
+            }
+
+            public IEnumerable this[int index]
+            {
+                get => new TourEnumerable(owner.dumps[index]);
+            }
         }
         #endregion
 
@@ -566,22 +617,45 @@ namespace NAfvalOphaler
         #region Evauluate
         public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
         {
+            Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
             deltaTime = double.NaN;
             whereToAdd = null;
-            if (toAdd.TimeToEmpty > TimeLeft) return false;
+            if (toAdd.TimeToEmpty > TimeLeft)
+            {
+                Console.WriteLine("Not enough time left, returning false...");
+                return false;
+            }
 
             double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers * 0.2;
+            Console.WriteLine($"Space needed: {totalSpaceOfOrder}");
             List<int> candidateTours = new List<int>(roomLefts.Count);
             for (int i = 0; i < roomLefts.Count; i++) if (roomLefts[i] >= totalSpaceOfOrder) candidateTours.Add(i);
+            Console.WriteLine($"Candidate tourIndices: {Util.ListToString(candidateTours)}");
             List<Node> candidateNodes = new List<Node>();
-            foreach (int i in candidateTours) 
-                for (Node curr = dumps[i].Next; !curr.IsDump; curr = curr.Next) 
-                    if (toAdd.TimeToEmpty
-                        + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId] 
-                        + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId] 
-                        - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId] 
-                        < TimeLeft) 
+            foreach (int i in candidateTours)
+            {
+                Console.WriteLine($"Tour {i}");
+                foreach(Node curr in Tours[i])
+                {
+                    Console.WriteLine($"Node {curr.Data.OrderId}");
+                    if (TimeLeft > 
+                            toAdd.TimeToEmpty
+                                + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
+                                + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
+                                - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
+                    {
+                        Console.WriteLine($"found candidate, adding to list");
                         candidateNodes.Add(curr);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Nog enough time left in day...");
+                    }
+
+                }
+
+            }
+
 
             if (candidateNodes.Count > 0)
             {
@@ -598,37 +672,41 @@ namespace NAfvalOphaler
         }
         public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
         {
+            toRemove = null;
+            deltaTime = double.NaN;
             Random rnd = new Random();
             List<Node> candidates = ToList();
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
             Node theChosenOne = candidates[rnd.Next(0, candidates.Count)];
+
+            if (theChosenOne.Data.Frequency > 1)
+            {
+                return false;
+            }
+
             double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId] 
                 - (theChosenOne.Data.TimeToEmpty 
                     + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId] 
                     + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
 
-            if (delta <= TimeLeft)
-            {
-                deltaTime = delta;
-                if (theChosenOne.IsDump)
-                {
-                    if ((roomLefts[theChosenOne.TourIndex - 1] - (20000 - roomLefts[theChosenOne.TourIndex])) > 0)
-                    {
-                        toRemove = theChosenOne;
-                        return true;
-                    }
+            if (delta > TimeLeft) return false;
 
-                    toRemove = null;
-                    deltaTime = double.NaN;
+            if (theChosenOne.IsDump)
+            {
+                if (!((roomLefts[theChosenOne.TourIndex - 1] - (20000 - roomLefts[theChosenOne.TourIndex])) > 0))
+                {
                     return false;
                 }
-
-                toRemove = theChosenOne;
-                return true;
             }
 
-            toRemove = null;
-            deltaTime = double.NaN;
-            return false;
+            deltaTime = delta;
+            toRemove = theChosenOne;
+            return true;
 
             throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
@@ -742,7 +820,7 @@ namespace NAfvalOphaler
         public IEnumerator GetEnumerator()
         {
             if (dumps.Count == 0) return null;
-            return new LoopEnumerator(dumps[0]);
+            return new DayScheduleEnumerator(dumps[0]);
         }
 
         public string GetRoute()
@@ -837,20 +915,32 @@ namespace NAfvalOphaler
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new LoopEnumerator(Start);
+            return new DayScheduleEnumerator(Start);
         }
     }
     #endregion
 
     #region Loop Enum
-    public class LoopEnumerator : IEnumerator
+    public class TourEnumerable : IEnumerable
+    {
+        private Node start;
+
+        public TourEnumerable(Node start)
+        {
+            this.start = start;
+        }
+
+        public IEnumerator GetEnumerator() => new TourEnumerator(start);
+    }
+
+    public class DayScheduleEnumerator : IEnumerator
     {
         private readonly Node dump;
         private Node curr;
         private Node prev;
 
         object IEnumerator.Current => curr;
-        public LoopEnumerator(Node dump)
+        public DayScheduleEnumerator(Node dump)
         {
             this.dump = dump;
             curr = dump;
@@ -864,6 +954,34 @@ namespace NAfvalOphaler
         void IEnumerator.Reset()
         {
             curr = dump;
+        }
+    }
+
+    public class TourEnumerator : IEnumerator
+    {
+        private readonly Node dump;
+        private Node next;
+        private Node curr;
+
+        private int endIndex;
+
+        object IEnumerator.Current => curr;
+        public TourEnumerator(Node dump)
+        {
+            this.dump = dump;
+            next = dump;
+            endIndex = dump.TourIndex + 1;
+        }
+        bool IEnumerator.MoveNext()
+        {
+            curr = next;
+            next = curr.Next;
+            return !((curr.IsDump && curr.TourIndex == endIndex) || curr.IsSentry);
+        }
+        void IEnumerator.Reset()
+        {
+            next = curr;
+            curr = null;
         }
     }
     #endregion

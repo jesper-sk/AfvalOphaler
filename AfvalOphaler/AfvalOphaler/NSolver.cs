@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NOp = NAfvalOphaler.Schedule.NeighborOperation;
 using Order = AfvalOphaler.Order;
+using Util = AfvalOphaler.Util;
 
 namespace NAfvalOphaler
 {
@@ -40,7 +41,7 @@ namespace NAfvalOphaler
             int noChange = 0;
             while (!stop)
             {
-                if (solver.GetNext(new double[] { 1.0/3, 1.0/3, 1.0/3 }, opCount))
+                if (solver.GetNext(new double[] { 1, 0, 0 }, opCount))
                 {
                     noChange = 0;
                     if (solver.schedule.Score < best.Score)
@@ -56,6 +57,7 @@ namespace NAfvalOphaler
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
+                Console.ReadKey();
             }
         }
         #endregion
@@ -148,9 +150,11 @@ namespace NAfvalOphaler
             double opt = 0;
             for(int i = 0; i < nOps; i++)
             {
+                Console.WriteLine($"operation: {ops[i]}");
                 if (ops[i].Evaluate())
                 {
                     double delta = ops[i].TotalDelta;
+                    Console.WriteLine($"Evaluated, delta = {delta}");
                     if (delta < opt)
                     {
                         best = ops[i];
@@ -158,7 +162,11 @@ namespace NAfvalOphaler
                     }
                 }
             }
-            if (best == null) return false;
+            if (best == null)
+            {
+                Console.WriteLine("none evaluated...");
+                return false;
+            }
             best.Apply();
             return true;
         }
