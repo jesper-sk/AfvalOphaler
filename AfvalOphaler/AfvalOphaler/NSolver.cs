@@ -49,13 +49,16 @@ namespace NAfvalOphaler
             int s = 0;
             //Console.WriteLine(start.GetStatistics());
 
+            LocalSolver solver = new SaLocalSolver(start, 0.7, 0.99999);
+            solver.Init();
+
             bool stop = false;
             int i = 0;
             int noChange = 0;
             while (!stop)
             {
-                LocalSolver solver = solvs[s];
-                if (solver.GetNext(new double[] { 1, 0, 0 }, opCount)) //Add, Delete, Transfer
+                //LocalSolver solver = solvs[s];
+                if (solver.GetNext(new double[] { 7/8.0, 1/8.0, 0 }, opCount)) //Add, Delete, Transfer
                 {
                     noChange = 0;
                     if (solver.schedule.Score < best.Score)
@@ -274,6 +277,7 @@ namespace NAfvalOphaler
                         }
                     }
                 }
+                c *= a;
             }
             return false;
         }

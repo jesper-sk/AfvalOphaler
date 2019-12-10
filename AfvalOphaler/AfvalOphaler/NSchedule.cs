@@ -465,9 +465,16 @@ namespace NAfvalOphaler
             {
                 for (int d = 0; d < 5; d++)
                 {
+                    int lastDump = -3;
                     int ordOfDay = 0;
                     foreach (Node n in DayRoutes[d][t])
-                        b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
+                        if(!n.IsDump)
+                            b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
+                        else if (ordOfDay != lastDump)
+                        {
+                            b.AppendLine($"{t + 1}; {d + 1}; {++ordOfDay}; {n.Data.OrderId}");
+                            lastDump = ordOfDay;
+                        }
                 }
             }
             //for (int t = 0; t < 2; t++)
@@ -739,6 +746,7 @@ namespace NAfvalOphaler
             {
                 return false;
             }
+            if (theChosenOne.IsDump) return false;
 
             double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId]
                 - (theChosenOne.Data.TimeToEmpty
