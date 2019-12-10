@@ -26,12 +26,17 @@ namespace NAfvalOphaler
         private ScheduleResult[] Solve(int threads, int opCount, int maxI, int maxNoChange)
         {
             Task[] tasks = new Task[threads];
-            for(int i = 0; i < threads; i++) tasks[i] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange));
+            for (int i = 0; i < threads; i++)
+            {
+                int index = i;
+                tasks[index] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange, index));
+            }
             Task.WaitAll(tasks);
             return top10;
         }
-        private void SolveOne(int maxI, int opCount, int maxNoChange)
+        private void SolveOne(int maxI, int opCount, int maxNoChange, int TaskID)
         {
+            Console.WriteLine($"Task {TaskID} started.");
             Schedule start = new Schedule(orders);
             //LocalSolver solver = new RandomHillClimbLocalSolver(start);
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
@@ -54,7 +59,7 @@ namespace NAfvalOphaler
                 {
                     noChange = 0;
                     if (solver.schedule.Score < best.Score)
-                    {
+                    {                     
                         best = solver.schedule.ToResult();
                         lock (addlock) AddScheduleToTop(best);
                     }
@@ -63,11 +68,14 @@ namespace NAfvalOphaler
                 {
                     noChange++;
                 }
-                //if (i % 100000 == 0) s = 1 - s;
+                if (i % 100 == 0) for (int opt = 0; opt < 10; opt++) solver.schedule.OptimizeAllDays();
+                if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
+                if (i % 5000 == 0) s = 1 - s;
                 stop = noChange == maxNoChange
                     || ++i == maxI
                     || UserInterrupt;
             }
+            Console.WriteLine($"Task {TaskID} done.");
         }
         #endregion
 
