@@ -65,6 +65,7 @@
     </Compile>
     <Compile Include="Schedule.cs" />
     <Compile Include="Solver.cs" />
+    <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
