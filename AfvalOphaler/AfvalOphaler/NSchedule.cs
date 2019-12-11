@@ -714,9 +714,7 @@ namespace AfvalOphaler
                     {
                         //Console.WriteLine($"Nog enough time left in day...");
                     }
-
                 }
-
             }
 
             if (candidateNodes.Count > 0)
