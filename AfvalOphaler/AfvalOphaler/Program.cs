@@ -43,10 +43,10 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 1;
-            int operationCount = 1;
-            int maxIterations = 30000;
-            int maxNoChange = 3000;
+            int threads = 20;
+            int operationCount = 20;
+            int maxIterations = 500000;
+            int maxNoChange = 75000;
 
 #if CLUSTER
             // Clustering:

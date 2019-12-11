@@ -328,6 +328,7 @@ namespace AfvalOphaler
                 }
                 State.Penalty -= 3 * nAdditions * toAdd.TimeToEmpty;
                 if (orderIndex != -1) State.UnScheduledOrders.RemoveAt(orderIndex);
+                else State.UnScheduledOrders.Remove(toAdd);
             }
 
             public override string ToString() => $"AddOperation, Evaluated: {IsEvaluated}";
@@ -346,6 +347,12 @@ namespace AfvalOphaler
             }
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
+                void SetToRemove(Node r)
+                {
+                    toRemove = r;
+                    OrderToRemove = r.Data;
+                }
+
                 int d = State.Rnd.Next(0, 5);
                 int t = State.Rnd.Next(0, 2);
                 if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
@@ -372,12 +379,6 @@ namespace AfvalOphaler
                     deltaTime = double.NaN;
                     deltaPenalty = double.NaN;
                     return false;
-                }
-
-                void SetToRemove(Node r)
-                {
-                    toRemove = r;
-                    OrderToRemove = r.Data;
                 }
             }
 
@@ -718,21 +719,16 @@ namespace AfvalOphaler
 
             }
 
+            candidateNodes.Remove(candidateNodes.Find(n => n.Data.OrderId == toAdd.OrderId));
             if (candidateNodes.Count > 0)
-            {
+            {             
                 Random rnd = new Random();
-                while (!(candidateNodes.Count == 0))
-                {
-                    int add = rnd.Next(0, candidateNodes.Count);
-                    whereToAdd = candidateNodes[add];
-                    deltaTime = toAdd.TimeToEmpty
-                        + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
-                        + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
-                        - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
-                    if (whereToAdd.Data.OrderId == toAdd.OrderId) candidateNodes[add].Remove();
-                    else return true;
-                }
-
+                whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                deltaTime = toAdd.TimeToEmpty
+                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
+                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
+                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                return true;
                 //Console.WriteLine($"Adding next to {whereToAdd}");
                 //Console.WriteLine($"Room left: {roomLefts[whereToAdd.TourIndex] - totalSpaceOfOrder}");
             }
