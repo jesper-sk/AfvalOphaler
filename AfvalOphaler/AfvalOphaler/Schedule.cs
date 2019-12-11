@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Order = AfvalOphaler.Order;
+using GD = AfvalOphaler.GD;
 
-namespace AfvalOphaler
+namespace OldAfvalOphaler
 {
     public class Schedule
     {
