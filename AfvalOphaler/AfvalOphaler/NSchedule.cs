@@ -246,7 +246,7 @@ namespace AfvalOphaler
             private readonly Order toAdd;
             private readonly int nAdditions;
             private List<double> deltas;
-            private List<Node> whereToAdd;
+            public List<Node> whereToAdd;
             private List<int> whereToAddDays;
             private List<int> whereToAddTrucks;
             public AddOperation(Schedule s, int orderIndex) : base(s)
@@ -413,12 +413,14 @@ namespace AfvalOphaler
             {
                 deltaTime = double.NaN;
                 deltaPenalty = double.NaN;
-
+                Console.WriteLine("\nEvaluating transfer operation");
                 //Weet niet of dit goed gaat als Evaluate van del en add maar een mogelijkheid proberen, 
                 //miss voor transfer beetje weinig
                 if (!delOp.Evaluate()) return false;
+                Console.WriteLine($"Removing {delOp.OrderToRemove}");
                 addOp = new AddOperation(State, delOp.OrderToRemove);
                 if (!addOp.Evaluate()) return false;
+                Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
 
                 deltaTime = delOp.DeltaTime + addOp.DeltaTime;
                 deltaPenalty = delOp.DeltaPenalty + addOp.DeltaPenalty;
