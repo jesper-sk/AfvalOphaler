@@ -172,7 +172,7 @@ namespace AfvalOphaler
             if (s.Score < top.Score)
             {
                 top = s;
-                if (showBest) Console.Write($"\r{s.String}");
+                //if (showBest) Console.Write($"\r{s.String}");
             }
         }
         #endregion

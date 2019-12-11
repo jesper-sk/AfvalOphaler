@@ -43,8 +43,8 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 10;
-            int operationCount = 10;
+            int threads = 1;
+            int operationCount = 1;
             int maxIterations = 30000;
             int maxNoChange = 3000;
 
