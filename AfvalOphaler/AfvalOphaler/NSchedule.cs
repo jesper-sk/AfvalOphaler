@@ -413,14 +413,14 @@ namespace AfvalOphaler
             {
                 deltaTime = double.NaN;
                 deltaPenalty = double.NaN;
-                Console.WriteLine("\nEvaluating transfer operation");
+                //Console.WriteLine("\nEvaluating transfer operation");
                 //Weet niet of dit goed gaat als Evaluate van del en add maar een mogelijkheid proberen, 
                 //miss voor transfer beetje weinig
                 if (!delOp.Evaluate()) return false;
-                Console.WriteLine($"Removing {delOp.OrderToRemove}");
+                //Console.WriteLine($"Removing {delOp.OrderToRemove}");
                 addOp = new AddOperation(State, delOp.OrderToRemove);
                 if (!addOp.Evaluate()) return false;
-                Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
+                //Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
 
                 deltaTime = delOp.DeltaTime + addOp.DeltaTime;
                 deltaPenalty = delOp.DeltaPenalty + addOp.DeltaPenalty;
@@ -770,8 +770,6 @@ namespace AfvalOphaler
             deltaTime = delta;
             toRemove = theChosenOne;
             return true;
-
-            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
         #endregion
 
