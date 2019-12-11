@@ -43,15 +43,12 @@ namespace NAfvalOphaler
             ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
             LocalSolver[] solvs = new LocalSolver[]
             {
+                //new SaLocalSolver(start, 0.99, 0.999999),
                 new RandomHillClimbLocalSolver(start),
-                new SaLocalSolver(start, 0.6, 0.9999)
+                new SaLocalSolver(start, 0.6, 0.99999)
             };
             foreach (LocalSolver ss in solvs) ss.Init();
             int s = 0;
-            //Console.WriteLine(start.GetStatistics());
-
-            //LocalSolver solver = new SaLocalSolver(start, 0.7, 0.99999);
-            //solver.Init();
 
             bool stop = false;
             int i = 0;
@@ -77,10 +74,38 @@ namespace NAfvalOphaler
                 if (i % 1000 == 0) for (int opt = 0; opt < 100; opt++) solver.schedule.OptimizeAllDays();
                 if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
                 if (i % 15000 == 0) s = 1 - s;
-                stop = noChange == maxNoChange
+                stop = noChange == 2500
+                    || ++i == 30000
+                    || UserInterrupt;
+            }
+            stop = false;
+            LocalSolver solv = new SaLocalSolver(start, 0.7, 0.9999);
+            solv.Init();
+            Console.WriteLine($"Task {TaskID} transfer: {start.Penalty}");
+            while (!stop)
+            {
+                //double[] probs = new double[] { 1, 0, 0 };
+                double[] probs = new double[] { 1/9.0, 1 / 9.0, 7 / 9.0 };
+                if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
+                {
+                    noChange = 0;
+                    if (solv.schedule.Score < best.Score)
+                    {
+                        best = solv.schedule.ToResult();
+                        lock (addlock) AddScheduleToTop(best);
+                    }
+                }
+                else
+                {
+                    noChange++;
+                }
+                if (i % 1000 == 0) for (int opt = 0; opt < 100; opt++) solv.schedule.OptimizeAllDays();
+                if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
+                stop = noChange == maxI
                     || ++i == maxI
                     || UserInterrupt;
             }
+
             Console.WriteLine($"Task {TaskID} done.");
         }
         #endregion
@@ -217,7 +242,7 @@ namespace NAfvalOphaler
             while (ops.Count != 0)
             {
                 int i = rnd.Next(0, ops.Count);
-                if (ops[i].Evaluate()) //&& ops[i].TotalDelta < 0)
+                if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
                     return true;
