@@ -717,11 +717,11 @@ namespace AfvalOphaler
 
             }
 
-            candidateNodes.Remove(candidateNodes.Find(n => n.Data.OrderId == toAdd.OrderId));
             if (candidateNodes.Count > 0)
             {             
                 Random rnd = new Random();
                 whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                while (whereToAdd.Data.OrderId == toAdd.OrderId) whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
                 deltaTime = toAdd.TimeToEmpty
                     + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
                     + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
