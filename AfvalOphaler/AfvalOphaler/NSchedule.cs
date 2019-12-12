@@ -538,20 +538,20 @@ namespace AfvalOphaler
     public class DayRoute : IEnumerable
     {
         #region Variables & Constructor
-        public double TimeLeft;
         public double Duration => 720 - TimeLeft;
+        public double TimeLeft;
 
         public readonly int DayIndex;
         public readonly int TruckIndex;
 
-        public TourEnumerableIndexer Tours { get; private set; }
-
-        public Node FirstDump => dumps[0];
-
         public List<Node> dumps;
         public List<double> roomLefts;
+        private List<Node> nodes; //Always contains all nodes, in no specific order 
+
+        public TourEnumerableIndexer Tours { get; private set; }
 
         private bool firstAdd = true;
+        private const int lim = 10;
 
         public DayRoute(int dind, int trind)
         {
@@ -572,6 +572,7 @@ namespace AfvalOphaler
 
             dumps = new List<Node> { dump0, dump1 };
             roomLefts = new List<double> { 100000, 100000 };
+            nodes = new List<Node> { dump0, dump1 };
 
             Tours = new TourEnumerableIndexer(this);
         }
@@ -634,11 +635,9 @@ namespace AfvalOphaler
                 roomLefts[n.TourIndex - 1] -= newSpaceTaken;
             }
 
+            nodes.Add(n);
+
             return n;
-            //TimeLeft += Loops[loopIndex].Duration;
-            //Node res = Loops[loopIndex].AddOrder(order, nextTo);
-            //TimeLeft -= Loops[loopIndex].Duration;
-            //return res;
         }
         public void RemoveNode(Node n)
         {
@@ -665,11 +664,7 @@ namespace AfvalOphaler
             }
 
             n.Remove();
-
-            //throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
-            //TimeLeft += Loops[loopIndex].Duration;
-            //Loops[loopIndex].RemoveNode(n);
-            //TimeLeft -= Loops[loopIndex].Duration;
+            nodes.Remove(n);
         }
 
         #endregion
@@ -740,44 +735,94 @@ namespace AfvalOphaler
         {
             toRemove = null;
             deltaTime = double.NaN;
-            List<Node> candidates = ToList();
 
-            if (candidates.Count == 0)
+            HashSet<int> dones = new HashSet<int>();
+            for(int i = 0; i < nodes.Count && i < lim; i++)
             {
-                return false;
+                int ind;
+                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
+                Node chosen = nodes[ind];
+
+                if (chosen.Data.Frequency > 1) continue;
+                if (chosen.IsDump) continue;
+
+                deltaTime = GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Next.Data.MatrixId]
+                    - (chosen.Data.TimeToEmpty
+                        + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
+                        + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId]);
+
+                if (deltaTime > TimeLeft) continue;
+                toRemove = chosen;
+                break;
             }
 
-            Node theChosenOne = candidates[StaticRandom.Next(0, candidates.Count)];
+            if (toRemove == null) return false;
+            return true;
 
-            if (theChosenOne.Data.Frequency > 1)
-            {
-                return false;
-            }
-            if (theChosenOne.IsDump) return false;
+            //if (theChosenOne.IsDump)
+            //{
+            //    if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
+            //    {
+            //        return false;
+            //    }
+            //}
+        }
 
-            double delta = GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Next.Data.MatrixId]
-                - (theChosenOne.Data.TimeToEmpty
-                    + GD.JourneyTime[theChosenOne.Prev.Data.MatrixId, theChosenOne.Data.MatrixId]
-                    + GD.JourneyTime[theChosenOne.Data.MatrixId, theChosenOne.Next.Data.MatrixId]);
+        public bool EvaluateSwap1(out Node toRep, out double spaceLeft, out double timeLeft)
+        {
+            toRep = null;
+            spaceLeft = double.NaN;
+            timeLeft = double.NaN;
 
-            if (delta > TimeLeft) return false;
 
-            if (theChosenOne.IsDump)
-            {
-                if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
-                {
-                    return false;
-                }
-            }
+            if (!GetRandomNode(out Node chosen)) return false;
+            if (chosen.Data.Frequency > 1) return false;
+            if (chosen.IsDump) return false;
 
-            deltaTime = delta;
-            toRemove = theChosenOne;
+            double deltaTime = chosen.Data.TimeToEmpty
+                                + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
+                                + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId];
+
+            timeLeft = TimeLeft + deltaTime;
+            spaceLeft = roomLefts[chosen.TourIndex] + chosen.Data.VolPerContainer * chosen.Data.NumContainers;
+            toRep = chosen;
             return true;
         }
 
-        public bool EvaluateSwap1(out Node toRem, out double spaceLeft, out double timeLeft)
+        public bool EvaluateSwap2(Node toIns, double reqSpace, double reqTime, out Node toRep)
         {
+            toRep = null;
 
+            if (reqTime > TimeLeft) return false;
+
+            List<Node> cands = ToList();
+            HashSet<int> dones = new HashSet<int>();
+
+            Node chosen = null;
+
+            while (true)
+            {
+                int ind;
+                do ind = StaticRandom.Next(0, cands.Count); while (!dones.Add(ind));
+                chosen = cands[ind];
+                if (roomLefts[chosen.TourIndex] < reqSpace) continue;
+
+            }
+
+
+            //if (!GetRandomNode(out Node chosen)) return false;
+            //if (chosen.Data.Frequency > 1) return false;
+            //if (chosen.IsDump) return false;
+
+        }
+
+        private bool GetRandomNode(out Node chosen)
+        {
+            chosen = null;
+            List<Node> nodes = ToList();
+            if (nodes.Count == 0) return false;
+            chosen = nodes[StaticRandom.Next(0, nodes.Count)];
+            return true;
         }
         #endregion
 
@@ -1093,7 +1138,7 @@ namespace AfvalOphaler
     #endregion
 
     #region Node
-    public class Node
+    public class Node : IEquatable<object>
     {
         #region Variables & Constructors
         public readonly Order Data;
@@ -1171,8 +1216,8 @@ namespace AfvalOphaler
         #region Overrides
         public override bool Equals(object o)
         {
-            Node n = (Node)o;
-            return Data.OrderId.Equals(n.Data.OrderId);
+            if (!(o is Node n)) return false;
+            return Data.OrderId.Equals(n.Data.OrderId) && TourIndex.Equals(n.TourIndex);
         }
         public override int GetHashCode() => base.GetHashCode();
         public override string ToString() => $"{(IsSentry ? "Sentry" : "Node")} ti{TourIndex}: {Data}";

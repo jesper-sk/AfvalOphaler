@@ -133,5 +133,18 @@ namespace AfvalOphaler
         public static int Next() => rnd.Value.Next();
 
         public static double NextDouble() => rnd.Value.NextDouble();
+
+        public static int[] RandomSequence(int n, int minValue, int maxValue)
+        {
+            int[] res = new int[n];
+            HashSet<int> done = new HashSet<int>();
+            for(int i = 0; i < n; i++)
+            {
+                int sample;
+                do sample = rnd.Value.Next(minValue, maxValue); while (!done.Add(sample));
+                res[i] = sample;
+            }
+            return res;
+        }
     }
 }
