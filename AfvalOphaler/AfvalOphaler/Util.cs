@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AfvalOphaler
@@ -62,8 +63,6 @@ namespace AfvalOphaler
 
     public static class GD
     {
-        public static readonly Random Rand = new Random();
-
         public static double[,] JourneyTime;
 
         public static Order Dump = new Order()
@@ -118,5 +117,21 @@ namespace AfvalOphaler
                 new int[] {0,1,2,3,4}
             }
         };
+    }
+
+    //Thread-safe static random number generator class
+    public static class StaticRandom
+    {
+        static int seed = Environment.TickCount;
+
+        static readonly ThreadLocal<Random> rnd = new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref seed)));
+
+        public static int Next(int minValue, int maxValue) => rnd.Value.Next(minValue, maxValue);
+
+        public static int Next(int maxValue) => rnd.Value.Next(maxValue);
+
+        public static int Next() => rnd.Value.Next();
+
+        public static double NextDouble() => rnd.Value.NextDouble();
     }
 }

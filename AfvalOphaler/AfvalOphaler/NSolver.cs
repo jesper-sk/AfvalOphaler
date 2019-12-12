@@ -396,7 +396,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = GD.Rand.Next(0, ops.Count);
+                int i = StaticRandom.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
                 if (op.Evaluate())
@@ -410,7 +410,7 @@ namespace AfvalOphaler
                     else
                     {
                         double p = Prob(delta, c);
-                        double r = GD.Rand.NextDouble();
+                        double r = StaticRandom.NextDouble();
 
                         if (p > r)
                         {
