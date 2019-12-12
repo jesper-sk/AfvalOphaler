@@ -124,7 +124,7 @@ namespace AfvalOphaler
             //Console.CancelKeyPress += Console_CancelKeyPress;
             Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
             results.Wait();
-            if (!userInterruptAwaiter.IsCompleted)
+            if (!userInterruptAwaiter.IsCompleted) solverStillGoing = false;
             userInterruptAwaiter.Wait();
             ScheduleResult res = results.Result;
             PrintResult(res);             
@@ -135,9 +135,10 @@ namespace AfvalOphaler
         {
             while (solverStillGoing)
             {
+                Console.Beep();
                 if (Console.KeyAvailable)
                 {
-                    ConsoleKeyInfo userInput = Console.ReadKey();
+                    ConsoleKeyInfo userInput = Console.ReadKey(true);
                     if (userInput.Key == ConsoleKey.X || userInput.Key == ConsoleKey.Escape)
                     {
                         Console.Clear();

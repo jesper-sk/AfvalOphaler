@@ -1,16 +1,6 @@
-﻿=============
-=== TO DO ===
-=============
-- Loops vervangen voor een ding in dag
-	- Lijst van Storten (oftewel elke loop begint bij een index)
-	- lijst van ruimte over per dump-dump reeks (tour)
-	- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
-	- 2.5-opt: Bij elke switch checken of operatie mag
-	- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
-	
--AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
-
-
+﻿===================
+= SUBMISSION INFO =
+===================
 
 Format Inlevermodel
 
@@ -26,27 +16,39 @@ Op het eind van de dag gaat de auto weer naar de stort; dit moet je ook aangeven
 1; 1; 3; 0
 1; 1; 4; 30
 
-SWEETSPOT PARAMETERS:
-	BESTE MET CLUSTER:
-	clusterCount = 4, 5, 6 <- verschilt wann welke beter.
-	nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList();
-	opCount = 20
-	Hillclimb
-	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
-	AddByCluster BEST
-
-	TOT NU TOE BESTE (DUS BETER DAN MET CLUSTER):
-	nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList();
-	opCount = 20
-	Hillclimb
-	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
-	Add BEST
-
 http://178.85.229.78:8067/team/157557372232042770
+
+=============
+=== TO DO ===
+=============
+- Loops vervangen voor een ding in dag
+	- Lijst van Storten (oftewel elke loop begint bij een index)
+	- lijst van ruimte over per dump-dump reeks (tour)
+	- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
+	- 2.5-opt: Bij elke switch checken of operatie mag
+	- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
+	
+-AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
+
+===========================
+= AANPAK MOEILIJKE DINGEN =
+===========================
+
+adden en verwijderen van dumps tijdens het zoeken:
+- Toestaan dat dit gebeurd in AddOperator/DeleteOperator
+
+- In de optimizer doen
+	De optimizer kijkt voor elke dayroute of een dump verwijderd kan worden of dat er één toegevoegd moet worden
+	Verwijderen kan altijd zolang de constraints niet geschonden worden.
+	Adden zou in theorie ook altijd mogen 
+	- Voor:
+		- Je weet zeker dat de dumps daadwerkelijk verwijderd/toegevoegd worden
+	- Tegen:
 
 ===========================================
 === Evolutionairy Programming Approach: ===
 ===========================================
+
 Iterate till convergence || maxiterations || user interupt:
 	Schedule[parentCount] Parents;
 	List<Schedule> Children = new List<Schedule>(to_be_determined);

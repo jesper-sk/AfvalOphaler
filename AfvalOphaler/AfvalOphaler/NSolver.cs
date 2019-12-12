@@ -36,7 +36,7 @@ namespace AfvalOphaler
             bestResults = new ScheduleResult[threads];
             for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
 
-            Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
+            //Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
             for (int i = 0; i < threads; i++)
             {
                 int index = i;
@@ -44,9 +44,7 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             stopStatusUpdater = true;
-            Console.WriteLine("Setting stopStatusUpdater on true");
-            statusUpdater.Wait();
-            Console.WriteLine("Statusupdater done...");
+            //statusUpdater.Wait();
             return best;
         }
 
@@ -259,37 +257,37 @@ namespace AfvalOphaler
                 Console.SetCursorPosition(0, threads);
                 Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
                 Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
-                //Thread.Sleep(5000);
+                Thread.Sleep(5000);
             }
         }
 
-        private readonly object lockobject = new object();
-        void AddScheduleToTop(ScheduleResult s)
-        {
-            #region Top10 [DEPRICATED]
-            ////Console.WriteLine("Pushing schedule to ranking: " + s.Score);
-            //double s_score = s.Score;
-            //for (int i = 0; i < 10; i++)
-            //    if (top10[i] == null) top10[i] = s;
-            //    else if (s_score < top10[i].Score)
-            //    {
-            //        for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
-            //        top10[i] = s;
-            //    }
-            #endregion
-            lock (lockobject) 
-            {
-                if (s.Score < best.Score) best = s;
-            }
-        }
-        void UpdateStatus(int taskId, string update)
-        {
-            lock (lockobject)
-            {
-                Console.SetCursorPosition(0, taskId + 1);
-                Console.WriteLine($"Task {taskId}: {update}");
-            }
-        }
+        //private readonly object lockobject = new object();
+        //void AddScheduleToTop(ScheduleResult s)
+        //{
+        //    #region Top10 [DEPRICATED]
+        //    ////Console.WriteLine("Pushing schedule to ranking: " + s.Score);
+        //    //double s_score = s.Score;
+        //    //for (int i = 0; i < 10; i++)
+        //    //    if (top10[i] == null) top10[i] = s;
+        //    //    else if (s_score < top10[i].Score)
+        //    //    {
+        //    //        for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
+        //    //        top10[i] = s;
+        //    //    }
+        //    #endregion
+        //    lock (lockobject) 
+        //    {
+        //        if (s.Score < best.Score) best = s;
+        //    }
+        //}
+        //void UpdateStatus(int taskId, string update)
+        //{
+        //    lock (lockobject)
+        //    {
+        //        Console.SetCursorPosition(0, taskId + 1);
+        //        Console.WriteLine($"Task {taskId}: {update}");
+        //    }
+        //}
         #endregion
 
     }
