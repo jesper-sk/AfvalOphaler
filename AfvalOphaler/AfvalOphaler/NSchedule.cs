@@ -19,6 +19,8 @@ namespace AfvalOphaler
         public List<Order> UnScheduledOrders;
 
         public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
+
+        public Random Rand;
         #endregion
 
         #region Constructor(s)
@@ -36,6 +38,8 @@ namespace AfvalOphaler
                 DayRoutes[d] = new DayRoute[2];
                 for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
             }
+
+            Rand = new Random();
         }
         #endregion
 
@@ -112,7 +116,7 @@ namespace AfvalOphaler
             for(int j = 0; j < nOps; j++)
             {
                 double acc = 0;
-                double p = GD.Rand.NextDouble();
+                double p = Rand.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
                     acc += probDist[i];
@@ -178,7 +182,7 @@ namespace AfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int ind = GD.Rand.Next(0, State.UnScheduledOrders.Count);
+                int ind = State.Rand.Next(0, State.UnScheduledOrders.Count);
                 //Console.WriteLine($"Try to add {toAdd}");
                 Operation = new AddOperation(State, ind);
                 bool possible = Operation.Evaluate();
@@ -271,7 +275,7 @@ namespace AfvalOphaler
 
                 while (!(combis.Count == 0)) 
                 {
-                    int[] combi = combis[GD.Rand.Next(0, combis.Count)];
+                    int[] combi = combis[State.Rand.Next(0, combis.Count)];
                     int everyDayInCombiAllowed = 0;
                     deltas = new List<double>(nAdditions);
                     whereToAdd = new List<Node>(nAdditions);
@@ -280,7 +284,7 @@ namespace AfvalOphaler
                     foreach (int day in combi)
                     {
                         //Console.WriteLine($"Day {day}");
-                        int truck = GD.Rand.Next(0, 2);
+                        int truck = State.Rand.Next(0, 2);
                         if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                         {
                             //Console.WriteLine($"Truck {truck} Evaluated!");
@@ -350,8 +354,8 @@ namespace AfvalOphaler
                     OrderToRemove = r.Data;
                 }
 
-                int d = GD.Rand.Next(0, 5);
-                int t = GD.Rand.Next(0, 2);
+                int d = State.Rand.Next(0, 5);
+                int t = State.Rand.Next(0, 2);
                 if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
                 {
                     SetToRemove(rem1);

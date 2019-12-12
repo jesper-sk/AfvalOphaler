@@ -94,9 +94,11 @@ namespace AfvalOphaler
 
                 bool stop = false;
                 int i = 0; int noChange = 0;
+
+                LocalSolver solv = solvs[1];
                 while (!stop)
                 {
-                    LocalSolver solv = solvs[s];
+                    //LocalSolver solv = solvs[s];
                     //double[] probs = new double[] { 1, 0, 0 };
                     double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0 };
                     if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
@@ -335,12 +337,14 @@ namespace AfvalOphaler
     #region Random HillClimb : Apply random operation, take successor if score decreases.
     class RandomHillClimbLocalSolver : LocalSolver
     {
+        Random Rand;
         public RandomHillClimbLocalSolver(Schedule s) : base(s)
         {
         }
 
         public override void Init()
         {
+            Rand = new Random();
         }
 
         public override bool GetNext(double[] probDist, int nOps)
@@ -348,7 +352,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = GD.Rand.Next(0, ops.Count);
+                int i = Rand.Next(0, ops.Count);
                 if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
@@ -372,10 +376,14 @@ namespace AfvalOphaler
 
         private double c;
 
+        Random Rand;
+
         public SaLocalSolver(Schedule s, double cs, double a) : base(s)
         {
             this.cs = cs;
             this.a = a;
+
+            Rand = new Random();
         }
 
         public override void Init()
