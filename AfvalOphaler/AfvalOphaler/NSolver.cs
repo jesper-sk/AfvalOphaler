@@ -37,9 +37,8 @@ namespace AfvalOphaler
             iterationCounters = new int[threads];
             bestResults = new ScheduleResult[threads];
             for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
-#if STATUS
+
             Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
-#endif
             for (int i = 0; i < threads; i++)
             {
                 int index = i;
@@ -47,9 +46,7 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             stopStatusUpdater = true;
-#if STATUS
             statusUpdater.Wait();
-#endif
             return best;
         }
 
@@ -241,6 +238,7 @@ namespace AfvalOphaler
                         currBestIndex = i;
                         best = curr;
                     }
+#if STATUS
                     SolverStatus stat = statii[i];
                     string extraInfo;
                     switch (stat)
@@ -259,10 +257,13 @@ namespace AfvalOphaler
                     //string extraInfo = (stat == SolverStatus.Done || stat == SolverStatus.Not_Initialized) ? "" : $", iteration: {iterationCounters[i]}";
                     Console.SetCursorPosition(0, i);
                     Console.WriteLine($"Task {i}: {stat}{extraInfo}");
+#endif
                 }
+#if STATUS
                 Console.SetCursorPosition(0, threads);
                 Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
                 Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
+#endif
                 Thread.Sleep(5000);
             }
         }
@@ -294,11 +295,11 @@ namespace AfvalOphaler
         //        Console.WriteLine($"Task {taskId}: {update}");
         //    }
         //}
-        #endregion
+#endregion
 
     }
 
-    #region LocalSolvers
+#region LocalSolvers
     abstract class LocalSolver
     {
         public readonly Schedule schedule;
@@ -311,7 +312,7 @@ namespace AfvalOphaler
         public abstract bool GetNext(double[] probDist, int nOps);
     }
 
-    #region Steepest HillClimb : Apply best successor of n random neighbors.
+#region Steepest HillClimb : Apply best successor of n random neighbors.
     class SteepestHillClimbLocalSolver : LocalSolver
     {
         public SteepestHillClimbLocalSolver(Schedule s) : base(s)
@@ -352,9 +353,9 @@ namespace AfvalOphaler
             return true;
         }
     }
-    #endregion
+#endregion
 
-    #region Random HillClimb : Apply random operation, take successor if score decreases.
+#region Random HillClimb : Apply random operation, take successor if score decreases.
     class RandomHillClimbLocalSolver : LocalSolver
     {
         Random Rand;
@@ -386,9 +387,9 @@ namespace AfvalOphaler
             return false;
         }
     }
-    #endregion
+#endregion
 
-    #region Simulated Annealing
+#region Simulated Annealing
     class SaLocalSolver : LocalSolver
     {
         public readonly double cs;
@@ -445,8 +446,8 @@ namespace AfvalOphaler
         }
         static double Prob(double delta, double temp) => Math.Exp(-delta / temp);
     }
-    #endregion
+#endregion
 
-    #endregion
+#endregion
 
 }
