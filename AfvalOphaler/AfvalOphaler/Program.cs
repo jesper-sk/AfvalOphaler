@@ -44,10 +44,10 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 10;
-            int operationCount = 20;
-            int maxIterations = 100; //500000;
-            int maxNoChange = 100; //75000;
+            int threads = 1;
+            int operationCount = 1;
+            int maxIterations = 500000;
+            int maxNoChange = 75000;
 
 #if CLUSTER
             // Clustering:
@@ -127,6 +127,7 @@ namespace AfvalOphaler
             if (!userInterruptAwaiter.IsCompleted) solverStillGoing = false;
             userInterruptAwaiter.Wait();
             ScheduleResult res = results.Result;
+            Console.Beep();
             PrintResult(res);             
         }
 
@@ -135,7 +136,6 @@ namespace AfvalOphaler
         {
             while (solverStillGoing)
             {
-                Console.Beep();
                 if (Console.KeyAvailable)
                 {
                     ConsoleKeyInfo userInput = Console.ReadKey(true);

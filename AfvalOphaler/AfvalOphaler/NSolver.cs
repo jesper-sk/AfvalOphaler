@@ -1,4 +1,4 @@
-﻿#define VISUALIZER
+﻿//#define STATUS
 
 using System;
 using System.Collections.Generic;
@@ -37,7 +37,7 @@ namespace AfvalOphaler
             iterationCounters = new int[threads];
             bestResults = new ScheduleResult[threads];
             for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
-#if VISUALIZER
+#if STATUS
             Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
 #endif
             for (int i = 0; i < threads; i++)
@@ -47,7 +47,7 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             stopStatusUpdater = true;
-#if VISUALIZER
+#if STATUS
             statusUpdater.Wait();
 #endif
             return best;
