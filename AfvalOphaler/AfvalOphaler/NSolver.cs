@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NOp = AfvalOphaler.Schedule.NeighborOperation;
@@ -9,123 +11,127 @@ namespace AfvalOphaler
     class Solver
     {
         #region Variables & Constructor
-        private ScheduleResult[] top10;
-        private ScheduleResult top;
-        private bool showBest;
+        //private ScheduleResult[] top10;
         public bool UserInterrupt = false;
 
         private List<Order> orders;
         public Solver(List<Order> orders, bool sBest = false)
         {
             Application.EnableVisualStyles();
-            top10 = new ScheduleResult[10];
-            top = new ScheduleResult() { Score = double.MaxValue };
+            //top10 = new ScheduleResult[10];
+            best = new ScheduleResult() { Score = double.MaxValue };
             this.orders = orders;
-
-            showBest = sBest;
-            showBest = true; // <- to be wegcommented in the future
         }
         #endregion
 
         #region Solving
+        private int[] iterationCounters;
+        private ScheduleResult[] bestResults;
         public Task<ScheduleResult> StartSolving(int threads, int opCount, int maxI, int maxNoChange) => Task.Run(() => Solve(threads, opCount, maxI, maxNoChange));
         private ScheduleResult Solve(int threads, int opCount, int maxI, int maxNoChange)
         {
             Task[] tasks = new Task[threads];
+            statii = new SolverStatus[threads];
+            iterationCounters = new int[threads];
+            bestResults = new ScheduleResult[threads];
+            for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
+
+            Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
             for (int i = 0; i < threads; i++)
             {
                 int index = i;
-                tasks[index] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange, index));
+                tasks[index] = Task.Factory.StartNew(() => SolveOne(maxI, opCount, maxNoChange, index, ref bestResults[index]));
             }
             Task.WaitAll(tasks);
-            return top;
+            stopStatusUpdater = true;
+            statusUpdater.Wait();
+            return best;
         }
-        private void SolveOne(int maxI, int opCount, int maxNoChange, int taskID)
-        {
-            UpdateStatus(taskID, "Task started.");
-            Schedule start = new Schedule(orders);
-            ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
 
-            #region Solve Voids
-            void DoAddOperationOnly(int maxAddI, int maxNoChangeAdd)
+        private void SolveOne(int maxI, int opCount, int maxNoChange, int taskID, ref ScheduleResult best)
+        {
+            Schedule start = new Schedule(orders);
+
+            int i;
+            LocalSolver[] solvs;
+            int s;
+
+            #region AddOperation
+            statii[taskID] = SolverStatus.Doing_Add;
+            int maxAddI = 30000;
+            int maxNoChangeAdd = 3000;
+            solvs = new LocalSolver[]
             {
-                LocalSolver[] solvs = new LocalSolver[]
-                {
                 new RandomHillClimbLocalSolver(start),
                 new SaLocalSolver(start, 0.6, 0.99999)
-                };
-                foreach (LocalSolver ls in solvs) ls.Init();
-                int s = 0;
+            };
+            foreach (LocalSolver ls in solvs) ls.Init();
+            s = 0;
 
-                bool stopAdd = false;
-                int iAdd = 0; int noChangeAdd = 0;
-                while (!stopAdd)
-                {
-                    LocalSolver solver = solvs[s];
-                    double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0 };
-                    if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer
-                    {
-                        noChangeAdd = 0;
-                        if (solver.schedule.Score < best.Score)
-                        {
-                            best = solver.schedule.ToResult();
-                            AddScheduleToTop(best);
-                        }
-                    }
-                    else noChangeAdd++;
-
-                    if (iAdd % 500 == 0) for (int opt = 0; opt < 25; opt++) solver.schedule.OptimizeAllDays();
-                    if (iAdd % 10000 == 0) UpdateStatus(taskID, $"On ADD-iteration: {iAdd}");
-                    if (iAdd % 15000 == 0) s = 1 - s;
-                    stopAdd = noChangeAdd == maxNoChangeAdd
-                        || ++iAdd == maxAddI
-                        || UserInterrupt;
-                }
-            }
-            void DoAllOperations()
+            bool stopAdd = false;
+            i = 0; int noChangeAdd = 0;
+            while (!stopAdd)
             {
-                LocalSolver[] solvs = new LocalSolver[]
+                LocalSolver solver = solvs[s];
+                double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0 };
+                if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer
                 {
-                new RandomHillClimbLocalSolver(start),
-                new SaLocalSolver(start, 0.9, 0.99999)
-                };
-                foreach (LocalSolver ls in solvs) ls.Init();
-                int s = 1;
-
-                bool stop = false;
-                int i = 0; int noChange = 0;
-
-                LocalSolver solv = solvs[1];
-                while (!stop)
-                {
-                    //LocalSolver solv = solvs[s];
-                    //double[] probs = new double[] { 1, 0, 0 };
-                    double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0 };
-                    if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
+                    noChangeAdd = 0;
+                    if (solver.schedule.Score < best.Score)
                     {
-                        noChange = 0;
-                        if (solv.schedule.Score < best.Score)
-                        {
-                            best = solv.schedule.ToResult();
-                            AddScheduleToTop(best);
-                        }
+                        best = solver.schedule.ToResult();
+                        //AddScheduleToTop(best);
                     }
-                    else noChange++;
-
-                    if (i % 1000 == 0) for (int opt = 0; opt < 50; opt++) solv.schedule.OptimizeAllDays();
-                    if (i % 10000 == 0) UpdateStatus(taskID, $"On ALL-iteration: {i}");
-                    //if (i % 1000 == 0) s = 1 - s;
-                    stop = noChange == maxI
-                        || ++i == maxI
-                        || UserInterrupt;
                 }
+                else noChangeAdd++;
+
+                if (i % 500 == 0) for (int opt = 0; opt < 25; opt++) solver.schedule.OptimizeAllDays();
+                if (i % 10000 == 0) iterationCounters[taskID] = i;
+                if (i % 15000 == 0) s = 1 - s;
+                stopAdd = noChangeAdd == maxNoChangeAdd
+                    || ++i == maxAddI
+                    || UserInterrupt;
             }
             #endregion
 
-            DoAddOperationOnly(30000, 3000);
-            DoAllOperations();
+            #region AllOperations
+            statii[taskID] = SolverStatus.Doing_All;
+            solvs = new LocalSolver[]
+            {
+                new RandomHillClimbLocalSolver(start),
+                new SaLocalSolver(start, 1, 0.99999)
+            };
+            foreach (LocalSolver ls in solvs) ls.Init();
+            s = 1;
 
-            UpdateStatus(taskID, $"Done. Best: {best.Score}");
+            bool stop = false;
+            i = 0; int noChange = 0;
+            while (!stop)
+            {
+                LocalSolver solv = solvs[s];
+                //double[] probs = new double[] { 1, 0, 0 };
+                double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0 };
+                if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
+                {
+                    noChange = 0;
+                    if (solv.schedule.Score < best.Score)
+                    {
+                        best = solv.schedule.ToResult();
+                        //AddScheduleToTop(best);
+                    }
+                }
+                else noChange++;
+                if (i % 1000 == 0) for (int opt = 0; opt < 50; opt++) solv.schedule.OptimizeAllDays();
+                if (i % 10000 == 0) iterationCounters[taskID] = i;
+                //if (i % 10000 == 0) s = 1 - s;
+                stop = noChange == maxNoChange
+                    || ++i == maxI
+                    || UserInterrupt;
+            }
+            #endregion
+
+            //UpdateStatus(taskID, $"Done. Best: {best.Score}");
+            statii[taskID] = SolverStatus.Done;
 
             #region Old
             ////Console.WriteLine($"Task {TaskID} started.");
@@ -202,45 +208,59 @@ namespace AfvalOphaler
         }
         #endregion
 
-        #region OLD
-        /*
-        public Task[] nStartSolving(int maxIterations, int opCount, int maxNoChange)
+        #region LeaderBoard / Stati
+        private enum SolverStatus
         {
-            LocalSolver solver = new GreedyHillClimbLocalSolver();
-            top10Schedules = new Schedule[10];
+            Not_Initialized,
+            Doing_Add,
+            Doing_All,
+            Done
+        }
+        private SolverStatus[] statii;
+        private ScheduleResult best;
 
-            var tasks = new Task[threads];
-            for (int i = 0; i < threads; i-=-1)
-            {
-                int index = i;
-                tasks[index] = Task.Factory.StartNew(() => DoSolving(startSchedules[index], maxIterations, opCount, maxNoChange, maxNoChangeAdd, solver));
-                //tasks[i] = Task.Run(() => DoSolving(startSchedules[i], 0, maxIterations, opCount, 0, maxNoChange));
+        private bool stopStatusUpdater = false;
+        private void StatusUpdater(int threads)
+        {
+            Console.Clear();
+            Stopwatch watch = Stopwatch.StartNew();
+            int currBestIndex = -1;
+            while (!stopStatusUpdater && !UserInterrupt)
+            {           
+                for (int i = 0; i < threads; i++)
+                {
+                    ScheduleResult curr = bestResults[i];
+                    if (curr.Score < best.Score)
+                    {
+                        currBestIndex = i;
+                        best = curr;
+                    }
+                    SolverStatus stat = statii[i];
+                    string extraInfo;
+                    switch (stat)
+                    { // In order of most time on status:
+                        case SolverStatus.Doing_All:
+                            extraInfo = $", iteration: {iterationCounters[i]}";
+                            break;
+                        case SolverStatus.Done:
+                            extraInfo = $", best: {bestResults[i].Score}";
+                            break;
+                        case SolverStatus.Doing_Add:
+                            extraInfo = $", iteration: {iterationCounters[i]}";
+                            break;
+                        default: extraInfo = ""; break;
+                    }
+                    //string extraInfo = (stat == SolverStatus.Done || stat == SolverStatus.Not_Initialized) ? "" : $", iteration: {iterationCounters[i]}";
+                    Console.SetCursorPosition(0, i);
+                    Console.WriteLine($"Task {i}: {stat}{extraInfo}");
+                }
+                Console.SetCursorPosition(0, threads);
+                Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
+                Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
+                Thread.Sleep(5000);
             }
-            return tasks;
         }
 
-        private void nDoSolving(Schedule state, int maxIterations, int opCount, int maxNoChange, int maxNoChangeAdd, LocalSolver solver)
-        {
-            int noChange = 0;
-            for (int iter = 0; iter < maxIterations; iter++)
-            {
-                Console.WriteLine($"Iteration {iter}...");
-                //if (iter % 1000 == 0) Console.WriteLine($"Iteration {iter}...");
-                
-                bool change = solver.GenerateNextState(state);
-
-                if (!change)
-                {
-                    if (noChange >= maxNoChange) break;
-                    else noChange++;
-                }
-            }
-            Console.WriteLine("Solving done");
-            lock (addlock) { AddScheduleToTop(state); }
-        }*/
-        #endregion
-
-        #region LeaderBoard / Stati
         private readonly object lockobject = new object();
         void AddScheduleToTop(ScheduleResult s)
         {
@@ -257,13 +277,7 @@ namespace AfvalOphaler
             #endregion
             lock (lockobject) 
             {
-                if (s.Score < top.Score)
-                {
-                    top = s;
-                    Console.SetCursorPosition(0, 0);
-                    Console.WriteLine(s.String);
-                    //if (showBest) Console.Write($"\r{s.String}");
-                }
+                if (s.Score < best.Score) best = s;
             }
         }
         void UpdateStatus(int taskId, string update)
