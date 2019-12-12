@@ -717,6 +717,7 @@ namespace AfvalOphaler
                 }
             }
 
+            if (candidateNodes.Count == 1 && candidateNodes[0].Data.OrderId == toAdd.OrderId) return false;
             if (candidateNodes.Count > 0)
             {             
                 Random rnd = new Random();
@@ -759,13 +760,13 @@ namespace AfvalOphaler
 
             if (delta > TimeLeft) return false;
 
-            if (theChosenOne.IsDump)
-            {
-                if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
-                {
-                    return false;
-                }
-            }
+            //if (theChosenOne.IsDump)
+            //{
+            //    if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
+            //    {
+            //        return false;
+            //    }
+            //}
 
             deltaTime = delta;
             toRemove = theChosenOne;

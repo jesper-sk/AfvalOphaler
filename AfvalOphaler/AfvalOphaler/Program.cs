@@ -43,7 +43,7 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 20;
+            int threads = 10;
             int operationCount = 20;
             int maxIterations = 500000;
             int maxNoChange = 75000;
@@ -103,9 +103,10 @@ namespace AfvalOphaler
 #endif
 #elif NTEST
             Solver solver = new Solver(orders);
-            var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);                  
-            Task awaitAndPrintResults = Task.Factory.StartNew(() => AwaitAndPrintResults(solver, results));
-            Task.WaitAll(new Task[] { awaitAndPrintResults });
+            var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
+            //Task awaitAndPrintResults = Task.Factory.StartNew(() => 
+            //Task.WaitAll(new Task[] { awaitAndPrintResults });
+            AwaitAndPrintResults(solver, results);
 
 #elif CUSTOM
 #endif
@@ -115,11 +116,13 @@ namespace AfvalOphaler
         #endregion
 
         #region Await Solver/User Then Print Results
-        private async static void AwaitAndPrintResults(Solver solver, Task<ScheduleResult> results)
+        private static void AwaitAndPrintResults(Solver solver, Task<ScheduleResult> results)
         {
-            //Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
-            await results;
-            //if (!userInterruptAwaiter.IsCompleted) Console.WriteLine("close");
+            Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
+            userInterruptAwaiter.Wait();
+            //await results;
+            if (!userInterruptAwaiter.IsCompleted) Console.Write("x");
+            userInterruptAwaiter.Wait();
             //await userInterruptAwaiter;
             ScheduleResult res = results.Result;
             PrintResult(res);           
@@ -128,9 +131,11 @@ namespace AfvalOphaler
         {
             while (true)
             {
-                string userInput = Console.ReadLine();
-                if (userInput == "close")
+                ConsoleKeyInfo userInput = Console.ReadKey();
+                if (userInput.Key == ConsoleKey.X || userInput.Key == ConsoleKey.Escape)
                 {
+                    Console.Clear();
+                    Console.WriteLine("Stopping all solver tasks...");
                     solver.UserInterrupt = true;
                     return;
                 }
@@ -138,6 +143,7 @@ namespace AfvalOphaler
         }
         private static void PrintResult(ScheduleResult res, bool writeToFile = true, string fileName = "result")
         {
+            Console.Clear();
             Console.WriteLine("===============" +
                             "\n= BEST RESULT =" +
                             "\n===============");
