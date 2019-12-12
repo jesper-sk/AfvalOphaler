@@ -19,7 +19,6 @@ namespace AfvalOphaler
         public List<Order> UnScheduledOrders;
 
         public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
-        private Random Rnd;
         #endregion
 
         #region Constructor(s)
@@ -37,8 +36,6 @@ namespace AfvalOphaler
                 DayRoutes[d] = new DayRoute[2];
                 for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
             }
-
-            Rnd = new Random();
         }
         #endregion
 
@@ -115,7 +112,7 @@ namespace AfvalOphaler
             for(int j = 0; j < nOps; j++)
             {
                 double acc = 0;
-                double p = Rnd.NextDouble();
+                double p = GD.rnd.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
                     acc += probDist[i];
@@ -181,7 +178,7 @@ namespace AfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int ind = State.Rnd.Next(0, State.UnScheduledOrders.Count);
+                int ind = GD.rnd.Next(0, State.UnScheduledOrders.Count);
                 //Console.WriteLine($"Try to add {toAdd}");
                 Operation = new AddOperation(State, ind);
                 bool possible = Operation.Evaluate();
@@ -274,7 +271,7 @@ namespace AfvalOphaler
 
                 while (!(combis.Count == 0)) 
                 {
-                    int[] combi = combis[State.Rnd.Next(0, combis.Count)];
+                    int[] combi = combis[GD.rnd.Next(0, combis.Count)];
                     int everyDayInCombiAllowed = 0;
                     deltas = new List<double>(nAdditions);
                     whereToAdd = new List<Node>(nAdditions);
@@ -283,7 +280,7 @@ namespace AfvalOphaler
                     foreach (int day in combi)
                     {
                         //Console.WriteLine($"Day {day}");
-                        int truck = State.Rnd.Next(0, 2);
+                        int truck = GD.rnd.Next(0, 2);
                         if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                         {
                             //Console.WriteLine($"Truck {truck} Evaluated!");
@@ -353,8 +350,8 @@ namespace AfvalOphaler
                     OrderToRemove = r.Data;
                 }
 
-                int d = State.Rnd.Next(0, 5);
-                int t = State.Rnd.Next(0, 2);
+                int d = GD.rnd.Next(0, 5);
+                int t = GD.rnd.Next(0, 2);
                 if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
                 {
                     SetToRemove(rem1);
@@ -413,14 +410,14 @@ namespace AfvalOphaler
             {
                 deltaTime = double.NaN;
                 deltaPenalty = double.NaN;
-                Console.WriteLine("\nEvaluating transfer operation");
+                //Console.WriteLine("\nEvaluating transfer operation");
                 //Weet niet of dit goed gaat als Evaluate van del en add maar een mogelijkheid proberen, 
                 //miss voor transfer beetje weinig
                 if (!delOp.Evaluate()) return false;
-                Console.WriteLine($"Removing {delOp.OrderToRemove}");
+                //Console.WriteLine($"Removing {delOp.OrderToRemove}");
                 addOp = new AddOperation(State, delOp.OrderToRemove);
                 if (!addOp.Evaluate()) return false;
-                Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
+                //Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
 
                 deltaTime = delOp.DeltaTime + addOp.DeltaTime;
                 deltaPenalty = delOp.DeltaPenalty + addOp.DeltaPenalty;
@@ -482,23 +479,6 @@ namespace AfvalOphaler
                         }
                 }
             }
-            //for (int t = 0; t < 2; t++)
-            //    for (int d = 0; d < 5; d++)
-            //    {
-            //        List<Loop> loops = dayRoutes[d][t].Loops;
-            //        int global = 1;
-            //        for (int l = 0; l < loops.Count; l++)
-            //        {
-            //            Loop curr = loops[l];
-            //            Node ord = curr.Start;
-
-            //            do
-            //            {
-            //                ord = ord.Next;
-            //                b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
-            //            } while (!ord.IsDump);
-            //        }
-            //    }
             return b;
         }
         public string GetStatistics() => GetStatisticsBuilder().ToString();

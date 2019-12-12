@@ -238,7 +238,7 @@ namespace AfvalOphaler
         }*/
         #endregion
 
-        #region LeaderBoard / Statii
+        #region LeaderBoard / Stati
         private readonly object lockobject = new object();
         void AddScheduleToTop(ScheduleResult s)
         {
@@ -335,14 +335,12 @@ namespace AfvalOphaler
     #region Random HillClimb : Apply random operation, take successor if score decreases.
     class RandomHillClimbLocalSolver : LocalSolver
     {
-        Random rnd;
         public RandomHillClimbLocalSolver(Schedule s) : base(s)
         {
         }
 
         public override void Init()
         {
-            rnd = new Random();
         }
 
         public override bool GetNext(double[] probDist, int nOps)
@@ -350,7 +348,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = rnd.Next(0, ops.Count);
+                int i = GD.rnd.Next(0, ops.Count);
                 if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
@@ -373,7 +371,6 @@ namespace AfvalOphaler
         public readonly double a;
 
         private double c;
-        private Random rnd;
 
         public SaLocalSolver(Schedule s, double cs, double a) : base(s)
         {
@@ -384,7 +381,6 @@ namespace AfvalOphaler
         public override void Init()
         {
             c = cs;
-            rnd = new Random();
         }
 
         public override bool GetNext(double[] probDist, int nOps)
@@ -392,7 +388,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = rnd.Next(0, ops.Count);
+                int i = GD.rnd.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
                 if (op.Evaluate())
@@ -406,7 +402,7 @@ namespace AfvalOphaler
                     else
                     {
                         double p = Prob(delta, c);
-                        double r = rnd.NextDouble();
+                        double r = GD.rnd.NextDouble();
 
                         if (p > r)
                         {
