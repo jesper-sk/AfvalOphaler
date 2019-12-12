@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
+using System.Threading;
 #endregion
 
 // © Het Woczek duo
@@ -45,8 +46,8 @@ namespace AfvalOphaler
 
             int threads = 10;
             int operationCount = 20;
-            int maxIterations = 500000;
-            int maxNoChange = 75000;
+            int maxIterations = 100; //500000;
+            int maxNoChange = 100; //75000;
 
 #if CLUSTER
             // Clustering:
@@ -102,11 +103,11 @@ namespace AfvalOphaler
             Console.ReadKey();*/
 #endif
 #elif NTEST
-            Solver solver = new Solver(orders);
-            var results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
+            solver = new Solver(orders);
+            results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
             //Task awaitAndPrintResults = Task.Factory.StartNew(() => 
             //Task.WaitAll(new Task[] { awaitAndPrintResults });
-            AwaitAndPrintResults(solver, results);
+            AwaitAndPrintResults();
 
 #elif CUSTOM
 #endif
@@ -116,29 +117,36 @@ namespace AfvalOphaler
         #endregion
 
         #region Await Solver/User Then Print Results
-        private static void AwaitAndPrintResults(Solver solver, Task<ScheduleResult> results)
+        static Solver solver;
+        static Task<ScheduleResult> results;
+        private static void AwaitAndPrintResults()
         {
+            //Console.CancelKeyPress += Console_CancelKeyPress;
             Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
+            results.Wait();
+            if (!userInterruptAwaiter.IsCompleted)
             userInterruptAwaiter.Wait();
-            //await results;
-            if (!userInterruptAwaiter.IsCompleted) Console.Write("x");
-            userInterruptAwaiter.Wait();
-            //await userInterruptAwaiter;
             ScheduleResult res = results.Result;
-            PrintResult(res);           
+            PrintResult(res);             
         }
+
+        private static bool solverStillGoing = true;
         private static void AwaitUserInterrupt(Solver solver)
         {
-            while (true)
+            while (solverStillGoing)
             {
-                ConsoleKeyInfo userInput = Console.ReadKey();
-                if (userInput.Key == ConsoleKey.X || userInput.Key == ConsoleKey.Escape)
+                if (Console.KeyAvailable)
                 {
-                    Console.Clear();
-                    Console.WriteLine("Stopping all solver tasks...");
-                    solver.UserInterrupt = true;
-                    return;
+                    ConsoleKeyInfo userInput = Console.ReadKey();
+                    if (userInput.Key == ConsoleKey.X || userInput.Key == ConsoleKey.Escape)
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Stopping all solver tasks...");
+                        solver.UserInterrupt = true;
+                        return;
+                    }
                 }
+                else Thread.Sleep(50);
             }
         }
         private static void PrintResult(ScheduleResult res, bool writeToFile = true, string fileName = "result")

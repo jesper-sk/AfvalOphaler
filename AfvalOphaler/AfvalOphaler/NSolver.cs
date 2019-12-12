@@ -44,7 +44,9 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             stopStatusUpdater = true;
+            Console.WriteLine("Setting stopStatusUpdater on true");
             statusUpdater.Wait();
+            Console.WriteLine("Statusupdater done...");
             return best;
         }
 
@@ -257,7 +259,7 @@ namespace AfvalOphaler
                 Console.SetCursorPosition(0, threads);
                 Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
                 Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
-                Thread.Sleep(5000);
+                //Thread.Sleep(5000);
             }
         }
 
