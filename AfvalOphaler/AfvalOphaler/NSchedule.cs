@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace AfvalOphaler
 {
@@ -482,8 +480,8 @@ namespace AfvalOphaler
             {
                 State.Duration -= State.DayRoutes[d1][t1].Duration;
                 State.Duration -= State.DayRoutes[d2][t2].Duration;
-                State.DayRoutes[d1][t1].Swap1(toSwap1, toSwap2);
-                State.DayRoutes[d2][t2].Swap2(toSwap2, toSwap1);
+                State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1);
+                State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2);
                 State.Duration += State.DayRoutes[d1][t1].Duration;
                 State.Duration += State.DayRoutes[d2][t2].Duration;
             }
@@ -830,7 +828,7 @@ namespace AfvalOphaler
             return true;
         }
 
-        public bool EvaluateSwap2(Node ToSwapIn, double space_swapOut, double time_swapOut, out Node toSwapOut, out double deltaTime)
+        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, out Node toSwapOut, out double deltaTime)
         {
             toSwapOut = null;
             deltaTime = double.NaN;
@@ -850,8 +848,8 @@ namespace AfvalOphaler
                 if (reqS_swapOut > space_swapOut) continue;
 
                 double reqT_swapOut = swapOut.Data.TimeToEmpty
-                    + GD.JourneyTime[ToSwapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                    + GD.JourneyTime[swapOut.Data.MatrixId, ToSwapIn.Next.Data.MatrixId];
+                    + GD.JourneyTime[toSwapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                    + GD.JourneyTime[swapOut.Data.MatrixId, toSwapIn.Next.Data.MatrixId];
 
                 if (reqT_swapOut > time_swapOut) continue;
 
@@ -859,7 +857,7 @@ namespace AfvalOphaler
                 double space_swapIn = roomLefts[swapOut.TourIndex] 
                     + swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
 
-                double reqS_swapIn = ToSwapIn.Data.VolPerContainer * ToSwapIn.Data.NumContainers;
+                double reqS_swapIn = toSwapIn.Data.VolPerContainer * toSwapIn.Data.NumContainers;
 
                 if (reqS_swapIn > space_swapIn) continue;
 
@@ -868,9 +866,9 @@ namespace AfvalOphaler
                     + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
                     + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId];
 
-                double reqT_swapIn = ToSwapIn.Data.TimeToEmpty
-                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, ToSwapIn.Data.MatrixId]
-                    + GD.JourneyTime[ToSwapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
+                double reqT_swapIn = toSwapIn.Data.TimeToEmpty
+                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, toSwapIn.Data.MatrixId]
+                    + GD.JourneyTime[toSwapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
 
                 if (reqT_swapIn > time_swapIn) continue;
 
@@ -912,12 +910,12 @@ namespace AfvalOphaler
             temp.Next = swapIn;
 
             TimeLeft = TimeLeft
-                - swapIn.Data.TimeToEmpty
-                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
-                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId]
                 + swapOut.Data.TimeToEmpty
                 + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId];
+                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
+                - swapIn.Data.TimeToEmpty
+                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
 
             roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
                 + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
