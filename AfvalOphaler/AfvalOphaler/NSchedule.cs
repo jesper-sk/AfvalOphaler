@@ -459,17 +459,22 @@ namespace AfvalOphaler
                 deltaPenalty = double.NaN;
                 d1 = StaticRandom.Next(0, 5);
                 t1 = StaticRandom.Next(0, 2);
+                //Console.WriteLine($"Swap1: day {d1} truck {t1}");
                 if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double ss1, out double ts1))
                 {
                     do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
                     do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
+                    //Console.WriteLine($"Evaluated. Swap2: day {d2} truck {t2}");
                     if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, out toSwap2, out double dT))
                     {
                         deltaTime = dT;
                         deltaPenalty = 0;
+                        //Console.WriteLine("Swap!");
                         return true;
                     }
                 }
+                //Console.WriteLine("Swapping didn't make sense");
+                //Console.ReadKey(true);
                 return false;
             }
 
@@ -837,7 +842,7 @@ namespace AfvalOphaler
                 do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
                 Node swapOut = nodes[ind];
 
-                if (swapOut.IsDump || swapOut.Data.Frequency < 1) continue;
+                if (swapOut.IsDump || swapOut.Data.Frequency > 1) continue;
 
                 //Check of chosen past op de plek van toIns
                 double reqS_swapOut = swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
@@ -849,7 +854,6 @@ namespace AfvalOphaler
                     + GD.JourneyTime[swapOut.Data.MatrixId, ToSwapIn.Next.Data.MatrixId];
 
                 if (reqT_swapOut > time_swapOut) continue;
-
 
                 //Check of toIns past op de plek van chosen
                 double space_swapIn = roomLefts[swapOut.TourIndex] 

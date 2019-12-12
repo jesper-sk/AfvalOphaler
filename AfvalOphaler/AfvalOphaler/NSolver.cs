@@ -1,4 +1,4 @@
-﻿//#define STATUS
+﻿#define STATUS
 
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ namespace AfvalOphaler
         private ScheduleResult Solve(int threads, int opCount, int maxI, int maxNoChange)
         {
             Task[] tasks = new Task[threads];
-            statii = new SolverStatus[threads];
+            stati = new SolverStatus[threads];
             iterationCounters = new int[threads];
             bestResults = new ScheduleResult[threads];
             for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
@@ -59,7 +59,7 @@ namespace AfvalOphaler
             int s;
 
             #region AddOperation
-            statii[taskID] = SolverStatus.Doing_Add;
+            stati[taskID] = SolverStatus.Doing_Add;
             int maxAddI = 30000;
             int maxNoChangeAdd = 3000;
             solvs = new LocalSolver[]
@@ -96,8 +96,10 @@ namespace AfvalOphaler
             }
             #endregion
 
+            Console.WriteLine("Swapping");
+
             #region AllOperations
-            statii[taskID] = SolverStatus.Doing_All;
+            stati[taskID] = SolverStatus.Doing_All;
             solvs = new LocalSolver[]
             {
                 new RandomHillClimbLocalSolver(start),
@@ -134,7 +136,7 @@ namespace AfvalOphaler
             #endregion
 
             //UpdateStatus(taskID, $"Done. Best: {best.Score}");
-            statii[taskID] = SolverStatus.Done;
+            stati[taskID] = SolverStatus.Done;
 
             #region Old
             ////Console.WriteLine($"Task {TaskID} started.");
@@ -219,7 +221,7 @@ namespace AfvalOphaler
             Doing_All,
             Done
         }
-        private SolverStatus[] statii;
+        private SolverStatus[] stati;
         private ScheduleResult best;
 
         private bool stopStatusUpdater = false;
@@ -239,7 +241,7 @@ namespace AfvalOphaler
                         best = curr;
                     }
 #if STATUS
-                    SolverStatus stat = statii[i];
+                    SolverStatus stat = stati[i];
                     string extraInfo;
                     switch (stat)
                     { // In order of most time on status:
