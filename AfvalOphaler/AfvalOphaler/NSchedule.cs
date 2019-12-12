@@ -694,16 +694,14 @@ namespace AfvalOphaler
                     {
                         //Console.WriteLine($"Nog enough time left in day...");
                     }
-
                 }
-
             }
 
-            candidateNodes.Remove(candidateNodes.Find(n => n.Data.OrderId == toAdd.OrderId));
             if (candidateNodes.Count > 0)
             {             
                 Random rnd = new Random();
                 whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                while (whereToAdd.Data.OrderId == toAdd.OrderId) whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
                 deltaTime = toAdd.TimeToEmpty
                     + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
                     + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
@@ -752,8 +750,6 @@ namespace AfvalOphaler
             deltaTime = delta;
             toRemove = theChosenOne;
             return true;
-
-            throw new AfvalOphaler.HeyJochieException("Das nog helemaal niet geimplementeerd jochie!");
         }
         #endregion
 

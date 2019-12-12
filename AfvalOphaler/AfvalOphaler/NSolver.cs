@@ -98,7 +98,7 @@ namespace AfvalOphaler
                 {
                     LocalSolver solv = solvs[s];
                     //double[] probs = new double[] { 1, 0, 0 };
-                    double[] probs = new double[] { 2 / 9.0, 4 / 9.0, 3 / 9.0 };
+                    double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0 };
                     if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
                     {
                         noChange = 0;
