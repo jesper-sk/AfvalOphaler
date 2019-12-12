@@ -348,7 +348,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = GD.rnd.Next(0, ops.Count);
+                int i = GD.Rand.Next(0, ops.Count);
                 if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
@@ -388,7 +388,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = GD.rnd.Next(0, ops.Count);
+                int i = GD.Rand.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
                 if (op.Evaluate())
@@ -402,7 +402,7 @@ namespace AfvalOphaler
                     else
                     {
                         double p = Prob(delta, c);
-                        double r = GD.rnd.NextDouble();
+                        double r = GD.Rand.NextDouble();
 
                         if (p > r)
                         {

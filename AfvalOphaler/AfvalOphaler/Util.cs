@@ -62,7 +62,7 @@ namespace AfvalOphaler
 
     public static class GD
     {
-        public static readonly Random rnd = new Random();
+        public static readonly Random Rand = new Random();
 
         public static double[,] JourneyTime;
 
