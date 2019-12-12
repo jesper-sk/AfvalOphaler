@@ -1,0 +1,33 @@
+RandomSwapOperation
+	Dag d1
+	Dag d2
+	Node swap1
+	Node swap2
+	
+	Evaluate()
+		Pak willekeurige dag d1
+		voor d, als EvaluateTransfer1(out swap1, out sL, out tL)
+			Pak willekeurige dag d2
+			voor d1, als EvaluateTransfer2(swap1, sL, tL, out Node swap2)
+				return true
+		anders return false
+			
+	Apply()
+		d1.TransferNode(swap2, swap1)
+		d2.TransferNode(swap1, swap2)
+		
+			
+Dag
+	EvaluateSwap1(out Node toRep out double spaceLeft, out double timeLeft)
+		Pakt willekeurige node die kan worden verwijderd, returnt
+		die node en en waar een te swappen node aan zal moeten
+		voldoen
+		
+	EvaluateSwap2(Node toIns, double reqSpace, double reqTime, out Node toRep)
+		Pakt een node uit de dag die kan worden vervangen door toIns, dus zo dat
+		toIns daarin past en aan alle constraints voldoet én toDel aan de constraints
+		van reqSpace en reqTime voldoet
+	
+	SwapNode(Node toIns, Node toRep)
+		Verwijder toRep uit de dag, voeg toIns toe op dezelfde plek.
+		Update de TimeLeft en de SpaceLeft accordingly.	

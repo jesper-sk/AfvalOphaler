@@ -208,7 +208,7 @@ namespace AfvalOphaler
         }
         #endregion
 
-        #region LeaderBoard / Statii
+        #region LeaderBoard / Stati
         private enum SolverStatus
         {
             Not_Initialized,
@@ -351,14 +351,14 @@ namespace AfvalOphaler
     #region Random HillClimb : Apply random operation, take successor if score decreases.
     class RandomHillClimbLocalSolver : LocalSolver
     {
-        Random rnd;
+        Random Rand;
         public RandomHillClimbLocalSolver(Schedule s) : base(s)
         {
         }
 
         public override void Init()
         {
-            rnd = new Random();
+            Rand = new Random();
         }
 
         public override bool GetNext(double[] probDist, int nOps)
@@ -366,7 +366,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = rnd.Next(0, ops.Count);
+                int i = Rand.Next(0, ops.Count);
                 if (ops[i].Evaluate() /*&& ops[i].TotalDelta < 0*/)
                 {
                     ops[i].Apply();
@@ -389,18 +389,20 @@ namespace AfvalOphaler
         public readonly double a;
 
         private double c;
-        private Random rnd;
+
+        Random Rand;
 
         public SaLocalSolver(Schedule s, double cs, double a) : base(s)
         {
             this.cs = cs;
             this.a = a;
+
+            Rand = new Random();
         }
 
         public override void Init()
         {
             c = cs;
-            rnd = new Random();
         }
 
         public override bool GetNext(double[] probDist, int nOps)
@@ -408,7 +410,7 @@ namespace AfvalOphaler
             List<NOp> ops = new List<NOp>(schedule.GetOperations(probDist, nOps));
             while (ops.Count != 0)
             {
-                int i = rnd.Next(0, ops.Count);
+                int i = StaticRandom.Next(0, ops.Count);
                 NOp op = ops[i];
                 ops.RemoveAt(i);
                 if (op.Evaluate())
@@ -422,7 +424,7 @@ namespace AfvalOphaler
                     else
                     {
                         double p = Prob(delta, c);
-                        double r = rnd.NextDouble();
+                        double r = StaticRandom.NextDouble();
 
                         if (p > r)
                         {

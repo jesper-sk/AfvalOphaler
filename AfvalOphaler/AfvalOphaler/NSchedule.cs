@@ -19,7 +19,8 @@ namespace AfvalOphaler
         public List<Order> UnScheduledOrders;
 
         public DayRoute[][] DayRoutes;     //zo dat dayRoutes[i][j] is de dagroute van dag i voor truck j
-        private Random Rnd;
+
+        //public Random Rand;
         #endregion
 
         #region Constructor(s)
@@ -38,7 +39,7 @@ namespace AfvalOphaler
                 for (int t = 0; t < 2; t++) DayRoutes[d][t] = new DayRoute(d, t);
             }
 
-            Rnd = new Random();
+            //Rand = new Random();
         }
         #endregion
 
@@ -115,7 +116,7 @@ namespace AfvalOphaler
             for(int j = 0; j < nOps; j++)
             {
                 double acc = 0;
-                double p = Rnd.NextDouble();
+                double p = StaticRandom.NextDouble();
                 for (int i = 0; i < probDist.Length; i++)
                 {
                     acc += probDist[i];
@@ -181,7 +182,7 @@ namespace AfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                int ind = State.Rnd.Next(0, State.UnScheduledOrders.Count);
+                int ind = StaticRandom.Next(0, State.UnScheduledOrders.Count);
                 //Console.WriteLine($"Try to add {toAdd}");
                 Operation = new AddOperation(State, ind);
                 bool possible = Operation.Evaluate();
@@ -274,7 +275,7 @@ namespace AfvalOphaler
 
                 while (!(combis.Count == 0)) 
                 {
-                    int[] combi = combis[State.Rnd.Next(0, combis.Count)];
+                    int[] combi = combis[StaticRandom.Next(0, combis.Count)];
                     int everyDayInCombiAllowed = 0;
                     deltas = new List<double>(nAdditions);
                     whereToAdd = new List<Node>(nAdditions);
@@ -283,7 +284,7 @@ namespace AfvalOphaler
                     foreach (int day in combi)
                     {
                         //Console.WriteLine($"Day {day}");
-                        int truck = State.Rnd.Next(0, 2);
+                        int truck = StaticRandom.Next(0, 2);
                         if (State.DayRoutes[day][truck].EvaluateRandomAdd(toAdd, out double delta1, out Node where1)) // MISS NIET BEIDE TRUCKS PROBEREN
                         {
                             //Console.WriteLine($"Truck {truck} Evaluated!");
@@ -353,8 +354,8 @@ namespace AfvalOphaler
                     OrderToRemove = r.Data;
                 }
 
-                int d = State.Rnd.Next(0, 5);
-                int t = State.Rnd.Next(0, 2);
+                int d = StaticRandom.Next(0, 5);
+                int t = StaticRandom.Next(0, 2);
                 if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
                 {
                     SetToRemove(rem1);
@@ -436,6 +437,26 @@ namespace AfvalOphaler
 
             public override string ToString() => $"RandomTransferOperation, Evaluated: {IsEvaluated}";
         }
+
+        public class RandomSwapOperation : NeighborOperation
+        {
+            public RandomSwapOperation(Schedule s) : base(s)
+            {
+
+            }
+
+            protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override void _Apply()
+            {
+                throw new NotImplementedException();
+            }
+
+            public override string ToString() => $"RandomSwapOperation, Evaluated {IsEvaluated}";
+        }
         #endregion
 
         #region Optimization
@@ -482,23 +503,6 @@ namespace AfvalOphaler
                         }
                 }
             }
-            //for (int t = 0; t < 2; t++)
-            //    for (int d = 0; d < 5; d++)
-            //    {
-            //        List<Loop> loops = dayRoutes[d][t].Loops;
-            //        int global = 1;
-            //        for (int l = 0; l < loops.Count; l++)
-            //        {
-            //            Loop curr = loops[l];
-            //            Node ord = curr.Start;
-
-            //            do
-            //            {
-            //                ord = ord.Next;
-            //                b.AppendLine($"{t + 1}; {d + 1}; {global++}; {ord.Data.OrderId}");
-            //            } while (!ord.IsDump);
-            //        }
-            //    }
             return b;
         }
         public string GetStatistics() => GetStatisticsBuilder().ToString();
@@ -670,7 +674,7 @@ namespace AfvalOphaler
 
         #endregion
 
-        #region Evauluate
+        #region Evaluate
         public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
         {
             //Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
@@ -737,7 +741,6 @@ namespace AfvalOphaler
         {
             toRemove = null;
             deltaTime = double.NaN;
-            Random rnd = new Random();
             List<Node> candidates = ToList();
 
             if (candidates.Count == 0)
@@ -745,7 +748,7 @@ namespace AfvalOphaler
                 return false;
             }
 
-            Node theChosenOne = candidates[rnd.Next(0, candidates.Count)];
+            Node theChosenOne = candidates[StaticRandom.Next(0, candidates.Count)];
 
             if (theChosenOne.Data.Frequency > 1)
             {
@@ -771,6 +774,11 @@ namespace AfvalOphaler
             deltaTime = delta;
             toRemove = theChosenOne;
             return true;
+        }
+
+        public bool EvaluateSwap1(out Node toRem, out double spaceLeft, out double timeLeft)
+        {
+
         }
         #endregion
 
@@ -1138,19 +1146,6 @@ namespace AfvalOphaler
         #endregion
 
         #region Modifications
-        //public Node AppendNext(Order o)
-        //{
-        //    Node n = new Node(o)
-        //    {
-        //        Prev = this,
-        //        Next = Next
-        //    };
-
-        //    Next.Prev = n;
-        //    Next = n;
-
-        //    return n;
-        //}
         public void Remove()
         {
             Next.Prev = Prev;
