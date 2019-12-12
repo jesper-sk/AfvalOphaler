@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define VISUALIZER
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -35,8 +37,9 @@ namespace AfvalOphaler
             iterationCounters = new int[threads];
             bestResults = new ScheduleResult[threads];
             for (int i = 0; i < threads; i -= -1) bestResults[i] = new ScheduleResult() { Score = double.MaxValue };
-
+#if VISUALIZER
             Task statusUpdater = Task.Factory.StartNew(() => StatusUpdater(threads));
+#endif
             for (int i = 0; i < threads; i++)
             {
                 int index = i;
@@ -44,7 +47,9 @@ namespace AfvalOphaler
             }
             Task.WaitAll(tasks);
             stopStatusUpdater = true;
+#if VISUALIZER
             statusUpdater.Wait();
+#endif
             return best;
         }
 
@@ -73,8 +78,8 @@ namespace AfvalOphaler
             while (!stopAdd)
             {
                 LocalSolver solver = solvs[s];
-                double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0 };
-                if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer
+                double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0, 0 };
+                if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChangeAdd = 0;
                     if (solver.schedule.Score < best.Score)
@@ -110,8 +115,9 @@ namespace AfvalOphaler
             {
                 LocalSolver solv = solvs[s];
                 //double[] probs = new double[] { 1, 0, 0 };
-                double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0 };
-                if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
+                //double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0, 0 };
+                double[] probs = new double[] { 0, 0, 0, 1 };
+                if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChange = 0;
                     if (solv.schedule.Score < best.Score)

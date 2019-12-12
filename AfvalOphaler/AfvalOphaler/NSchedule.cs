@@ -107,7 +107,8 @@ namespace AfvalOphaler
         {
             new Func<Schedule, NeighborOperation>((s) => new RandomAddOperation(s)),
             new Func<Schedule, NeighborOperation>((s) => new RandomDeleteOperation(s)),
-            new Func<Schedule, NeighborOperation>((s) => new RandomTransferOperation(s))
+            new Func<Schedule, NeighborOperation>((s) => new RandomTransferOperation(s)),
+            new Func<Schedule, NeighborOperation>((s) => new RandomSwapOperation(s))
         };
 
         public NeighborOperation[] GetOperations(double[] probDist, int nOps)
@@ -440,6 +441,13 @@ namespace AfvalOphaler
 
         public class RandomSwapOperation : NeighborOperation
         {
+            public Node toSwap1;
+            public Node toSwap2;
+            int d1;
+            int d2;
+            int t1;
+            int t2;
+
             public RandomSwapOperation(Schedule s) : base(s)
             {
 
@@ -447,12 +455,32 @@ namespace AfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                throw new NotImplementedException();
+                deltaTime = double.NaN;
+                deltaPenalty = double.NaN;
+                d1 = StaticRandom.Next(0, 5);
+                t1 = StaticRandom.Next(0, 2);
+                if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double ss1, out double ts1))
+                {
+                    do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
+                    do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
+                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, out toSwap2, out double dT))
+                    {
+                        deltaTime = dT;
+                        deltaPenalty = 0;
+                        return true;
+                    }
+                }
+                return false;
             }
 
             protected override void _Apply()
             {
-                throw new NotImplementedException();
+                State.Duration -= State.DayRoutes[d1][t1].Duration;
+                State.Duration -= State.DayRoutes[d2][t2].Duration;
+                State.DayRoutes[d1][t1].Swap1(toSwap1, toSwap2);
+                State.DayRoutes[d2][t2].Swap2(toSwap2, toSwap1);
+                State.Duration += State.DayRoutes[d1][t1].Duration;
+                State.Duration += State.DayRoutes[d2][t2].Duration;
             }
 
             public override string ToString() => $"RandomSwapOperation, Evaluated {IsEvaluated}";
@@ -577,15 +605,15 @@ namespace AfvalOphaler
             Tours = new TourEnumerableIndexer(this);
         }
 
-        List<Node> ToList()
-        {
-            List<Node> nodes = new List<Node>();
+        //List<Node> ToList()
+        //{
+        //    List<Node> nodes = new List<Node>();
 
-            foreach (Node node in this) nodes.Add(node);
-            nodes.RemoveAt(nodes.Count - 1);
+        //    foreach (Node node in this) nodes.Add(node);
+        //    nodes.RemoveAt(nodes.Count - 1);
 
-            return nodes;
-        }
+        //    return nodes;
+        //}
 
         public class TourEnumerableIndexer
         {
@@ -768,61 +796,128 @@ namespace AfvalOphaler
             //}
         }
 
-        public bool EvaluateSwap1(out Node toRep, out double spaceLeft, out double timeLeft)
+        public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn)
         {
-            toRep = null;
-            spaceLeft = double.NaN;
-            timeLeft = double.NaN;
+            toSwapOut = null;
+            space_swapIn = double.NaN;
+            time_swapIn = double.NaN;
 
-
-            if (!GetRandomNode(out Node chosen)) return false;
-            if (chosen.Data.Frequency > 1) return false;
-            if (chosen.IsDump) return false;
-
-            double deltaTime = chosen.Data.TimeToEmpty
-                                + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
-                                + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId];
-
-            timeLeft = TimeLeft + deltaTime;
-            spaceLeft = roomLefts[chosen.TourIndex] + chosen.Data.VolPerContainer * chosen.Data.NumContainers;
-            toRep = chosen;
-            return true;
-        }
-
-        public bool EvaluateSwap2(Node toIns, double reqSpace, double reqTime, out Node toRep)
-        {
-            toRep = null;
-
-            if (reqTime > TimeLeft) return false;
-
-            List<Node> cands = ToList();
             HashSet<int> dones = new HashSet<int>();
-
-            Node chosen = null;
-
-            while (true)
+            for(int i = 0; i < nodes.Count && i < lim; i++)
             {
                 int ind;
-                do ind = StaticRandom.Next(0, cands.Count); while (!dones.Add(ind));
-                chosen = cands[ind];
-                if (roomLefts[chosen.TourIndex] < reqSpace) continue;
+                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
+                Node swapOut = nodes[ind];
 
+                if (swapOut.Data.Frequency > 1) continue;
+                if (swapOut.IsDump) continue;
+
+                double deltaTime = swapOut.Data.TimeToEmpty
+                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                    + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId];
+
+                toSwapOut = swapOut;
+                time_swapIn = TimeLeft + deltaTime;
+                break;
             }
-
-
-            //if (!GetRandomNode(out Node chosen)) return false;
-            //if (chosen.Data.Frequency > 1) return false;
-            //if (chosen.IsDump) return false;
-
+            if (toSwapOut == null) return false;
+            space_swapIn = roomLefts[toSwapOut.TourIndex] + toSwapOut.Data.VolPerContainer * toSwapOut.Data.NumContainers;
+            return true;
         }
 
-        private bool GetRandomNode(out Node chosen)
+        public bool EvaluateSwap2(Node ToSwapIn, double space_swapOut, double time_swapOut, out Node toSwapOut, out double deltaTime)
         {
-            chosen = null;
-            List<Node> nodes = ToList();
-            if (nodes.Count == 0) return false;
-            chosen = nodes[StaticRandom.Next(0, nodes.Count)];
+            toSwapOut = null;
+            deltaTime = double.NaN;
+
+            HashSet<int> dones = new HashSet<int>();
+            for(int i = 0; i < nodes.Count && i < lim; i++)
+            {
+                int ind;
+                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
+                Node swapOut = nodes[ind];
+
+                if (swapOut.IsDump || swapOut.Data.Frequency < 1) continue;
+
+                //Check of chosen past op de plek van toIns
+                double reqS_swapOut = swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
+
+                if (reqS_swapOut > space_swapOut) continue;
+
+                double reqT_swapOut = swapOut.Data.TimeToEmpty
+                    + GD.JourneyTime[ToSwapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                    + GD.JourneyTime[swapOut.Data.MatrixId, ToSwapIn.Next.Data.MatrixId];
+
+                if (reqT_swapOut > time_swapOut) continue;
+
+
+                //Check of toIns past op de plek van chosen
+                double space_swapIn = roomLefts[swapOut.TourIndex] 
+                    + swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
+
+                double reqS_swapIn = ToSwapIn.Data.VolPerContainer * ToSwapIn.Data.NumContainers;
+
+                if (reqS_swapIn > space_swapIn) continue;
+
+                double time_swapIn = TimeLeft
+                    + swapOut.Data.TimeToEmpty
+                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                    + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId];
+
+                double reqT_swapIn = ToSwapIn.Data.TimeToEmpty
+                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, ToSwapIn.Data.MatrixId]
+                    + GD.JourneyTime[ToSwapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
+
+                if (reqT_swapIn > time_swapIn) continue;
+
+                deltaTime = (reqT_swapIn - time_swapIn) + (reqT_swapOut - time_swapOut);
+                toSwapOut = swapOut;
+            }
+
+            if (toSwapOut == null) return false;
             return true;
+        }
+
+        public void Swap1(Node swapIn, Node swapOut)
+        {
+            TimeLeft = TimeLeft
+                + swapOut.Data.TimeToEmpty
+                + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
+                - swapIn.Data.TimeToEmpty
+                - GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                - GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
+
+            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
+                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
+                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
+
+            Node temp = swapOut.Next;
+            swapOut.Next = swapIn.Next;
+            swapIn.Next.Prev = swapOut;
+            swapIn.Next = temp;
+            temp.Prev = swapIn;
+        }
+
+        public void Swap2(Node swapIn, Node swapOut)
+        {
+            Node temp = swapOut.Prev;
+            swapOut.Prev = swapIn.Prev;
+            swapIn.Prev.Next = swapOut;
+            swapIn.Prev = temp;
+            temp.Next = swapIn;
+
+            TimeLeft = TimeLeft
+                - swapIn.Data.TimeToEmpty
+                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId]
+                + swapOut.Data.TimeToEmpty
+                + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId];
+
+            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
+                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
+                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
         }
         #endregion
 
