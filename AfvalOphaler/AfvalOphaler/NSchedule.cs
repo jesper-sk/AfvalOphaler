@@ -458,12 +458,12 @@ namespace AfvalOphaler
                 d1 = StaticRandom.Next(0, 5);
                 t1 = StaticRandom.Next(0, 2);
                 //Console.WriteLine($"Swap1: day {d1} truck {t1}");
-                if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double ss1, out double ts1))
+                if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double ss1, out double ts1, out double tl))
                 {
                     do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
                     do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
                     //Console.WriteLine($"Evaluated. Swap2: day {d2} truck {t2}");
-                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, out toSwap2, out double dT))
+                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, tl, out toSwap2, out double dT))
                     {
                         deltaTime = dT;
                         deltaPenalty = 0;
@@ -799,11 +799,12 @@ namespace AfvalOphaler
             //}
         }
 
-        public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn)
+        public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn, out double time_left)
         {
             toSwapOut = null;
             space_swapIn = double.NaN;
             time_swapIn = double.NaN;
+            time_left = double.NaN;
 
             HashSet<int> dones = new HashSet<int>();
             for(int i = 0; i < nodes.Count && i < lim; i++)
@@ -812,8 +813,7 @@ namespace AfvalOphaler
                 do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
                 Node swapOut = nodes[ind];
 
-                if (swapOut.Data.Frequency > 1) continue;
-                if (swapOut.IsDump) continue;
+                if (swapOut.Data.Frequency > 1 || swapOut.IsDump) continue;
 
                 double deltaTime = swapOut.Data.TimeToEmpty
                     + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
@@ -821,6 +821,7 @@ namespace AfvalOphaler
 
                 toSwapOut = swapOut;
                 time_swapIn = TimeLeft + deltaTime;
+                time_left = TimeLeft;
                 break;
             }
             if (toSwapOut == null) return false;
@@ -828,7 +829,7 @@ namespace AfvalOphaler
             return true;
         }
 
-        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, out Node toSwapOut, out double deltaTime)
+        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, out double deltaTime)
         {
             toSwapOut = null;
             deltaTime = double.NaN;
@@ -840,7 +841,7 @@ namespace AfvalOphaler
                 do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
                 Node swapOut = nodes[ind];
 
-                if (swapOut.IsDump || swapOut.Data.Frequency > 1) continue;
+                if (swapOut.Data.Frequency > 1 || swapOut.IsDump) continue;
 
                 //Check of chosen past op de plek van toIns
                 double reqS_swapOut = swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
@@ -871,8 +872,12 @@ namespace AfvalOphaler
                     + GD.JourneyTime[toSwapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
 
                 if (reqT_swapIn > time_swapIn) continue;
+                // time_swapin = tijd die het oplevert om swapOut weg te halen + timeleft van dag swapOut
+                // reqT_swapin = tijd die het kost om swapIn in te voegen.
 
-                deltaTime = (reqT_swapIn - time_swapIn) + (reqT_swapOut - time_swapOut);
+                // time_swapout = tijd die het oplevert om swapIn weg te halen + timeleft van dag swapIn
+                // reqT_swapout = tijd die het kost om swapOut in de dag van swapIn te zetten
+                deltaTime = (reqT_swapIn - (time_swapIn - TimeLeft)) + (reqT_swapOut - (time_swapOut - time_leftOut));
                 toSwapOut = swapOut;
             }
 
@@ -880,6 +885,11 @@ namespace AfvalOphaler
             return true;
         }
 
+        // Total swap operator:
+        // a b c && 1 2 3 => a 2 c && 1 b 3
+
+        //  
+        // 
         public void Swap1(Node swapIn, Node swapOut)
         {
             TimeLeft = TimeLeft
