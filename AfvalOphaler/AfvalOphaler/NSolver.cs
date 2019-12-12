@@ -267,33 +267,33 @@ namespace AfvalOphaler
             }
         }
 
-        private readonly object lockobject = new object();
-        void AddScheduleToTop(ScheduleResult s)
-        {
-            #region Top10 [DEPRICATED]
-            ////Console.WriteLine("Pushing schedule to ranking: " + s.Score);
-            //double s_score = s.Score;
-            //for (int i = 0; i < 10; i++)
-            //    if (top10[i] == null) top10[i] = s;
-            //    else if (s_score < top10[i].Score)
-            //    {
-            //        for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
-            //        top10[i] = s;
-            //    }
-            #endregion
-            lock (lockobject) 
-            {
-                if (s.Score < best.Score) best = s;
-            }
-        }
-        void UpdateStatus(int taskId, string update)
-        {
-            lock (lockobject)
-            {
-                Console.SetCursorPosition(0, taskId + 1);
-                Console.WriteLine($"Task {taskId}: {update}");
-            }
-        }
+        //private readonly object lockobject = new object();
+        //void AddScheduleToTop(ScheduleResult s)
+        //{
+        //    #region Top10 [DEPRICATED]
+        //    ////Console.WriteLine("Pushing schedule to ranking: " + s.Score);
+        //    //double s_score = s.Score;
+        //    //for (int i = 0; i < 10; i++)
+        //    //    if (top10[i] == null) top10[i] = s;
+        //    //    else if (s_score < top10[i].Score)
+        //    //    {
+        //    //        for (int j = 9; j > i; j--) top10[j] = top10[j - 1];
+        //    //        top10[i] = s;
+        //    //    }
+        //    #endregion
+        //    lock (lockobject) 
+        //    {
+        //        if (s.Score < best.Score) best = s;
+        //    }
+        //}
+        //void UpdateStatus(int taskId, string update)
+        //{
+        //    lock (lockobject)
+        //    {
+        //        Console.SetCursorPosition(0, taskId + 1);
+        //        Console.WriteLine($"Task {taskId}: {update}");
+        //    }
+        //}
         #endregion
 
     }
