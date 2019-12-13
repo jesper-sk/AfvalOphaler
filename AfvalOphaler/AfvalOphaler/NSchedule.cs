@@ -463,15 +463,14 @@ namespace AfvalOphaler
                 d1 = StaticRandom.Next(0, 5);
                 t1 = StaticRandom.Next(0, 2);
                 //Console.WriteLine($"Swap1: day {d1} truck {t1}");
-                if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double ss1, out double ts1, out double tl))
+                if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double roomLeft_d1, out double freeTime_d1, out double timeLeft_d1))
                 {
                     do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
                     do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
                     //Console.WriteLine($"Evaluated. Swap2: day {d2} truck {t2}");
-                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, tl, out toSwap2, log, out dt1, out dt2))
+                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, roomLeft_d1, freeTime_d1, timeLeft_d1, out toSwap2, log, out dt1, out dt2))
                     {
                         deltaTime = dt1 + dt2;
-
                         deltaPenalty = 0;
                         //Console.WriteLine("Swap!");
                         return true;
@@ -495,14 +494,18 @@ namespace AfvalOphaler
                     $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
                     $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
 
-                State.Duration -= State.DayRoutes[d1][t1].Duration;
-                State.Duration -= State.DayRoutes[d2][t2].Duration;
+                //State.Duration -= State.DayRoutes[d1][t1].Duration;
+                //State.Duration -= State.DayRoutes[d2][t2].Duration;
+                State.Duration += DeltaTime;
 
                 State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1, log, dt1);
                 State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2, log, dt2);
+                int tempTourIndex = toSwap1.TourIndex;
+                toSwap1.TourIndex = toSwap2.TourIndex;
+                toSwap2.TourIndex = tempTourIndex;
 
-                State.Duration += State.DayRoutes[d1][t1].Duration;
-                State.Duration += State.DayRoutes[d2][t2].Duration;
+                //State.Duration += State.DayRoutes[d1][t1].Duration;
+                //State.Duration += State.DayRoutes[d2][t2].Duration;
 
                 log.AppendLine($"---\nAfter swap:\n" +
                     $"Roomlefts after:\n" +
@@ -512,7 +515,7 @@ namespace AfvalOphaler
                     $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
                     $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
 
-                if (true)//State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
+                if (false)//State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
                 {
                     Console.WriteLine("JOCHIE GAAT NIET GOED!");
                     Console.WriteLine("Stats in evaluate:");
@@ -672,6 +675,236 @@ namespace AfvalOphaler
         }
         #endregion
 
+        #region Evaluate
+        public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
+        {
+            //Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
+            deltaTime = double.NaN;
+            whereToAdd = null;
+            if (toAdd.TimeToEmpty > TimeLeft)
+            {
+                //Console.WriteLine("Not enough time left, returning false...");
+                return false;
+            }
+
+            double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers;
+            //Console.WriteLine($"Space needed: {totalSpaceOfOrder}");
+            List<int> candidateTours = new List<int>(roomLefts.Count);
+            for (int i = 0; i < roomLefts.Count; i++)
+            {
+                if (roomLefts[i] >= totalSpaceOfOrder)
+                {
+                    candidateTours.Add(i);
+                    //Console.WriteLine($"Space: {roomLefts[i]}");
+                }
+            }
+            //Console.WriteLine($"Candidate tourIndices: {Util.ListToString(candidateTours)}");
+            List<Node> candidateNodes = new List<Node>();
+            foreach (int i in candidateTours)
+            {
+                //Console.WriteLine($"Tour {i}");
+                foreach (Node curr in Tours[i])
+                {
+                    //Console.WriteLine($"Node {curr.Data.OrderId}");
+                    if (TimeLeft >
+                            toAdd.TimeToEmpty
+                                + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
+                                + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
+                                - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
+                    {
+                        //Console.WriteLine($"found candidate, adding to list");
+                        candidateNodes.Add(curr);
+                    }
+                    else
+                    {
+                        //Console.WriteLine($"Nog enough time left in day...");
+                    }
+                }
+            }
+
+            if (candidateNodes.Count > 0)
+            {
+                Random rnd = new Random();
+                whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                while (whereToAdd.Data.OrderId == toAdd.OrderId) whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
+                deltaTime = toAdd.TimeToEmpty
+                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
+                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
+                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                return true;
+                //Console.WriteLine($"Adding next to {whereToAdd}");
+                //Console.WriteLine($"Room left: {roomLefts[whereToAdd.TourIndex] - totalSpaceOfOrder}");
+            }
+            return false;
+        }
+        public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
+        {
+            toRemove = null;
+            deltaTime = double.NaN;
+
+            HashSet<int> dones = new HashSet<int>();
+            for (int i = 0; i < nodes.Count && i < lim; i++)
+            {
+                int ind;
+                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
+                Node chosen = nodes[ind];
+
+                if (chosen.Data.Frequency > 1) continue;
+                if (chosen.IsDump) continue;
+
+                deltaTime = GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Next.Data.MatrixId]
+                    - (chosen.Data.TimeToEmpty
+                        + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
+                        + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId]);
+
+                if (deltaTime > TimeLeft) continue;
+                toRemove = chosen;
+                break;
+            }
+
+            if (toRemove == null) return false;
+            return true;
+
+            //if (theChosenOne.IsDump)
+            //{
+            //    if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
+            //    {
+            //        return false;
+            //    }
+            //}
+        }
+
+        public bool EvaluateSwap1(out Node toSwapOut, out double vrije_ruimte_als_swap1_weg_is, out double tijd_die_vrijkomt_als_swap1_wordt_verwijderd, out double time_left)
+        {
+            toSwapOut = null;
+            vrije_ruimte_als_swap1_weg_is = double.NaN;
+            tijd_die_vrijkomt_als_swap1_wordt_verwijderd = double.NaN;
+            time_left = double.NaN;
+
+            HashSet<int> dones = new HashSet<int>();
+            for (int i = 0; i < nodes.Count && i < lim; i++)
+            {
+                // Pak random node
+                int index;
+                do index = StaticRandom.Next(0, nodes.Count); while (!dones.Add(index));
+                Node swap1 = nodes[index];
+
+                // Stop als swap1 een dump is of freq > 1
+                if (swap1.Data.Frequency > 1 || swap1.IsDump) continue;
+
+                // Bereken de tijd die vrijkomt als we swap1 verwijderen
+                tijd_die_vrijkomt_als_swap1_wordt_verwijderd = 0
+                    + TimeLeft
+                    + swap1.Data.TimeToEmpty
+                    + GD.JourneyTime[swap1.Prev.Data.MatrixId, swap1.Data.MatrixId]
+                    + GD.JourneyTime[swap1.Data.MatrixId, swap1.Next.Data.MatrixId];
+
+                // Bereken de vrije ruimte als swap1 weg is
+                vrije_ruimte_als_swap1_weg_is =
+                    roomLefts[swap1.TourIndex]
+                    + swap1.Data.VolPerContainer * swap1.Data.NumContainers;
+
+                time_left = TimeLeft;
+                toSwapOut = swap1;
+                return true;
+                //break;
+            }
+            //if (toSwapOut == null) return false;
+            //return true;
+            return false;
+        }
+
+        public bool EvaluateSwap2(Node swap1, double vrije_ruimte_in_dag1, double vrije_tijd_in_dag1_met_timeleft_dag1, double timeleft_dag1, out Node toSwapOut, StringBuilder log, out double dt1, out double dt2)
+        {
+            toSwapOut = null;
+            dt1 = dt2 = double.NaN;
+
+            HashSet<int> dones = new HashSet<int>();
+            for (int i = 0; i < nodes.Count && i < lim; i++)
+            {
+                // Kies random node
+                int index;
+                do index = StaticRandom.Next(0, nodes.Count); while (!dones.Add(index));
+                Node swap2 = nodes[index];
+
+                // Stop als swap2 dump is of freq > 1
+                if (swap2.Data.Frequency > 1 || swap2.IsDump) continue;
+
+                //
+                //Check of swap2 past op de plek van swap1
+                //
+
+                // Bereken de benodigde vrije ruimte voor swap2
+                double benodigd_ruimte_swap2 = swap2.Data.VolPerContainer * swap2.Data.NumContainers;
+
+                // Stop als er niet genoeg spaceLeft in dag1 is
+                if (benodigd_ruimte_swap2 > vrije_ruimte_in_dag1) continue;
+
+                // Bereken benodigde tijd in dag1 als swap2 daar gezet wordt
+                double benodigde_tijd_swap2 = 0
+                    + swap2.Data.TimeToEmpty
+                    + GD.JourneyTime[swap1.Prev.Data.MatrixId, swap2.Data.MatrixId]
+                    + GD.JourneyTime[swap2.Data.MatrixId, swap1.Next.Data.MatrixId];
+
+                // Stop als er niet genoeg tijd over is in dag1 voor swap2
+                if (benodigde_tijd_swap2 > vrije_tijd_in_dag1_met_timeleft_dag1) continue;
+
+                //
+                //Check of swap1 past op de plek van swap2
+                //
+
+                // Bereken de vrije ruimte op dag2
+                double vrije_ruimte_dag2 = roomLefts[swap2.TourIndex]
+                    + swap2.Data.VolPerContainer * swap2.Data.NumContainers;
+
+                // Bereken de benodigde ruimte voor swap1
+                double benodigde_ruimte_swap1 = swap1.Data.VolPerContainer * swap1.Data.NumContainers;
+
+                // Stop als er niet genoeg vrije ruimte in dag2 is voor swap1
+                if (benodigde_ruimte_swap1 > vrije_ruimte_dag2) continue;
+
+                // Bereken de vrije tijd in dag
+                double vrije_tijd_in_dag2_met_timeleft_dag2 = 0
+                    + TimeLeft
+                    + swap2.Data.TimeToEmpty
+                    + GD.JourneyTime[swap2.Prev.Data.MatrixId, swap2.Data.MatrixId]
+                    + GD.JourneyTime[swap2.Data.MatrixId, swap2.Next.Data.MatrixId];
+
+                // Bereken de benodigde tijd voor swap1
+                double benodigde_tijd_swap1 = 0
+                    + swap1.Data.TimeToEmpty
+                    + GD.JourneyTime[swap2.Prev.Data.MatrixId, swap1.Data.MatrixId]
+                    + GD.JourneyTime[swap1.Data.MatrixId, swap2.Next.Data.MatrixId];
+
+                // Stop als er niet genoeg vrije tijd is in dag2
+                if (benodigde_tijd_swap1 > vrije_tijd_in_dag2_met_timeleft_dag2) continue;
+
+                log.AppendLine($"rS_in: {benodigde_ruimte_swap1}, space_swapIn: {vrije_ruimte_dag2}\n" +
+                    $"rS_out: {benodigd_ruimte_swap2}, space_swapOut: {vrije_ruimte_in_dag1}");
+                log.AppendLine($"rT_in: {benodigde_tijd_swap1}, t_in: {vrije_tijd_in_dag2_met_timeleft_dag2}, timeleft: {TimeLeft}, tnew_in: {vrije_tijd_in_dag2_met_timeleft_dag2 - TimeLeft} \n" +
+                    $"rT_out: {benodigde_tijd_swap2}, t_out: {vrije_tijd_in_dag1_met_timeleft_dag1}, timeleftout: {timeleft_dag1}, tnew_out: {vrije_tijd_in_dag1_met_timeleft_dag1 - timeleft_dag1}");
+
+                dt1 = benodigde_tijd_swap2 - (vrije_tijd_in_dag1_met_timeleft_dag1 - timeleft_dag1);
+                dt2 = benodigde_tijd_swap1 - (vrije_tijd_in_dag2_met_timeleft_dag2 - TimeLeft);
+
+                log.AppendLine($"Delta d1: {dt1}");
+                log.AppendLine($"Delta d2: {dt2}");
+
+                log.AppendLine($"deltaTime: {dt1 + dt2}");
+
+                // dt1: Verschil in TimeLeft voor d1t1, pos iff kost tijd om swap1 weg te halen uit zijn dag en swap2 daar te zetten
+                // dt2: Verschil in TimeLeft voor d2t2, pos iff kost tijd om swap2 hier weg te halen en swap1 hier te zetten.
+
+                toSwapOut = swap2;
+                return true;
+            }
+
+            //if (toSwapOut == null) return false;
+            //return true;
+            return false;
+        }
+        #endregion
+
         #region Tour Modifications
         public Node AddOrder(Order order, Node nextTo)
         {
@@ -801,208 +1034,6 @@ namespace AfvalOphaler
             roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
                 + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
                 - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
-        }
-        #endregion
-
-        #region Evaluate
-        public bool EvaluateRandomAdd(Order toAdd, out double deltaTime, out Node whereToAdd)
-        {
-            //Console.WriteLine($"Evaluating addition of {toAdd.OrderId}");
-            deltaTime = double.NaN;
-            whereToAdd = null;
-            if (toAdd.TimeToEmpty > TimeLeft)
-            {
-                //Console.WriteLine("Not enough time left, returning false...");
-                return false;
-            }
-
-            double totalSpaceOfOrder = toAdd.VolPerContainer * toAdd.NumContainers;
-            //Console.WriteLine($"Space needed: {totalSpaceOfOrder}");
-            List<int> candidateTours = new List<int>(roomLefts.Count);
-            for (int i = 0; i < roomLefts.Count; i++)
-            {
-                if (roomLefts[i] >= totalSpaceOfOrder)
-                {
-                    candidateTours.Add(i);
-                    //Console.WriteLine($"Space: {roomLefts[i]}");
-                }
-            }
-            //Console.WriteLine($"Candidate tourIndices: {Util.ListToString(candidateTours)}");
-            List<Node> candidateNodes = new List<Node>();
-            foreach (int i in candidateTours)
-            {
-                //Console.WriteLine($"Tour {i}");
-                foreach (Node curr in Tours[i])
-                {
-                    //Console.WriteLine($"Node {curr.Data.OrderId}");
-                    if (TimeLeft >
-                            toAdd.TimeToEmpty
-                                + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
-                                + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
-                                - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
-                    {
-                        //Console.WriteLine($"found candidate, adding to list");
-                        candidateNodes.Add(curr);
-                    }
-                    else
-                    {
-                        //Console.WriteLine($"Nog enough time left in day...");
-                    }
-                }
-            }
-
-            if (candidateNodes.Count > 0)
-            {             
-                Random rnd = new Random();
-                whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
-                while (whereToAdd.Data.OrderId == toAdd.OrderId) whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
-                deltaTime = toAdd.TimeToEmpty
-                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
-                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
-                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
-                return true;
-                //Console.WriteLine($"Adding next to {whereToAdd}");
-                //Console.WriteLine($"Room left: {roomLefts[whereToAdd.TourIndex] - totalSpaceOfOrder}");
-            }
-            return false;
-        }
-        public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
-        {
-            toRemove = null;
-            deltaTime = double.NaN;
-
-            HashSet<int> dones = new HashSet<int>();
-            for(int i = 0; i < nodes.Count && i < lim; i++)
-            {
-                int ind;
-                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
-                Node chosen = nodes[ind];
-
-                if (chosen.Data.Frequency > 1) continue;
-                if (chosen.IsDump) continue;
-
-                deltaTime = GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Next.Data.MatrixId]
-                    - (chosen.Data.TimeToEmpty
-                        + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
-                        + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId]);
-
-                if (deltaTime > TimeLeft) continue;
-                toRemove = chosen;
-                break;
-            }
-
-            if (toRemove == null) return false;
-            return true;
-
-            //if (theChosenOne.IsDump)
-            //{
-            //    if (!((roomLefts[theChosenOne.TourIndex - 1] - (100000 - roomLefts[theChosenOne.TourIndex])) > 0))
-            //    {
-            //        return false;
-            //    }
-            //}
-        }
-
-        public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn, out double time_left)
-        {
-            toSwapOut = null;
-            space_swapIn = double.NaN;
-            time_swapIn = double.NaN;
-            time_left = double.NaN;
-
-            HashSet<int> dones = new HashSet<int>();
-            for(int i = 0; i < nodes.Count && i < lim; i++)
-            {
-                int ind;
-                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
-                Node swapOut = nodes[ind];
-
-                if (swapOut.Data.Frequency > 1 || swapOut.IsDump) continue;
-
-                double deltaTime = swapOut.Data.TimeToEmpty
-                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                    + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId];
-
-                toSwapOut = swapOut;
-                time_swapIn = TimeLeft + deltaTime;
-                time_left = TimeLeft;
-                space_swapIn = roomLefts[toSwapOut.TourIndex] + toSwapOut.Data.VolPerContainer * toSwapOut.Data.NumContainers;
-                return true;
-                //break;
-            }
-            //if (toSwapOut == null) return false;
-            //return true;
-            return false;
-        }
-
-        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, StringBuilder log, out double dt1, out double dt2)
-        {
-            toSwapOut = null;
-            dt1 = dt2 = double.NaN;
-
-            HashSet<int> dones = new HashSet<int>();
-            for(int i = 0; i < nodes.Count && i < lim; i++)
-            {
-                int ind;
-                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
-                Node swapOut = nodes[ind];
-
-                if (swapOut.Data.Frequency > 1 || swapOut.IsDump) continue;
-
-                //Check of chosen past op de plek van toIns
-                double reqS_swapOut = swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
-
-                if (reqS_swapOut > space_swapOut) continue;
-
-                double reqT_swapOut = swapOut.Data.TimeToEmpty
-                    + GD.JourneyTime[toSwapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                    + GD.JourneyTime[swapOut.Data.MatrixId, toSwapIn.Next.Data.MatrixId];
-
-                if (reqT_swapOut > time_swapOut) continue;
-
-                //Check of toIns past op de plek van chosen
-                double space_swapIn = roomLefts[swapOut.TourIndex] 
-                    + swapOut.Data.VolPerContainer * swapOut.Data.NumContainers;
-
-                double reqS_swapIn = toSwapIn.Data.VolPerContainer * toSwapIn.Data.NumContainers;
-
-                if (reqS_swapIn > space_swapIn) continue;
-
-                double time_swapIn = TimeLeft
-                    + swapOut.Data.TimeToEmpty
-                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                    + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId];
-
-                double reqT_swapIn = toSwapIn.Data.TimeToEmpty
-                    + GD.JourneyTime[swapOut.Prev.Data.MatrixId, toSwapIn.Data.MatrixId]
-                    + GD.JourneyTime[toSwapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
-
-                if (reqT_swapIn > time_swapIn) continue;
-                // time_swapin = tijd die het oplevert om swapOut weg te halen + timeleft van dag swapOut
-                // reqT_swapin = tijd die het kost om swapIn in te voegen.
-
-                // time_swapout = tijd die het oplevert om swapIn weg te halen + timeleft van dag swapIn
-                // reqT_swapout = tijd die het kost om swapOut in de dag van swapIn te zetten
-                log.AppendLine($"rS_in: {reqS_swapIn}, space_swapIn: {space_swapIn}\n" +
-                    $"rS_out: {reqS_swapOut}, space_swapOut: {space_swapOut}");
-                log.AppendLine($"rT_in: {reqT_swapIn}, t_in: {time_swapIn}, timeleft: {TimeLeft}, tnew_in: {time_swapIn - TimeLeft} \n" +
-                    $"rT_out: {reqT_swapOut}, t_out: {time_swapOut}, timeleftout: {time_leftOut}, tnew_out: {time_swapOut - time_leftOut}");
-                dt1 = reqT_swapOut - (time_swapOut - time_leftOut);
-                dt2 = reqT_swapIn - (time_swapIn - TimeLeft);
-                log.AppendLine($"Delta d1: {dt1}");
-                log.AppendLine($"Delta d2: {dt2}");
-
-                //deltaTime = (reqT_swapIn - (time_swapIn - TimeLeft)) + (reqT_swapOut - (time_swapOut - time_leftOut));
-
-                log.AppendLine($"deltaTime: {dt1 + dt2}");
-
-                toSwapOut = swapOut;
-                return true;
-            }
-
-            //if (toSwapOut == null) return false;
-            //return true;
-            return false;
         }
         #endregion
 

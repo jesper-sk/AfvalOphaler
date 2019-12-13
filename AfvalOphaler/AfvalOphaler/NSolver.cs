@@ -1,4 +1,4 @@
-﻿//#define STATUS
+﻿#define STATUS
 
 using System;
 using System.Collections.Generic;
@@ -106,7 +106,7 @@ namespace AfvalOphaler
                 new SaLocalSolver(start, 1, 0.99999)
             };
             foreach (LocalSolver ls in solvs) ls.Init();
-            s = 1;
+            s = 0;
 
             bool stop = false;
             i = 0; int noChange = 0;
