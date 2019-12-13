@@ -446,9 +446,11 @@ namespace AfvalOphaler
             int t1;
             int t2;
 
+            private StringBuilder log;
+
             public RandomSwapOperation(Schedule s) : base(s)
             {
-
+                log = new StringBuilder();
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
@@ -464,7 +466,7 @@ namespace AfvalOphaler
                     do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
                     do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
                     //Console.WriteLine($"Evaluated. Swap2: day {d2} truck {t2}");
-                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, tl, out toSwap2, out double dT))
+                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, ss1, ts1, tl, out toSwap2, out double dT, log))
                     {
                         deltaTime = dT;
                         deltaPenalty = 0;
@@ -479,29 +481,38 @@ namespace AfvalOphaler
 
             protected override void _Apply()
             {
-                //Console.WriteLine($"Applying swap between:\n" +
-                //    $"toSwap1: {toSwap1}\n" +
-                //    $"toSwap2: {toSwap2}\n" +
-                //    $"Roomlefts before:\n" +
-                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
-                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
-                //    $"Duration before swap: {State.Duration}\n" +
-                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
-                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+                log.AppendLine($"Applying swap:\n" +
+                    $"toSwap1: {toSwap1}\n" +
+                    $"toSwap2: {toSwap2}\n" +
+                    $"Roomlefts before:\n" +
+                    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                    $"Duration before swap: {State.Duration}\n" +
+                    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
                 State.Duration -= State.DayRoutes[d1][t1].Duration;
                 State.Duration -= State.DayRoutes[d2][t2].Duration;
                 State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1);
                 State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2);
                 State.Duration += State.DayRoutes[d1][t1].Duration;
                 State.Duration += State.DayRoutes[d2][t2].Duration;
-                //Console.WriteLine($"---\n" +
-                //    $"Roomlefts after:\n" +
-                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
-                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
-                //    $"Duration before swap: {State.Duration}\n" +
-                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
-                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
-                //Console.WriteLine();
+                log.AppendLine($"---\n" +
+                    $"Roomlefts after:\n" +
+                    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                    $"Duration before swap: {State.Duration}\n" +
+                    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+                if (State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0)
+                {
+                    Console.WriteLine("JOCHIE GAAT NIET GOED!");
+                    Console.WriteLine("Stats in evaluate:");
+                    Console.WriteLine(log.ToString());
+                    Console.WriteLine("Stats after swap:");
+                    Console.WriteLine($"d1t1: {State.DayRoutes[d1][t1].TimeLeft}\n" +
+                        $"d2t2: {State.DayRoutes[d2][t2].TimeLeft}");
+                    Console.WriteLine("=====");
+                }
             }
 
             public override string ToString() => $"RandomSwapOperation, Evaluated {IsEvaluated}";
@@ -849,7 +860,7 @@ namespace AfvalOphaler
             return false;
         }
 
-        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, out double deltaTime)
+        public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, out double deltaTime, StringBuilder log)
         {
             toSwapOut = null;
             deltaTime = double.NaN;
@@ -897,12 +908,15 @@ namespace AfvalOphaler
 
                 // time_swapout = tijd die het oplevert om swapIn weg te halen + timeleft van dag swapIn
                 // reqT_swapout = tijd die het kost om swapOut in de dag van swapIn te zetten
-                //Console.WriteLine($"rS_in: {reqS_swapIn}, space_swapIn: {space_swapIn}\n" +
-                //    $"rS_out: {reqS_swapOut}, space_swapOut: {space_swapOut}");
-                //Console.WriteLine($"rT_in: {reqT_swapIn}, t_in: {time_swapIn}, timeleft: {TimeLeft} \n" +
-                //    $"rT_out: {reqT_swapOut}, t_out: {time_swapOut}, timeleftout: {time_leftOut}");
+                log.AppendLine($"rS_in: {reqS_swapIn}, space_swapIn: {space_swapIn}\n" +
+                    $"rS_out: {reqS_swapOut}, space_swapOut: {space_swapOut}");
+                log.AppendLine($"rT_in: {reqT_swapIn}, t_in: {time_swapIn}, timeleft: {TimeLeft} \n" +
+                    $"rT_out: {reqT_swapOut}, t_out: {time_swapOut}, timeleftout: {time_leftOut}");
+
                 deltaTime = (reqT_swapIn - (time_swapIn - TimeLeft)) + (reqT_swapOut - (time_swapOut - time_leftOut));
-                //Console.WriteLine($"deltaTime: {deltaTime}");
+
+                log.AppendLine($"deltaTime: {deltaTime}");
+
                 toSwapOut = swapOut;
                 return true;
             }

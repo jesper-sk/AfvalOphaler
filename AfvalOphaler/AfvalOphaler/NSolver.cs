@@ -1,4 +1,4 @@
-﻿#define STATUS
+﻿//#define STATUS
 
 using System;
 using System.Collections.Generic;
@@ -113,10 +113,10 @@ namespace AfvalOphaler
             while (!stop)
             {
                 LocalSolver solv = solvs[s];
-                //double[] probs = new double[] { 1, 0, 0 };
-                double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 5 / 12.0, 0 / 12.0 };
+                //double[] probs = new double[] { 1, 0, 0, 0 }; // add only
+                double[] probs = new double[] { 0, 0, 0, 1 }; // Swap only
+                //double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 5 / 12.0, 0 / 12.0 };
                 //double[] probs = new double[] { 1 / 12.0, 4 / 12.0, 3 / 12.0, 4 / 12.0 };
-                //double[] probs = new double[] { 0, 0, 0, 1 };
                 if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChange = 0;
