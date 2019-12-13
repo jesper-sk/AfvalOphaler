@@ -482,6 +482,7 @@ namespace AfvalOphaler
             protected override void _Apply()
             {
                 log.AppendLine($"Applying swap:\n" +
+                    $"Before Swap:\n" +
                     $"toSwap1: {toSwap1}\n" +
                     $"toSwap2: {toSwap2}\n" +
                     $"Roomlefts before:\n" +
@@ -490,27 +491,31 @@ namespace AfvalOphaler
                     $"Duration before swap: {State.Duration}\n" +
                     $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
                     $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+
                 State.Duration -= State.DayRoutes[d1][t1].Duration;
                 State.Duration -= State.DayRoutes[d2][t2].Duration;
-                State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1);
-                State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2);
+
+                State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1, log);
+                State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2, log);
+
                 State.Duration += State.DayRoutes[d1][t1].Duration;
                 State.Duration += State.DayRoutes[d2][t2].Duration;
-                log.AppendLine($"---\n" +
+
+                log.AppendLine($"---\nAfter swap:\n" +
                     $"Roomlefts after:\n" +
                     $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
                     $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
-                    $"Duration before swap: {State.Duration}\n" +
+                    $"Duration after swap: {State.Duration}\n" +
                     $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
                     $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+
                 if (State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0)
                 {
                     Console.WriteLine("JOCHIE GAAT NIET GOED!");
                     Console.WriteLine("Stats in evaluate:");
                     Console.WriteLine(log.ToString());
-                    Console.WriteLine("Stats after swap:");
-                    Console.WriteLine($"d1t1: {State.DayRoutes[d1][t1].TimeLeft}\n" +
-                        $"d2t2: {State.DayRoutes[d2][t2].TimeLeft}");
+                    Console.WriteLine($"TimeLeft d1t1: {State.DayRoutes[d1][t1].TimeLeft}\n" +
+                        $"TimeLeft d2t2: {State.DayRoutes[d2][t2].TimeLeft}");
                     Console.WriteLine("=====");
                 }
             }
@@ -912,6 +917,8 @@ namespace AfvalOphaler
                     $"rS_out: {reqS_swapOut}, space_swapOut: {space_swapOut}");
                 log.AppendLine($"rT_in: {reqT_swapIn}, t_in: {time_swapIn}, timeleft: {TimeLeft} \n" +
                     $"rT_out: {reqT_swapOut}, t_out: {time_swapOut}, timeleftout: {time_leftOut}");
+                log.AppendLine($"Delta d1: {reqT_swapOut - (time_swapOut - time_leftOut)}");
+                log.AppendLine($"Delta d2: {reqT_swapIn - (time_swapIn - TimeLeft)}");
 
                 deltaTime = (reqT_swapIn - (time_swapIn - TimeLeft)) + (reqT_swapOut - (time_swapOut - time_leftOut));
 
@@ -931,15 +938,23 @@ namespace AfvalOphaler
 
         //  
         // 
-        public void Swap1(Node swapIn, Node swapOut)
+        public void Swap1(Node swapIn, Node swapOut, StringBuilder log)
         {
-            TimeLeft = TimeLeft
-                + swapOut.Data.TimeToEmpty
+            double deltaTime = swapOut.Data.TimeToEmpty
                 + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
                 + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
                 - swapIn.Data.TimeToEmpty
                 - GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
                 - GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
+            log.AppendLine($"Swap1:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
+            TimeLeft = TimeLeft + deltaTime;
+            log.AppendLine($"TimeLeftAfter: {TimeLeft}");
+                //+ swapOut.Data.TimeToEmpty
+                //+ GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                //+ GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
+                //- swapIn.Data.TimeToEmpty
+                //- GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                //- GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
 
             roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
                 + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
@@ -952,7 +967,7 @@ namespace AfvalOphaler
             temp.Prev = swapIn;
         }
 
-        public void Swap2(Node swapIn, Node swapOut)
+        public void Swap2(Node swapIn, Node swapOut, StringBuilder log)
         {
             Node temp = swapOut.Prev;
             swapOut.Prev = swapIn.Prev;
@@ -960,13 +975,24 @@ namespace AfvalOphaler
             swapIn.Prev = temp;
             temp.Next = swapIn;
 
-            TimeLeft = TimeLeft
-                + swapOut.Data.TimeToEmpty
-                + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
-                - swapIn.Data.TimeToEmpty
-                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
-                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
+            double deltaTime = 0
+                - swapOut.Data.TimeToEmpty
+                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                - GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
+                + swapIn.Data.TimeToEmpty
+                + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                + GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
+            log.AppendLine($"Swap2:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
+            TimeLeft = TimeLeft - deltaTime;
+            log.AppendLine($"TimeLeftAfter: {TimeLeft}");
+
+            //TimeLeft = TimeLeft
+            //    + swapOut.Data.TimeToEmpty
+            //    + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+            //    + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
+            //    - swapIn.Data.TimeToEmpty
+            //    - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+            //    - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
 
             roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
                 + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
