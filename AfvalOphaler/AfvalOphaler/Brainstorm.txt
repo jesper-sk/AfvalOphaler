@@ -21,14 +21,12 @@ http://178.85.229.78:8067/team/157557372232042770
 =============
 === TO DO ===
 =============
-- Loops vervangen voor een ding in dag
-	- Lijst van Storten (oftewel elke loop begint bij een index)
-	- lijst van ruimte over per dump-dump reeks (tour)
-	- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
-	- 2.5-opt: Bij elke switch checken of operatie mag
-	- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
-	
--AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
+
+- SWAP FIXEN
+- operators kunnen laten werken met hogere freq orders
+- dumps verwijderen / toevoegen
+- probability of operators dynamisch maken
+- andere zoekalgs implementeren
 
 ===========================
 = AANPAK MOEILIJKE DINGEN =
