@@ -453,6 +453,7 @@ namespace AfvalOphaler
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
+                //Console.WriteLine("Evaluating swap:");
                 deltaTime = double.NaN;
                 deltaPenalty = double.NaN;
                 d1 = StaticRandom.Next(0, 5);
@@ -478,12 +479,29 @@ namespace AfvalOphaler
 
             protected override void _Apply()
             {
+                //Console.WriteLine($"Applying swap between:\n" +
+                //    $"toSwap1: {toSwap1}\n" +
+                //    $"toSwap2: {toSwap2}\n" +
+                //    $"Roomlefts before:\n" +
+                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                //    $"Duration before swap: {State.Duration}\n" +
+                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
                 State.Duration -= State.DayRoutes[d1][t1].Duration;
                 State.Duration -= State.DayRoutes[d2][t2].Duration;
                 State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1);
                 State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2);
                 State.Duration += State.DayRoutes[d1][t1].Duration;
                 State.Duration += State.DayRoutes[d2][t2].Duration;
+                //Console.WriteLine($"---\n" +
+                //    $"Roomlefts after:\n" +
+                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                //    $"Duration before swap: {State.Duration}\n" +
+                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+                //Console.WriteLine();
             }
 
             public override string ToString() => $"RandomSwapOperation, Evaluated {IsEvaluated}";
@@ -822,11 +840,13 @@ namespace AfvalOphaler
                 toSwapOut = swapOut;
                 time_swapIn = TimeLeft + deltaTime;
                 time_left = TimeLeft;
-                break;
+                space_swapIn = roomLefts[toSwapOut.TourIndex] + toSwapOut.Data.VolPerContainer * toSwapOut.Data.NumContainers;
+                return true;
+                //break;
             }
-            if (toSwapOut == null) return false;
-            space_swapIn = roomLefts[toSwapOut.TourIndex] + toSwapOut.Data.VolPerContainer * toSwapOut.Data.NumContainers;
-            return true;
+            //if (toSwapOut == null) return false;
+            //return true;
+            return false;
         }
 
         public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, out double deltaTime)
@@ -877,12 +897,19 @@ namespace AfvalOphaler
 
                 // time_swapout = tijd die het oplevert om swapIn weg te halen + timeleft van dag swapIn
                 // reqT_swapout = tijd die het kost om swapOut in de dag van swapIn te zetten
+                //Console.WriteLine($"rS_in: {reqS_swapIn}, space_swapIn: {space_swapIn}\n" +
+                //    $"rS_out: {reqS_swapOut}, space_swapOut: {space_swapOut}");
+                //Console.WriteLine($"rT_in: {reqT_swapIn}, t_in: {time_swapIn}, timeleft: {TimeLeft} \n" +
+                //    $"rT_out: {reqT_swapOut}, t_out: {time_swapOut}, timeleftout: {time_leftOut}");
                 deltaTime = (reqT_swapIn - (time_swapIn - TimeLeft)) + (reqT_swapOut - (time_swapOut - time_leftOut));
+                //Console.WriteLine($"deltaTime: {deltaTime}");
                 toSwapOut = swapOut;
+                return true;
             }
 
-            if (toSwapOut == null) return false;
-            return true;
+            //if (toSwapOut == null) return false;
+            //return true;
+            return false;
         }
 
         // Total swap operator:

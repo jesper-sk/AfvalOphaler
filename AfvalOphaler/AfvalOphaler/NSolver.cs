@@ -96,7 +96,7 @@ namespace AfvalOphaler
             }
             #endregion
 
-            Console.WriteLine("Swapping");
+            //Console.WriteLine("Swapping");
 
             #region AllOperations
             stati[taskID] = SolverStatus.Doing_All;
@@ -114,8 +114,9 @@ namespace AfvalOphaler
             {
                 LocalSolver solv = solvs[s];
                 //double[] probs = new double[] { 1, 0, 0 };
-                //double[] probs = new double[] { 1 / 9.0, 6 / 9.0, 2 / 9.0, 0 };
-                double[] probs = new double[] { 0, 0, 0, 1 };
+                double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 5 / 12.0, 0 / 12.0 };
+                //double[] probs = new double[] { 1 / 12.0, 4 / 12.0, 3 / 12.0, 4 / 12.0 };
+                //double[] probs = new double[] { 0, 0, 0, 1 };
                 if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChange = 0;
