@@ -45,7 +45,7 @@ namespace AfvalOphaler
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
             int threads = 1;
-            int operationCount = 1;
+            int operationCount = 10;
             int maxIterations = 500000;
             int maxNoChange = 75000;
 
