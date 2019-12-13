@@ -110,6 +110,34 @@ namespace AfvalOphaler
             AwaitAndPrintResults();
 
 #elif CUSTOM
+            //Console.WriteLine($"Order {75}: id{orders[75]}");
+            //Console.WriteLine($"Order {23}: id{orders[23]}");
+            //Console.WriteLine($"Order {345}: {orders[345]}");
+            //Console.WriteLine($"Order {133}: id{orders[133]}");
+
+            Console.WriteLine($"t 0 -> 844: {GD.JourneyTime[0, 844]}");
+            Console.WriteLine($"t 844 -> 537: {GD.JourneyTime[844, 537]}");
+            Console.WriteLine($"t 537 -> 0: {GD.JourneyTime[537, 0]}");
+
+            DayRoute route1 = new DayRoute(0, 0);
+            Node first = route1.AddOrder(orders[75], route1.dumps[0]);
+            route1.AddOrder(orders[23], first);
+            route1.RemoveNode(route1.dumps[1]);
+
+            DayRoute route2 = new DayRoute(0, 1);
+            Node second = route2.AddOrder(orders[345], route2.dumps[0]);
+            route2.AddOrder(orders[133], second);
+            route2.RemoveNode(route2.dumps[1]);
+
+            Console.WriteLine(route1.ToString());
+            Console.WriteLine(route2.ToString());
+
+            route1.Swap1(second, first);
+            route2.Swap2(first, second);
+
+            Console.WriteLine(route1.ToString());
+            Console.WriteLine(route2.ToString());
+
 #endif
 #endif
             Console.ReadKey();

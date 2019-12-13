@@ -48,22 +48,31 @@ namespace AfvalOphaler
             double pen = CalculatePenalty();
             return dur + pen;
         }
+        //public double CalculateDuration()
+        //{
+        //    double duration = 0;
+        //    foreach (DayRoute[] bigDay in DayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
+        //    Duration = duration;
+        //    return duration;
+        //    //Loop l = dayRoutes[0][0].Loops[0];
+        //    //double duration = 30 + GD.JourneyTime[l.Start.Data.MatrixId, l.Start.Next.Data.MatrixId];
+        //    //Node curr = l.Start.Next;
+        //    //while (!curr.IsDump)
+        //    //{
+        //    //    duration += GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
+        //    //    curr = curr.Next;
+        //    //}
+        //    //return duration;
+        //}
+
         public double CalculateDuration()
         {
             double duration = 0;
-            foreach (DayRoute[] bigDay in DayRoutes) foreach (DayRoute day in bigDay) duration += day.Duration;
-            Duration = duration;
+            int prevOID = 0;
+            foreach(DayRoute[] day in DayRoutes) foreach(DayRoute dayRoute in day) foreach(Node order in dayRoute) duration += GD.JourneyTime[prevOID, prevOID = order.Data.OrderId];
             return duration;
-            //Loop l = dayRoutes[0][0].Loops[0];
-            //double duration = 30 + GD.JourneyTime[l.Start.Data.MatrixId, l.Start.Next.Data.MatrixId];
-            //Node curr = l.Start.Next;
-            //while (!curr.IsDump)
-            //{
-            //    duration += GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
-            //    curr = curr.Next;
-            //}
-            //return duration;
         }
+
         public double CalculatePenalty()
         {
             double penalty = 0;
@@ -467,7 +476,12 @@ namespace AfvalOphaler
                     {
                         deltaTime = dT;
                         deltaPenalty = 0;
-                        //Console.WriteLine("Swap!");
+
+                        //Console.WriteLine($"\nSwap between d{d1}t{t1} and d{d2}t{t2} authoristed, {toSwap1.Data.OrderId} from d{d1}t{t1} to d{d2}t{t2}, {toSwap2.Data.OrderId} from d{d2}t{t2} to d{d1}t{t1}");
+                        //Console.WriteLine($"Room left: d{d1}t{t1}: {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}, d{d2}t{t2}: {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}");
+                        //Console.WriteLine($"For d{d1}t{t1}: remove {toSwap1.Data.VolPerContainer * toSwap1.Data.NumContainers - toSwap2.Data.VolPerContainer * toSwap2.Data.NumContainers}");
+                        //Console.WriteLine($"For d{d2}t{t2}: remove {toSwap2.Data.VolPerContainer * toSwap2.Data.NumContainers - toSwap1.Data.VolPerContainer * toSwap1.Data.NumContainers}");
+                        //Console.ReadKey(true);
                         return true;
                     }
                 }
@@ -662,7 +676,7 @@ namespace AfvalOphaler
                     newSpaceTaken += curr.Data.NumContainers * curr.Data.VolPerContainer;
 
                 dumps.Insert(n.TourIndex, n);
-                roomLefts.Insert(n.TourIndex, 20000 - newSpaceTaken);
+                roomLefts.Insert(n.TourIndex, 100000 - newSpaceTaken);
                 roomLefts[n.TourIndex - 1] -= newSpaceTaken;
             }
 
@@ -690,14 +704,53 @@ namespace AfvalOphaler
                     curr.TourIndex--;
 
                 dumps.RemoveAt(n.TourIndex);
-                roomLefts[n.TourIndex - 1] -= 20000 - roomLefts[n.TourIndex];
+                roomLefts[n.TourIndex - 1] -= 100000 - roomLefts[n.TourIndex];
                 roomLefts.RemoveAt(n.TourIndex);
             }
 
             n.Remove();
             nodes.Remove(n);
         }
+        public void Swap1(Node swapIn, Node swapOut)
+        {
+            TimeLeft = TimeLeft
+                + swapOut.Data.TimeToEmpty
+                + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
+                - swapIn.Data.TimeToEmpty
+                - GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                - GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
 
+            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
+                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
+                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
+
+            Node temp = swapOut.Next;
+            swapOut.Next = swapIn.Next;
+            swapIn.Next.Prev = swapOut;
+            swapIn.Next = temp;
+            temp.Prev = swapIn;
+        }
+        public void Swap2(Node swapIn, Node swapOut)
+        {
+            Node temp = swapOut.Prev;
+            swapOut.Prev = swapIn.Prev;
+            swapIn.Prev.Next = swapOut;
+            swapIn.Prev = temp;
+            temp.Next = swapIn;
+
+            TimeLeft = TimeLeft
+                + swapOut.Data.TimeToEmpty
+                + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
+                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
+                - swapIn.Data.TimeToEmpty
+                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
+                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
+
+            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
+                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
+                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
+        }
         #endregion
 
         #region Evaluate
@@ -798,7 +851,6 @@ namespace AfvalOphaler
             //    }
             //}
         }
-
         public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn, out double time_left)
         {
             toSwapOut = null;
@@ -828,7 +880,6 @@ namespace AfvalOphaler
             space_swapIn = roomLefts[toSwapOut.TourIndex] + toSwapOut.Data.VolPerContainer * toSwapOut.Data.NumContainers;
             return true;
         }
-
         public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, out double deltaTime)
         {
             toSwapOut = null;
@@ -890,47 +941,6 @@ namespace AfvalOphaler
 
         //  
         // 
-        public void Swap1(Node swapIn, Node swapOut)
-        {
-            TimeLeft = TimeLeft
-                + swapOut.Data.TimeToEmpty
-                + GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                + GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
-                - swapIn.Data.TimeToEmpty
-                - GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
-                - GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
-
-            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
-                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
-                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
-
-            Node temp = swapOut.Next;
-            swapOut.Next = swapIn.Next;
-            swapIn.Next.Prev = swapOut;
-            swapIn.Next = temp;
-            temp.Prev = swapIn;
-        }
-
-        public void Swap2(Node swapIn, Node swapOut)
-        {
-            Node temp = swapOut.Prev;
-            swapOut.Prev = swapIn.Prev;
-            swapIn.Prev.Next = swapOut;
-            swapIn.Prev = temp;
-            temp.Next = swapIn;
-
-            TimeLeft = TimeLeft
-                + swapOut.Data.TimeToEmpty
-                + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapOut.Data.MatrixId]
-                + GD.JourneyTime[swapOut.Data.MatrixId, swapIn.Next.Data.MatrixId]
-                - swapIn.Data.TimeToEmpty
-                - GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
-                - GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
-
-            roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
-                + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
-                - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
-        }
         #endregion
 
         #region Optimization
@@ -1155,8 +1165,6 @@ namespace AfvalOphaler
         }
         #endregion
 
-
-
         public bool EvaluateRandomAdd(Random rnd)
         {
             while (true)
@@ -1214,7 +1222,7 @@ namespace AfvalOphaler
         }
         void IEnumerator.Reset()
         {
-            next = curr;
+            next = dump;
             curr = null;
         }
     }
