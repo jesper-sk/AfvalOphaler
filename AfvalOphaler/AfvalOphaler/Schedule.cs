@@ -984,12 +984,7 @@ namespace OldAfvalOphaler
     }
     public class SwapResult : NeighborResult
     {
-        List<DeleteResult> des;
-        List<AddResult> ads;
-        List<int> days;
-        List<int> trucks;
-        List<int> loops;
-        public SwapResult(Schedule s, List<DeleteResult> des, List<AddResult> ads, List<int> days, List<int> trucks, List<int> loops) : base(s)
+        public SwapResult(Schedule s) : base(s)
         {
 
         }
