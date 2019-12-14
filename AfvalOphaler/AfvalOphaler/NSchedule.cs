@@ -512,7 +512,7 @@ namespace AfvalOphaler
                     $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
                     $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
 
-                if (true)//State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
+                if (State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
                 {
                     Console.WriteLine("JOCHIE GAAT NIET GOED!");
                     Console.WriteLine("Stats in evaluate:");
@@ -770,7 +770,6 @@ namespace AfvalOphaler
             swapIn.Next = temp;
             temp.Prev = swapIn;
         }
-
         public void Swap2(Node swapIn, Node swapOut, StringBuilder log, double dt)
         {
             Node temp = swapOut.Prev;
@@ -902,7 +901,6 @@ namespace AfvalOphaler
             //    }
             //}
         }
-
         public bool EvaluateSwap1(out Node toSwapOut, out double space_swapIn, out double time_swapIn, out double time_left)
         {
             toSwapOut = null;
@@ -934,7 +932,6 @@ namespace AfvalOphaler
             //return true;
             return false;
         }
-
         public bool EvaluateSwap2(Node toSwapIn, double space_swapOut, double time_swapOut, double time_leftOut, out Node toSwapOut, StringBuilder log, out double dt1, out double dt2)
         {
             toSwapOut = null;

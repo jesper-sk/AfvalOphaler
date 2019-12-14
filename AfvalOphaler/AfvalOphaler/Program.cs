@@ -3,8 +3,8 @@
 //#define CLUSTER       // Whether to cluster all orders
 //#define VISUALIZER    // Whether to show the visualizer
 //#define TEST          // Whether to use Solver and Schedule
-#define NTEST         // Whether to use NSolver and NSchedule
-//#define CUSTOM        // Whether to use Own-Defined small testcases
+//#define NTEST         // Whether to use NSolver and NSchedule
+#define CUSTOM        // Whether to use Own-Defined small testcases
 #endregion
 
 #region Usings
