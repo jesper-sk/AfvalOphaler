@@ -1002,6 +1002,9 @@ namespace AfvalOphaler
             swapIn.Next.Prev = swapOut;
             swapIn.Next = temp;
             temp.Prev = swapIn;
+
+            nodes.Remove(swapOut);
+            nodes.Add(swapIn);
         }
 
         public void Swap2(Node swapIn, Node swapOut, StringBuilder log, double dt)
@@ -1034,6 +1037,9 @@ namespace AfvalOphaler
             roomLefts[swapOut.TourIndex] = roomLefts[swapOut.TourIndex]
                 + swapOut.Data.NumContainers * swapOut.Data.VolPerContainer
                 - swapIn.Data.NumContainers * swapIn.Data.VolPerContainer;
+
+            nodes.Remove(swapOut);
+            nodes.Add(swapIn);
         }
         #endregion
 

@@ -106,7 +106,7 @@ namespace AfvalOphaler
                 new SaLocalSolver(start, 1, 0.99999)
             };
             foreach (LocalSolver ls in solvs) ls.Init();
-            s = 0;
+            s = 1;
 
             bool stop = false;
             i = 0; int noChange = 0;
