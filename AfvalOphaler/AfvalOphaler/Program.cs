@@ -22,6 +22,10 @@ using System.Threading;
 
 namespace AfvalOphaler
 {
+    public static partial class GD
+    {
+        public const int ResearchLimit = 10;    //The amount of times a neighbor operation should retry to search a possible candidate if previous failed
+    }
     class Program
     {
         #region Directory Declarations
@@ -44,7 +48,7 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 10;
+            int threads = 8;
             int operationCount = 20;
             int maxIterations = 500000;
             int maxNoChange = 75000;

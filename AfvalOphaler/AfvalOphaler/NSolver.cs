@@ -64,7 +64,7 @@ namespace AfvalOphaler
             int maxNoChangeAdd = 3000;
             solvs = new LocalSolver[]
             {
-                new RandomHillClimbLocalSolver(start),
+                new RandomHikeLocalSolver(start),
                 new SaLocalSolver(start, 0.6, 0.99999)
             };
             foreach (LocalSolver ls in solvs) ls.Init();
@@ -76,6 +76,7 @@ namespace AfvalOphaler
             {
                 LocalSolver solver = solvs[s];
                 double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0, 0 };
+                //double[] probs = new double[] { 1, 0, 0, 0 };
                 if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChangeAdd = 0;
@@ -96,14 +97,12 @@ namespace AfvalOphaler
             }
             #endregion
 
-            //Console.WriteLine("Swapping");
-
             #region AllOperations
             stati[taskID] = SolverStatus.Doing_All;
             solvs = new LocalSolver[]
             {
-                new RandomHillClimbLocalSolver(start),
-                new SaLocalSolver(start, 1, 0.99999)
+                new RandomHikeLocalSolver(start),
+                new SaLocalSolver(start, 0.8, 0.9999)
             };
             foreach (LocalSolver ls in solvs) ls.Init();
             s = 1;
@@ -113,10 +112,10 @@ namespace AfvalOphaler
             while (!stop)
             {
                 LocalSolver solv = solvs[s];
-                //double[] probs = new double[] { 1, 0, 0, 0 }; // add only
+                //double[] probs = new double[] { 1/2.0, 1/2.0, 0, 0 }; // delete only
                 //double[] probs = new double[] { 0, 0, 0, 1 }; // Swap only
-                //double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 5 / 12.0, 0 / 12.0 };
-                double[] probs = new double[] { 1 / 12.0, 3 / 12.0, 4 / 12.0, 4 / 12.0 };
+                //double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 0, 5 / 12.0 };
+                double[] probs = new double[] { 1 / 12.0, 1 / 12.0, 5 / 12.0, 5 / 12.0 };
                 if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChange = 0;
@@ -134,6 +133,7 @@ namespace AfvalOphaler
                     || ++i == maxI
                     || UserInterrupt;
             }
+
             #endregion
 
             //UpdateStatus(taskID, $"Done. Best: {best.Score}");
@@ -337,7 +337,7 @@ namespace AfvalOphaler
                 //Console.WriteLine($"operation: {ops[i]}");
                 if (ops[i].Evaluate())
                 {
-                    double delta = ops[i].TotalDelta;
+                    double delta = ops[i].Evaluation;
                     //Console.WriteLine($"Evaluated, delta = {delta}");
                     if (delta < opt)
                     {
@@ -358,11 +358,11 @@ namespace AfvalOphaler
     }
 #endregion
 
-#region Random HillClimb : Apply random operation, take successor if score decreases.
-    class RandomHillClimbLocalSolver : LocalSolver
+#region Random HillClimb : Apply random operation, take random successor.
+    class RandomHikeLocalSolver : LocalSolver
     {
         Random Rand;
-        public RandomHillClimbLocalSolver(Schedule s) : base(s)
+        public RandomHikeLocalSolver(Schedule s) : base(s)
         {
         }
 
@@ -425,7 +425,7 @@ namespace AfvalOphaler
                 ops.RemoveAt(i);
                 if (op.Evaluate())
                 {
-                    double delta = op.TotalDelta;
+                    double delta = op.Evaluation;
                     if (delta < 0)
                     {
                         op.Apply();

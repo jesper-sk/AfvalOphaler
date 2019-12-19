@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static AfvalOphaler.GD;
 
 namespace AfvalOphaler
 {
@@ -132,6 +133,14 @@ namespace AfvalOphaler
         public abstract class NeighborOperation
         {
             public bool IsEvaluated { get; protected set; } = false;
+            public double Evaluation
+            {
+                get
+                {
+                    //Hier meer spul
+                    return TotalDelta;
+                }
+            }
             public double TotalDelta => DeltaTime + DeltaPenalty;
             public double DeltaTime { get; protected set; } = double.NaN;
             public double DeltaPenalty { get; protected set; } = double.NaN;
@@ -242,6 +251,7 @@ namespace AfvalOphaler
 
         public class AddOperation : NeighborOperation
         {
+            private readonly int[] excludedDayCombi;
             private readonly int orderIndex;
             private readonly Order toAdd;
             private readonly int nAdditions;
@@ -256,11 +266,12 @@ namespace AfvalOphaler
                 else toAdd = State.UnScheduledOrders[orderIndex];
                 nAdditions = toAdd?.Frequency ?? -1;
             }
-            public AddOperation(Schedule s, Order toAdd) : base(s)
+            public AddOperation(Schedule s, Order toAdd, int[] excluded = null) : base(s)
             {
                 orderIndex = -1;
                 this.toAdd = toAdd;
-                nAdditions = 1;
+                nAdditions = toAdd.Frequency;
+                excludedDayCombi = excluded;
             }
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
@@ -268,13 +279,14 @@ namespace AfvalOphaler
                 deltaPenalty = double.NaN;
                 if (toAdd == null) return false;
 
-                List<int[]> combis = GD.AllowedDayCombinations[nAdditions].ToList();
+                List<int[]> combis = AllowedDayCombinations[nAdditions].ToList();
                 //int[] combi = combis[State.Rnd.Next(0, combis.Length)]; // MISS ALLE COMBIS PROBEREN
                 //Console.WriteLine($"Chosen day combination: {Util.ArrToString(combi)}");
 
                 while (!(combis.Count == 0)) 
                 {
                     int[] combi = combis[StaticRandom.Next(0, combis.Count)];
+                    if (excludedDayCombi != null && combi == excludedDayCombi) goto next;
                     int everyDayInCombiAllowed = 0;
                     deltas = new List<double>(nAdditions);
                     whereToAdd = new List<Node>(nAdditions);
@@ -312,6 +324,7 @@ namespace AfvalOphaler
                         deltaPenalty = -(3 * nAdditions * toAdd.TimeToEmpty);
                         return true;
                     }
+                    next:
                     combis.Remove(combi);
                 }
                 return false;
@@ -319,12 +332,27 @@ namespace AfvalOphaler
 
             protected override void _Apply()
             {
+                Node[] all = new Node[whereToAdd.Count];
                 for(int i = 0; i < whereToAdd.Count; i++)
                 {
                     DayRoute curr = State.DayRoutes[whereToAddDays[i]][whereToAddTrucks[i]];
                     State.Duration -= curr.Duration;
-                    curr.AddOrder(toAdd, whereToAdd[i]);
+                    all[i] = curr.AddOrder(toAdd, whereToAdd[i]);
                     State.Duration += curr.Duration;
+                }
+                for(int i = 0; i < all.Length; i++)
+                {
+                    Node[] others = new Node[all.Length - 1];
+                    int j = 0;
+                    for(; j < i; j++)
+                    {
+                        others[j] = all[j];
+                    }
+                    for(; j < others.Length; j++)
+                    {
+                        others[j] = all[j + 1];
+                    }
+                    all[i].SetOthers(others);
                 }
                 State.Penalty -= 3 * nAdditions * toAdd.TimeToEmpty;
                 if (orderIndex != -1) State.UnScheduledOrders.RemoveAt(orderIndex);
@@ -337,63 +365,96 @@ namespace AfvalOphaler
         public class RandomDeleteOperation : NeighborOperation
         {
             public Order OrderToRemove { get; private set; }
+            public int[] ExcludedDayCombi { get; private set; }
 
-            Node toRemove;
-            int day;
-            int truck;
+            //Node toRemove;
+            //int day;
+            //int truck;
+
+            Node[] toRemove;
+            int[] days;
+            int[] trucks;
+
             public RandomDeleteOperation(Schedule s) : base(s)
             {
                 //Hé jochie
             }
+            //protected bool old_Evaluate(out double deltaTime, out double deltaPenalty)
+            //{
+            //    void SetToRemove(Node r)
+            //    {
+            //        toRemove = r;
+            //        OrderToRemove = r.Data;
+            //    }
+
+            //    int d = StaticRandom.Next(0, 5);
+            //    int t = StaticRandom.Next(0, 2);
+            //    if (State.DayRoutes[d][t].EvaluateRandomDelete(out Node rem1, out double delta1))
+            //    {
+            //        SetToRemove(rem1);
+            //        day = d;
+            //        truck = t;
+            //        deltaTime = delta1;
+            //        deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
+            //        return true;
+            //    }
+            //    // Uncomment below als niet evalueren ook andere truck:
+            //    else if (State.DayRoutes[d][1 - t].EvaluateRandomDelete(out Node rem2, out double delta2))
+            //    {
+            //        SetToRemove(rem2);
+            //        day = d;
+            //        truck = 1 - t;
+            //        deltaTime = delta2;
+            //        deltaPenalty = 3 * rem2.Data.Frequency * rem2.Data.TimeToEmpty;
+            //        return true;
+            //    }
+            //    else
+            //    {
+            //        deltaTime = double.NaN;
+            //        deltaPenalty = double.NaN;
+            //        return false;
+            //    }
+            //}
+
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
             {
-                void SetToRemove(Node r)
-                {
-                    toRemove = r;
-                    OrderToRemove = r.Data;
-                }
-
                 int d = StaticRandom.Next(0, 5);
-                int t = StaticRandom.Next(0, 2);
-                if (State.DayRoutes[d][t].EvaluateRandomRemove(out Node rem1, out double delta1))
+                int ts = StaticRandom.Next(0, 2);
+                for(int t = ts; t != (1-ts); t = 1 - t)
                 {
-                    SetToRemove(rem1);
-                    day = d;
-                    truck = t;
-                    deltaTime = delta1;
-                    deltaPenalty = 3 * rem1.Data.Frequency * rem1.Data.TimeToEmpty;
-                    return true;
+                    if (State.DayRoutes[d][t].EvaluateRandomDeleteOrder(out toRemove, out trucks, out days, out double nodeDeltaTime))
+                    {
+                        deltaPenalty = 3 * toRemove[0].Data.Frequency * toRemove[0].Data.TimeToEmpty;
+                        double[] dts = new double[days.Length];
+                        dts[0] = nodeDeltaTime;
+                        for(int i = 1; i < trucks.Length; i++)
+                        {
+                            if (!State.DayRoutes[days[i]][trucks[i]].EvaluateRemoveNode(toRemove[i], out dts[i])) 
+                                goto next;
+                        }
+                        deltaTime = dts.Sum() + nodeDeltaTime;
+                        OrderToRemove = toRemove[0].Data;
+                        ExcludedDayCombi = days;
+                        return true;
+                    }
+                    next:;
                 }
-                // Uncomment below als niet evalueren ook andere truck:
-                else if (State.DayRoutes[d][1 - t].EvaluateRandomRemove(out Node rem2, out double delta2))
-                {
-                    SetToRemove(rem2);
-                    day = d;
-                    truck = 1 - t;
-                    deltaTime = delta2;
-                    deltaPenalty = 3 * rem2.Data.Frequency * rem2.Data.TimeToEmpty;
-                    return true;
-                }
-                else
-                {
-                    deltaTime = double.NaN;
-                    deltaPenalty = double.NaN;
-                    return false;
-                }
+                deltaTime = deltaPenalty = double.NaN;
+                return false;
             }
 
             protected override void _Apply()
             {
-                //Console.WriteLine($"Deleting {toRemove.Data}");
-                DayRoute curr = State.DayRoutes[day][truck];
-                //Console.WriteLine($"day{day}, truck{truck}");
-                //Console.WriteLine($"Prev duration: {curr.Duration}");
-                State.Duration -= curr.Duration;
-                curr.RemoveNode(toRemove);
-                State.Duration += curr.Duration;
-                //Console.WriteLine($"After deletion {curr.Duration}");
-                State.UnScheduledOrders.Add(toRemove.Data);
-                State.Penalty += 3 * toRemove.Data.TimeToEmpty;
+
+                for(int i = 0; i < toRemove[0].Data.Frequency; i++)
+                {
+                    DayRoute curr = State.DayRoutes[days[i]][trucks[i]];
+                    State.Duration -= curr.Duration;
+                    curr.RemoveNode(toRemove[i]);
+                    State.Duration += curr.Duration;
+                }
+                State.UnScheduledOrders.Add(toRemove[0].Data);
+                State.Penalty += 3 * toRemove[0].Data.Frequency * toRemove[0].Data.TimeToEmpty;
             }
 
             public override string ToString() => $"RandomDeleteOperation, Evaluated: {IsEvaluated}";
@@ -418,7 +479,7 @@ namespace AfvalOphaler
                 //miss voor transfer beetje weinig
                 if (!delOp.Evaluate()) return false;
                 //Console.WriteLine($"Removing {delOp.OrderToRemove}");
-                addOp = new AddOperation(State, delOp.OrderToRemove);
+                addOp = new AddOperation(State, delOp.OrderToRemove, delOp.ExcludedDayCombi);
                 if (!addOp.Evaluate()) return false;
                 //Console.WriteLine($"Adding next to {addOp.whereToAdd[0]}");
 
@@ -441,18 +502,20 @@ namespace AfvalOphaler
         {
             public Node toSwap1;
             public Node toSwap2;
+
             int d1;
             int d2;
             int t1;
             int t2;
+
             double dt1;
             double dt2;
 
-            private StringBuilder log;
+            //private StringBuilder log;
 
             public RandomSwapOperation(Schedule s) : base(s)
             {
-                log = new StringBuilder();
+                //log = new StringBuilder();
             }
 
             protected override bool _Evaluate(out double deltaTime, out double deltaPenalty)
@@ -465,10 +528,19 @@ namespace AfvalOphaler
                 //Console.WriteLine($"Swap1: day {d1} truck {t1}");
                 if (State.DayRoutes[d1][t1].EvaluateSwap1(out toSwap1, out double roomLeft_d1, out double freeTime_d1, out double timeLeft_d1))
                 {
-                    do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
-                    do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
+                    if (toSwap1.Data.Frequency == 1)
+                    {
+                        do d2 = StaticRandom.Next(0, 5); while (d2 == d1);
+                        do t2 = StaticRandom.Next(0, 2); while (t2 == t1);
+                    }
+                    else
+                    {
+                        d2 = d1;
+                        t2 = t1;
+                    }
+
                     //Console.WriteLine($"Evaluated. Swap2: day {d2} truck {t2}");
-                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, roomLeft_d1, freeTime_d1, timeLeft_d1, out toSwap2, log, out dt1, out dt2))
+                    if (State.DayRoutes[d2][t2].EvaluateSwap2(toSwap1, roomLeft_d1, freeTime_d1, timeLeft_d1, out toSwap2, /*log,*/ out dt1, out dt2))
                     {
                         deltaTime = dt1 + dt2;
                         deltaPenalty = 0;
@@ -483,48 +555,55 @@ namespace AfvalOphaler
 
             protected override void _Apply()
             {
-                log.AppendLine($"Applying swap:\n" +
-                    $"Before Swap:\n" +
-                    $"toSwap1: {toSwap1}\n" +
-                    $"toSwap2: {toSwap2}\n" +
-                    $"Roomlefts before:\n" +
-                    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
-                    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
-                    $"Duration before swap: {State.Duration}\n" +
-                    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
-                    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+                //log.AppendLine($"Applying swap:\n" +
+                //    $"Before Swap:\n" +
+                //    $"toSwap1: {toSwap1}\n" +
+                //    $"toSwap2: {toSwap2}\n" +
+                //    $"Roomlefts before:\n" +
+                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                //    $"Duration before swap: {State.Duration}\n" +
+                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
 
                 //State.Duration -= State.DayRoutes[d1][t1].Duration;
                 //State.Duration -= State.DayRoutes[d2][t2].Duration;
                 State.Duration += DeltaTime;
 
-                State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1, log, dt1);
-                State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2, log, dt2);
+                State.DayRoutes[d1][t1].Swap1(toSwap2, toSwap1, /*log,*/ dt1);
+                State.DayRoutes[d2][t2].Swap2(toSwap1, toSwap2, /*log,*/ dt2);
                 int tempTourIndex = toSwap1.TourIndex;
                 toSwap1.TourIndex = toSwap2.TourIndex;
                 toSwap2.TourIndex = tempTourIndex;
+                int tempTruckIndex = toSwap1.TruckIndex;
+                toSwap1.TruckIndex = toSwap2.TruckIndex;
+                toSwap2.TruckIndex = tempTruckIndex;
+                int tempDayIndex = toSwap1.DayIndex;
+                toSwap1.DayIndex = toSwap2.DayIndex;
+                toSwap2.DayIndex = tempDayIndex;
+
 
                 //State.Duration += State.DayRoutes[d1][t1].Duration;
                 //State.Duration += State.DayRoutes[d2][t2].Duration;
 
-                log.AppendLine($"---\nAfter swap:\n" +
-                    $"Roomlefts after:\n" +
-                    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
-                    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
-                    $"Duration after swap: {State.Duration}\n" +
-                    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
-                    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
+                //log.AppendLine($"---\nAfter swap:\n" +
+                //    $"Roomlefts after:\n" +
+                //    $"roomleft[d1][t1][swap1] = {State.DayRoutes[d1][t1].roomLefts[toSwap1.TourIndex]}\n" +
+                //    $"roomleft[d2][t2][swap2] = {State.DayRoutes[d2][t2].roomLefts[toSwap2.TourIndex]}\n" +
+                //    $"Duration after swap: {State.Duration}\n" +
+                //    $"Duration d1t1: {State.DayRoutes[d1][t1].Duration}\n" +
+                //    $"Duration d2t2: {State.DayRoutes[d2][t2].Duration}");
 
-                if (State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
-                {
-                    Console.WriteLine("JOCHIE GAAT NIET GOED!");
-                    Console.WriteLine("Stats in evaluate:");
-                    Console.WriteLine(log.ToString());
-                    Console.WriteLine($"TimeLeft d1t1: {State.DayRoutes[d1][t1].TimeLeft}\n" +
-                        $"TimeLeft d2t2: {State.DayRoutes[d2][t2].TimeLeft}");
-                    Console.WriteLine("=====");
-                    Console.ReadKey(true);
-                }
+                //if (State.DayRoutes[d1][t1].TimeLeft < 0 || State.DayRoutes[d2][t2].TimeLeft < 0 || State.DayRoutes[d1][t1].TimeLeft > 720 || State.DayRoutes[d2][t2].TimeLeft > 720)
+                //{
+                //    Console.WriteLine("JOCHIE GAAT NIET GOED!");
+                //    Console.WriteLine("Stats in evaluate:");
+                //    Console.WriteLine(log.ToString());
+                //    Console.WriteLine($"TimeLeft d1t1: {State.DayRoutes[d1][t1].TimeLeft}\n" +
+                //        $"TimeLeft d2t2: {State.DayRoutes[d2][t2].TimeLeft}");
+                //    Console.WriteLine("=====");
+                //    Console.ReadKey(true);
+                //}
             }
 
             public override string ToString() => $"RandomSwapOperation, Evaluated {IsEvaluated}";
@@ -593,6 +672,18 @@ namespace AfvalOphaler
             return res;
         }
         #endregion
+
+        public void Validate()
+        {
+            foreach(DayRoute[] r in DayRoutes) foreach(DayRoute rt in r)
+            {
+                foreach (Node node in rt.nodes)
+                    {
+                        if (node.DayIndex != rt.DayIndex) throw new Exception();
+                        if (node.TruckIndex != rt.TruckIndex) throw new Exception();
+                    }
+            }
+        }
     }
     #endregion
 
@@ -618,12 +709,11 @@ namespace AfvalOphaler
 
         public List<Node> dumps;
         public List<double> roomLefts;
-        private List<Node> nodes; //Always contains all nodes, in no specific order 
+        public List<Node> nodes; //Always contains all nodes, in no specific order 
 
         public TourEnumerableIndexer Tours { get; private set; }
 
         private bool firstAdd = true;
-        private const int lim = 10;
 
         public DayRoute(int dind, int trind)
         {
@@ -631,9 +721,9 @@ namespace AfvalOphaler
             DayIndex = dind;
             TruckIndex = trind;
 
-            Node dump0 = new Node(0);
-            Node dumpL = new Node();
-            Node dump1 = new Node(1);
+            Node dump0 = new Node(DayIndex, TruckIndex, 0);
+            Node dumpL = new Node(DayIndex, TruckIndex);
+            Node dump1 = new Node(DayIndex, TruckIndex, 1);
 
             dump0.Next = dump1;
 
@@ -667,7 +757,6 @@ namespace AfvalOphaler
             {
                 owner = o;
             }
-
             public IEnumerable this[int index]
             {
                 get => new TourEnumerable(owner.dumps[index]);
@@ -708,9 +797,9 @@ namespace AfvalOphaler
                     //Console.WriteLine($"Node {curr.Data.OrderId}");
                     if (TimeLeft >
                             toAdd.TimeToEmpty
-                                + GD.JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
-                                + GD.JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
-                                - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
+                                + JourneyTime[curr.Data.MatrixId, toAdd.MatrixId]
+                                + JourneyTime[toAdd.MatrixId, curr.Next.Data.MatrixId]
+                                - JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId])
                     {
                         //Console.WriteLine($"found candidate, adding to list");
                         candidateNodes.Add(curr);
@@ -728,34 +817,37 @@ namespace AfvalOphaler
                 whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
                 while (whereToAdd.Data.OrderId == toAdd.OrderId) whereToAdd = candidateNodes[rnd.Next(0, candidateNodes.Count)];
                 deltaTime = toAdd.TimeToEmpty
-                    + GD.JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
-                    + GD.JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
-                    - GD.JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
+                    + JourneyTime[whereToAdd.Data.MatrixId, toAdd.MatrixId]
+                    + JourneyTime[toAdd.MatrixId, whereToAdd.Next.Data.MatrixId]
+                    - JourneyTime[whereToAdd.Data.MatrixId, whereToAdd.Next.Data.MatrixId];
                 return true;
                 //Console.WriteLine($"Adding next to {whereToAdd}");
                 //Console.WriteLine($"Room left: {roomLefts[whereToAdd.TourIndex] - totalSpaceOfOrder}");
             }
             return false;
         }
-        public bool EvaluateRandomRemove(out Node toRemove, out double deltaTime)
+
+        public bool EvaluateRandomDelete(out Node toRemove, out double deltaTime)
         {
             toRemove = null;
             deltaTime = double.NaN;
 
             HashSet<int> dones = new HashSet<int>();
-            for (int i = 0; i < nodes.Count && i < lim; i++)
+            for (int i = 0; i < nodes.Count && i < ResearchLimit; i++)
             {
                 int ind;
                 do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
                 Node chosen = nodes[ind];
 
-                if (chosen.Data.Frequency > 1) continue;
                 if (chosen.IsDump) continue;
 
-                deltaTime = GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Next.Data.MatrixId]
+                if (chosen.Data.Frequency > 1) continue;
+
+
+                deltaTime = JourneyTime[chosen.Prev.Data.MatrixId, chosen.Next.Data.MatrixId]
                     - (chosen.Data.TimeToEmpty
-                        + GD.JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
-                        + GD.JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId]);
+                        + JourneyTime[chosen.Prev.Data.MatrixId, chosen.Data.MatrixId]
+                        + JourneyTime[chosen.Data.MatrixId, chosen.Next.Data.MatrixId]);
 
                 if (deltaTime > TimeLeft) continue;
                 toRemove = chosen;
@@ -774,6 +866,53 @@ namespace AfvalOphaler
             //}
         }
 
+        public bool EvaluateRandomDeleteOrder(out Node[] toRemove, out int[] trucks, out int[] days, out double nodeDeltaTime)
+        {
+            HashSet<int> dones = new HashSet<int>();
+            for (int i = 0; i < nodes.Count && i < ResearchLimit; i++)
+            {
+                int ind;
+                do ind = StaticRandom.Next(0, nodes.Count); while (!dones.Add(ind));
+                Node chosen = nodes[ind];
+
+                if (chosen.IsDump) continue;
+
+                if (!EvaluateRemoveNode(chosen, out nodeDeltaTime)) continue;
+
+                toRemove = new Node[chosen.Data.Frequency];
+                trucks = new int[toRemove.Length];
+                days = new int[trucks.Length];
+                toRemove[0] = chosen;
+                trucks[0] = TruckIndex;
+                days[0] = DayIndex;
+                for(int j = 1; j < chosen.Data.Frequency; j++)
+                {
+                    toRemove[j] = chosen.Others[j - 1];
+                    trucks[j] = chosen.Others[j - 1].TruckIndex;
+                    days[j] = chosen.Others[j - 1].DayIndex;
+                }
+
+                return true;
+            }
+            toRemove = null; trucks = null; days = null; nodeDeltaTime = double.NaN;
+            return false;
+        }
+
+        public bool EvaluateRemoveNode(Node toRem, out double deltaTime)
+        {
+            deltaTime = double.NaN;
+
+            if (toRem.IsDump) return false;
+
+            deltaTime = JourneyTime[toRem.Prev.Data.MatrixId, toRem.Next.Data.MatrixId]
+            - (toRem.Data.TimeToEmpty
+                + JourneyTime[toRem.Prev.Data.MatrixId, toRem.Data.MatrixId]
+                + JourneyTime[toRem.Data.MatrixId, toRem.Next.Data.MatrixId]);
+
+            if (deltaTime > TimeLeft) return false;
+
+            return true;
+        }
         public bool EvaluateSwap1(out Node toSwapOut, out double vrije_ruimte_als_swap1_weg_is, out double tijd_die_vrijkomt_als_swap1_wordt_verwijderd, out double time_left)
         {
             toSwapOut = null;
@@ -782,7 +921,7 @@ namespace AfvalOphaler
             time_left = double.NaN;
 
             HashSet<int> dones = new HashSet<int>();
-            for (int i = 0; i < nodes.Count && i < lim; i++)
+            for (int i = 0; i < nodes.Count && i < ResearchLimit; i++)
             {
                 // Pak random node
                 int index;
@@ -790,14 +929,15 @@ namespace AfvalOphaler
                 Node swap1 = nodes[index];
 
                 // Stop als swap1 een dump is of freq > 1
-                if (swap1.Data.Frequency > 1 || swap1.IsDump) continue;
+                if (swap1.IsDump) continue;
+                if (swap1.Data.Frequency > 1) continue;
 
                 // Bereken de tijd die vrijkomt als we swap1 verwijderen
                 tijd_die_vrijkomt_als_swap1_wordt_verwijderd = 0
                     + TimeLeft
                     + swap1.Data.TimeToEmpty
-                    + GD.JourneyTime[swap1.Prev.Data.MatrixId, swap1.Data.MatrixId]
-                    + GD.JourneyTime[swap1.Data.MatrixId, swap1.Next.Data.MatrixId];
+                    + JourneyTime[swap1.Prev.Data.MatrixId, swap1.Data.MatrixId]
+                    + JourneyTime[swap1.Data.MatrixId, swap1.Next.Data.MatrixId];
 
                 // Bereken de vrije ruimte als swap1 weg is
                 vrije_ruimte_als_swap1_weg_is =
@@ -813,14 +953,13 @@ namespace AfvalOphaler
             //return true;
             return false;
         }
-
-        public bool EvaluateSwap2(Node swap1, double vrije_ruimte_in_dag1, double vrije_tijd_in_dag1_met_timeleft_dag1, double timeleft_dag1, out Node toSwapOut, StringBuilder log, out double dt1, out double dt2)
+        public bool EvaluateSwap2(Node swap1, double vrije_ruimte_in_dag1, double vrije_tijd_in_dag1_met_timeleft_dag1, double timeleft_dag1, out Node toSwapOut, out double dt1, out double dt2)
         {
             toSwapOut = null;
             dt1 = dt2 = double.NaN;
 
             HashSet<int> dones = new HashSet<int>();
-            for (int i = 0; i < nodes.Count && i < lim; i++)
+            for (int i = 0; i < nodes.Count && i < ResearchLimit; i++)
             {
                 // Kies random node
                 int index;
@@ -828,8 +967,9 @@ namespace AfvalOphaler
                 Node swap2 = nodes[index];
 
                 // Stop als swap2 dump is of freq > 1
-                if (swap2.Data.Frequency > 1 || swap2.IsDump) continue;
+                if (swap2.IsDump) continue;
 
+                if (swap2.Data.Frequency > 1) continue;
                 //
                 //Check of swap2 past op de plek van swap1
                 //
@@ -843,8 +983,8 @@ namespace AfvalOphaler
                 // Bereken benodigde tijd in dag1 als swap2 daar gezet wordt
                 double benodigde_tijd_swap2 = 0
                     + swap2.Data.TimeToEmpty
-                    + GD.JourneyTime[swap1.Prev.Data.MatrixId, swap2.Data.MatrixId]
-                    + GD.JourneyTime[swap2.Data.MatrixId, swap1.Next.Data.MatrixId];
+                    + JourneyTime[swap1.Prev.Data.MatrixId, swap2.Data.MatrixId]
+                    + JourneyTime[swap2.Data.MatrixId, swap1.Next.Data.MatrixId];
 
                 // Stop als er niet genoeg tijd over is in dag1 voor swap2
                 if (benodigde_tijd_swap2 > vrije_tijd_in_dag1_met_timeleft_dag1) continue;
@@ -867,30 +1007,30 @@ namespace AfvalOphaler
                 double vrije_tijd_in_dag2_met_timeleft_dag2 = 0
                     + TimeLeft
                     + swap2.Data.TimeToEmpty
-                    + GD.JourneyTime[swap2.Prev.Data.MatrixId, swap2.Data.MatrixId]
-                    + GD.JourneyTime[swap2.Data.MatrixId, swap2.Next.Data.MatrixId];
+                    + JourneyTime[swap2.Prev.Data.MatrixId, swap2.Data.MatrixId]
+                    + JourneyTime[swap2.Data.MatrixId, swap2.Next.Data.MatrixId];
 
                 // Bereken de benodigde tijd voor swap1
                 double benodigde_tijd_swap1 = 0
                     + swap1.Data.TimeToEmpty
-                    + GD.JourneyTime[swap2.Prev.Data.MatrixId, swap1.Data.MatrixId]
-                    + GD.JourneyTime[swap1.Data.MatrixId, swap2.Next.Data.MatrixId];
+                    + JourneyTime[swap2.Prev.Data.MatrixId, swap1.Data.MatrixId]
+                    + JourneyTime[swap1.Data.MatrixId, swap2.Next.Data.MatrixId];
 
                 // Stop als er niet genoeg vrije tijd is in dag2
                 if (benodigde_tijd_swap1 > vrije_tijd_in_dag2_met_timeleft_dag2) continue;
 
-                log.AppendLine($"rS_in: {benodigde_ruimte_swap1}, space_swapIn: {vrije_ruimte_dag2}\n" +
-                    $"rS_out: {benodigd_ruimte_swap2}, space_swapOut: {vrije_ruimte_in_dag1}");
-                log.AppendLine($"rT_in: {benodigde_tijd_swap1}, t_in: {vrije_tijd_in_dag2_met_timeleft_dag2}, timeleft: {TimeLeft}, tnew_in: {vrije_tijd_in_dag2_met_timeleft_dag2 - TimeLeft} \n" +
-                    $"rT_out: {benodigde_tijd_swap2}, t_out: {vrije_tijd_in_dag1_met_timeleft_dag1}, timeleftout: {timeleft_dag1}, tnew_out: {vrije_tijd_in_dag1_met_timeleft_dag1 - timeleft_dag1}");
+                //log.AppendLine($"rS_in: {benodigde_ruimte_swap1}, space_swapIn: {vrije_ruimte_dag2}\n" +
+                //    $"rS_out: {benodigd_ruimte_swap2}, space_swapOut: {vrije_ruimte_in_dag1}");
+                //log.AppendLine($"rT_in: {benodigde_tijd_swap1}, t_in: {vrije_tijd_in_dag2_met_timeleft_dag2}, timeleft: {TimeLeft}, tnew_in: {vrije_tijd_in_dag2_met_timeleft_dag2 - TimeLeft} \n" +
+                //    $"rT_out: {benodigde_tijd_swap2}, t_out: {vrije_tijd_in_dag1_met_timeleft_dag1}, timeleftout: {timeleft_dag1}, tnew_out: {vrije_tijd_in_dag1_met_timeleft_dag1 - timeleft_dag1}");
 
                 dt1 = benodigde_tijd_swap2 - (vrije_tijd_in_dag1_met_timeleft_dag1 - timeleft_dag1);
                 dt2 = benodigde_tijd_swap1 - (vrije_tijd_in_dag2_met_timeleft_dag2 - TimeLeft);
 
-                log.AppendLine($"Delta d1: {dt1}");
-                log.AppendLine($"Delta d2: {dt2}");
+                //log.AppendLine($"Delta d1: {dt1}");
+                //log.AppendLine($"Delta d2: {dt2}");
 
-                log.AppendLine($"deltaTime: {dt1 + dt2}");
+                //log.AppendLine($"deltaTime: {dt1 + dt2}");
 
                 // dt1: Verschil in TimeLeft voor d1t1, pos iff kost tijd om swap1 weg te halen uit zijn dag en swap2 daar te zetten
                 // dt2: Verschil in TimeLeft voor d2t2, pos iff kost tijd om swap2 hier weg te halen en swap1 hier te zetten.
@@ -915,9 +1055,9 @@ namespace AfvalOphaler
             }
 
             TimeLeft -= (order.TimeToEmpty
-                    + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
-                    + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
-                    - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
+                    + JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
+                    + JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
+                    - JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
 
             Node n = nextTo.AppendNext(order);
 
@@ -949,9 +1089,9 @@ namespace AfvalOphaler
             //Console.WriteLine($"From ");
 
             TimeLeft += (order.TimeToEmpty
-                + GD.JourneyTime[n.Prev.Data.MatrixId, order.MatrixId]
-                + GD.JourneyTime[order.MatrixId, n.Next.Data.MatrixId]
-                - GD.JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId]);
+                + JourneyTime[n.Prev.Data.MatrixId, order.MatrixId]
+                + JourneyTime[order.MatrixId, n.Next.Data.MatrixId]
+                - JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId]);
 
             roomLefts[n.TourIndex] += (order.NumContainers * order.VolPerContainer);
 
@@ -974,7 +1114,7 @@ namespace AfvalOphaler
 
         //  
         // 
-        public void Swap1(Node swapIn, Node swapOut, StringBuilder log, double dt)
+        public void Swap1(Node swapIn, Node swapOut, /*StringBuilder log,*/ double dt)
         {
             double deltaTime = dt;
             //double deltaTime = swapOut.Data.TimeToEmpty
@@ -983,9 +1123,9 @@ namespace AfvalOphaler
             //    - swapIn.Data.TimeToEmpty
             //    - GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapIn.Data.MatrixId]
             //    - GD.JourneyTime[swapIn.Data.MatrixId, swapOut.Next.Data.MatrixId];
-            log.AppendLine($"Swap1:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
-            TimeLeft = TimeLeft - deltaTime;
-            log.AppendLine($"TimeLeftAfter: {TimeLeft}");
+            //log.AppendLine($"Swap1:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
+            TimeLeft -= deltaTime;
+            //log.AppendLine($"TimeLeftAfter: {TimeLeft}");
             //+ swapOut.Data.TimeToEmpty
             //+ GD.JourneyTime[swapOut.Prev.Data.MatrixId, swapOut.Data.MatrixId]
             //+ GD.JourneyTime[swapOut.Data.MatrixId, swapOut.Next.Data.MatrixId]
@@ -1006,8 +1146,7 @@ namespace AfvalOphaler
             nodes.Remove(swapOut);
             nodes.Add(swapIn);
         }
-
-        public void Swap2(Node swapIn, Node swapOut, StringBuilder log, double dt)
+        public void Swap2(Node swapIn, Node swapOut, /*StringBuilder log,*/ double dt)
         {
             Node temp = swapOut.Prev;
             swapOut.Prev = swapIn.Prev;
@@ -1022,9 +1161,9 @@ namespace AfvalOphaler
             //    + swapIn.Data.TimeToEmpty
             //    + GD.JourneyTime[swapIn.Prev.Data.MatrixId, swapIn.Data.MatrixId]
             //    + GD.JourneyTime[swapIn.Data.MatrixId, swapIn.Next.Data.MatrixId];
-            log.AppendLine($"Swap2:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
-            TimeLeft = TimeLeft - deltaTime;
-            log.AppendLine($"TimeLeftAfter: {TimeLeft}");
+            //log.AppendLine($"Swap2:\nTimeLeftBefore: {TimeLeft}\nDeltaTime: {deltaTime}");
+            TimeLeft -= deltaTime;
+            //log.AppendLine($"TimeLeftAfter: {TimeLeft}");
 
             //TimeLeft = TimeLeft
             //    + swapOut.Data.TimeToEmpty
@@ -1058,9 +1197,9 @@ namespace AfvalOphaler
                 j.Next = j.Prev;
 
                 TimeLeft = TimeLeft
-                    + GD.JourneyTime[i.Data.MatrixId, iplus.Data.MatrixId]          // 0-1 eraf
-                    + GD.JourneyTime[iplus.Data.MatrixId, iplus.Next.Data.MatrixId] // 1-2 eraf
-                    + GD.JourneyTime[j.Data.MatrixId, jplus.Data.MatrixId];         // 8-9 eraf
+                    + JourneyTime[i.Data.MatrixId, iplus.Data.MatrixId]          // 0-1 eraf
+                    + JourneyTime[iplus.Data.MatrixId, iplus.Next.Data.MatrixId] // 1-2 eraf
+                    + JourneyTime[j.Data.MatrixId, jplus.Data.MatrixId];         // 8-9 eraf
 
                 Node curr = i.Next.Next;    // 2
                 Node stop = j;              // 8
@@ -1069,10 +1208,10 @@ namespace AfvalOphaler
                 {
                     Node temp = curr.Next;
                     TimeLeft = TimeLeft
-                        + GD.JourneyTime[curr.Data.MatrixId, temp.Data.MatrixId];
+                        + JourneyTime[curr.Data.MatrixId, temp.Data.MatrixId];
                     curr.Next = curr.Prev;
                     TimeLeft = TimeLeft
-                        - GD.JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
+                        - JourneyTime[curr.Data.MatrixId, curr.Next.Data.MatrixId];
                     curr.Prev = temp;
                     curr = curr.Prev;
                 }
@@ -1085,9 +1224,9 @@ namespace AfvalOphaler
                 // naar:    0 8 7 6 5 4 3 2 1 9
                 // met:     i=0, j=8
                 TimeLeft = TimeLeft
-                    - GD.JourneyTime[i.Data.MatrixId, j.Data.MatrixId]          // 0-8 erbij
-                    - GD.JourneyTime[j.Data.MatrixId, j.Next.Data.MatrixId]     // 8-7 erbij
-                    - GD.JourneyTime[iplus.Data.MatrixId, jplus.Data.MatrixId]; // 1-9 erbij
+                    - JourneyTime[i.Data.MatrixId, j.Data.MatrixId]          // 0-8 erbij
+                    - JourneyTime[j.Data.MatrixId, j.Next.Data.MatrixId]     // 8-7 erbij
+                    - JourneyTime[iplus.Data.MatrixId, jplus.Data.MatrixId]; // 1-9 erbij
                 //Console.WriteLine($"i.Next: {i.Next}\ni.Next.Prev: {i.Next.Prev}\nj.Next: {j.Next}\nj.Next.Prev: {j.Next.Prev}");
                 //Console.WriteLine("---");
             }
@@ -1109,12 +1248,12 @@ namespace AfvalOphaler
                 jnext.Prev = i;
 
                 TimeLeft = TimeLeft
-                    + GD.JourneyTime[iprev.Data.MatrixId, i.Data.MatrixId]
-                    + GD.JourneyTime[i.Data.MatrixId, inext.Data.MatrixId] 
-                    + GD.JourneyTime[j.Data.MatrixId, jnext.Data.MatrixId]
-                    - GD.JourneyTime[iprev.Data.MatrixId, inext.Data.MatrixId] 
-                    - GD.JourneyTime[j.Data.MatrixId, i.Data.MatrixId] 
-                    - GD.JourneyTime[i.Data.MatrixId, jnext.Data.MatrixId];
+                    + JourneyTime[iprev.Data.MatrixId, i.Data.MatrixId]
+                    + JourneyTime[i.Data.MatrixId, inext.Data.MatrixId] 
+                    + JourneyTime[j.Data.MatrixId, jnext.Data.MatrixId]
+                    - JourneyTime[iprev.Data.MatrixId, inext.Data.MatrixId] 
+                    - JourneyTime[j.Data.MatrixId, i.Data.MatrixId] 
+                    - JourneyTime[i.Data.MatrixId, jnext.Data.MatrixId];
                 //Console.WriteLine($"j: {j}\nj.Next: {j.Next}\nj.Next.Next: {j.Next.Next}");
                 //Console.WriteLine($"j.Next.Prev: {j.Next.Prev}\nj.Next.Next.Prev: {j.Next.Next.Prev}");
                 //Console.WriteLine("---");
@@ -1131,9 +1270,9 @@ namespace AfvalOphaler
                         Node y1 = y;
                         Node y2 = y.Next;
 
-                        double del_dist = GD.JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + GD.JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
-                        double X1Y1 = GD.JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
-                        double X2Y2 = GD.JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
+                        double del_dist = JourneyTime[x1.Data.MatrixId, x2.Data.MatrixId] + JourneyTime[y1.Data.MatrixId, y2.Data.MatrixId];
+                        double X1Y1 = JourneyTime[x1.Data.MatrixId, y1.Data.MatrixId];
+                        double X2Y2 = JourneyTime[x2.Data.MatrixId, y2.Data.MatrixId];
 
                         if (del_dist - (X1Y1 + X2Y2) > 0)
                         {
@@ -1143,11 +1282,11 @@ namespace AfvalOphaler
                         }
                         else
                         {
-                            double X2Y1 = GD.JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
+                            double X2Y1 = JourneyTime[x2.Data.MatrixId, y1.Data.MatrixId];
                             Node z1 = x2.Next;
                             if (z1 != y1)
                             {
-                                if ((del_dist + GD.JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + GD.JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                if ((del_dist + JourneyTime[x2.Data.MatrixId, z1.Data.MatrixId]) - (X2Y2 + X2Y1 + JourneyTime[x1.Data.MatrixId, z1.Data.MatrixId]) > 0)
                                 {
                                     //Console.WriteLine("Doing first 2.5-opt move...");
                                     Two_Opt_Node_Shift_Move(x2, y1);
@@ -1159,7 +1298,7 @@ namespace AfvalOphaler
                                 z1 = y1.Prev;
                                 if (z1 != x2)
                                 {
-                                    if ((del_dist + GD.JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + GD.JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
+                                    if ((del_dist + JourneyTime[y1.Data.MatrixId, z1.Data.MatrixId]) - (X1Y1 + X2Y1 + JourneyTime[y2.Data.MatrixId, z1.Data.MatrixId]) > 0)
                                     {
                                         //Console.WriteLine("Doing second 2.5-opt move...");
                                         Two_Opt_Node_Shift_Move(y1, x1);
@@ -1204,89 +1343,89 @@ namespace AfvalOphaler
     }
     #endregion
 
-    #region [DEPRECATED] Loop
-    public class Loop : IEnumerable
-    {
-        #region Variables & Constructor
-        public double Duration;
-        public double RoomLeft;
-        public int Count;
+    //#region [DEPRECATED] Loop
+    //public class Loop : IEnumerable
+    //{
+    //    #region Variables & Constructor
+    //    public double Duration;
+    //    public double RoomLeft;
+    //    public int Count;
 
-        public Node Start; //Order references to Dump
+    //    public Node Start; //Order references to Dump
 
-        public Loop()
-        {
-            Start = new Node();
-            Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
-            RoomLeft = 20000;           //Gecomprimeerd
-            Count = 0;
-        }
+    //    //public Loop()
+    //    //{
+    //    //    Start = new Node();
+    //    //    Duration = 30;              //Het storten moet één keer per Loop (lus) gebeuren
+    //    //    RoomLeft = 20000;           //Gecomprimeerd
+    //    //    Count = 0;
+    //    //}
 
-        public Node[] ToList()
-        {
-            Node[] nodes = new Node[Count];
-            Node curr = Start.Next; int i = 0;
-            while (!curr.IsDump)
-            {
-                nodes[i] = curr;
-                curr = curr.Next;
-                i++; 
-            } 
-            return nodes;
-        }
-        #endregion
+    //    public Node[] ToList()
+    //    {
+    //        Node[] nodes = new Node[Count];
+    //        Node curr = Start.Next; int i = 0;
+    //        while (!curr.IsDump)
+    //        {
+    //            nodes[i] = curr;
+    //            curr = curr.Next;
+    //            i++; 
+    //        } 
+    //        return nodes;
+    //    }
+    //    #endregion
 
-        #region Order Addition/Removal
-        public Node AddOrder(Order order, Node nextTo)
-        {
-            Duration += (order.TimeToEmpty
-                + GD.JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
-                + GD.JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
-                - GD.JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
+    //    #region Order Addition/Removal
+    //    public Node AddOrder(Order order, Node nextTo)
+    //    {
+    //        Duration += (order.TimeToEmpty
+    //            + JourneyTime[nextTo.Data.MatrixId, order.MatrixId]
+    //            + JourneyTime[order.MatrixId, nextTo.Next.Data.MatrixId]
+    //            - JourneyTime[nextTo.Data.MatrixId, nextTo.Next.Data.MatrixId]);
 
-            Node n = nextTo.AppendNext(order);
+    //        Node n = nextTo.AppendNext(order);
 
-            RoomLeft -= (order.NumContainers * order.VolPerContainer * 0.2);
-            Count++;
+    //        RoomLeft -= (order.NumContainers * order.VolPerContainer * 0.2);
+    //        Count++;
 
-            return n;
-        }
-        public void RemoveNode(Node n)
-        {
-            Order order = n.Data;
+    //        return n;
+    //    }
+    //    public void RemoveNode(Node n)
+    //    {
+    //        Order order = n.Data;
 
-            Duration -= order.TimeToEmpty + GD.JourneyTime[n.Prev.Data.MatrixId, order.MatrixId] + GD.JourneyTime[order.MatrixId, n.Next.Data.MatrixId];
-            Duration += GD.JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId];
+    //        Duration -= order.TimeToEmpty + JourneyTime[n.Prev.Data.MatrixId, order.MatrixId] + JourneyTime[order.MatrixId, n.Next.Data.MatrixId];
+    //        Duration += JourneyTime[n.Prev.Data.MatrixId, n.Next.Data.MatrixId];
             
-            n.Remove();
+    //        n.Remove();
 
-            RoomLeft += (order.NumContainers * order.VolPerContainer * 0.2);
-            Count--;
-        }
-        #endregion
+    //        RoomLeft += (order.NumContainers * order.VolPerContainer * 0.2);
+    //        Count--;
+    //    }
+    //    #endregion
 
 
 
-        public bool EvaluateRandomAdd(Random rnd)
-        {
-            while (true)
-            {
-                int nodeI = rnd.Next(0, Count);
+    //    public bool EvaluateRandomAdd(Random rnd)
+    //    {
+    //        while (true)
+    //        {
+    //            int nodeI = rnd.Next(0, Count);
 
-            }
-        }
+    //        }
+    //    }
 
-        public override string ToString()
-        {
-            return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
-        }
+    //    public override string ToString()
+    //    {
+    //        return $"nodeCount={Count}, time={Duration}, roomLeft={RoomLeft}";
+    //    }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return new DayScheduleEnumerator(Start);
-        }
-    }
-    #endregion
+    //    IEnumerator IEnumerable.GetEnumerator()
+    //    {
+    //        return new DayScheduleEnumerator(Start);
+    //    }
+    //}
+    //#endregion
 
     #region Loop Enum
     public class TourEnumerable : IEnumerable
@@ -1297,7 +1436,6 @@ namespace AfvalOphaler
         {
             this.start = start;
         }
-
         public IEnumerator GetEnumerator() => new TourEnumerator(start);
     }
 
@@ -1366,6 +1504,10 @@ namespace AfvalOphaler
         public Node Next;
 
         public int TourIndex;
+        public int TruckIndex;
+        public int DayIndex;
+
+        public Node[] Others { get; private set; }
 
         //public Node()
         //{
@@ -1374,35 +1516,37 @@ namespace AfvalOphaler
         //    Prev = Next = this;
         //}
 
-        public Node(Order o)
-        {
-            IsDump = false;
-            Data = o;
-        }
-        //Voor invoegen van Sentry, alleen bij constructor DayRoute!
-        public Node()
+        public Node(int dayInd, int truckInd) //Voor invoegen van Sentry, alleen bij constructor DayRoute!
         {
             IsDump = true;
             IsSentry = true;
-            Data = GD.Dump;
+            Data = Dump;
             TourIndex = -1;
             Next = this;
-        }
-        //Voor invoegen van dump
-        public Node(int dumpId)
+            TruckIndex = truckInd;
+            DayIndex = dayInd;
+        } 
+        public Node(int dayInd, int truckInd, int dumpId) //Voor invoegen van dump
         {
             IsDump = true;
             IsSentry = false;
-            Data = GD.Dump;
+            Data = Dump;
             TourIndex = dumpId;
+            TruckIndex = truckInd;
+            DayIndex = dayInd;
         }
-        //Voor invoegen normale order of dump
-        public Node(Order o, int tourInd)
+        public Node(Order o, int dayInd, int truckInd, int tourInd) //Voor invoegen normale order of dump
         {
             IsDump = o.OrderId == 0;
             Data = o;
             TourIndex = tourInd;
             IsSentry = false;
+            TruckIndex = truckInd;
+            DayIndex = dayInd;
+        }
+        public void SetOthers(Node[] others)
+        {
+           Others = others;
         }
         #endregion
 
@@ -1416,7 +1560,7 @@ namespace AfvalOphaler
         }
         public Node AppendNext(Order o)
         {
-            Node n = new Node(o, TourIndex)
+            Node n = new Node(o, DayIndex, TruckIndex, TourIndex)
             {
                 Prev = this,
                 Next = Next
@@ -1436,7 +1580,17 @@ namespace AfvalOphaler
             if (!(o is Node n)) return false;
             return Data.OrderId.Equals(n.Data.OrderId) && TourIndex.Equals(n.TourIndex);
         }
-        public override int GetHashCode() => base.GetHashCode();
+        public override int GetHashCode() //This method will not work for dumps, as they are the only order that can occur multiple times in one day.
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash *= 23 + TruckIndex.GetHashCode();
+                hash *= 23 + DayIndex.GetHashCode();
+                hash *= 23 + Data.OrderId.GetHashCode();
+                return hash;
+            }
+        }
         public override string ToString() => $"{(IsSentry ? "Sentry" : "Node")} ti{TourIndex}: {Data}";
         #endregion
     }

@@ -61,7 +61,7 @@ namespace AfvalOphaler
         }
     }
 
-    public static class GD
+    public static partial class GD
     {
         public static double[,] JourneyTime;
 
