@@ -44,8 +44,8 @@ namespace AfvalOphaler
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 1;
-            int operationCount = 10;
+            int threads = 10;
+            int operationCount = 20;
             int maxIterations = 500000;
             int maxNoChange = 75000;
 
@@ -220,7 +220,8 @@ namespace AfvalOphaler
 
 #endif
 #endif
-            Console.ReadKey();
+            ConsoleKeyInfo key;
+            do key = Console.ReadKey(); while (key.Key == ConsoleKey.RightWindows || key.Key == ConsoleKey.LeftWindows);
         }
         #endregion
 
