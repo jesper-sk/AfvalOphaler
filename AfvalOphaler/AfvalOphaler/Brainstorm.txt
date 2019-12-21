@@ -28,6 +28,21 @@ http://178.85.229.78:8067/team/157557372232042770
 - probability of operators dynamisch maken
 - andere zoekalgs implementeren
 
+==========================
+=== OPERATIES OP >1PWK ===
+==========================
+
+Elke node krijgt mee: HashSet<Node> met alle nodes die horen bij zijn order
+Als f=1pwk, dan hashset leeg of null
+Als f=npwk, dan hashset length n-1
+
+Als node verwijder:
+	foreach(Node node in freqNodes (oid))
+	{
+		node.Remove();
+	}
+	Remove();
+
 ===========================
 = AANPAK MOEILIJKE DINGEN =
 ===========================

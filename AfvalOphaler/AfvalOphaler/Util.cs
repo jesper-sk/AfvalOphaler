@@ -68,7 +68,7 @@ namespace AfvalOphaler
         }
     }
 
-    public static class GD
+    public static partial class GD
     {
         // 2D double array that gives the time (minutes) between each matrix-ID
         public static double[,] JourneyTime;

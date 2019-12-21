@@ -22,6 +22,10 @@ using System.Threading;
 
 namespace AfvalOphaler
 {
+    public static partial class GD
+    {
+        public const int ResearchLimit = 10;    //The amount of times a neighbor operation should retry to search a possible candidate if previous failed
+    }
     class Program
     {
         #region Input FileDirectory Declarations
@@ -221,7 +225,8 @@ namespace AfvalOphaler
 
 #endif
 #endif
-            Console.ReadKey();
+            ConsoleKeyInfo key;
+            do key = Console.ReadKey(); while (key.Key == ConsoleKey.RightWindows || key.Key == ConsoleKey.LeftWindows);
         }
         #endregion
 
