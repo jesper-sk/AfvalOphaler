@@ -45,9 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BigLL.cs" />
-    <Compile Include="NSchedule.cs" />
-    <Compile Include="NSolver.cs" />
+    <Compile Include="Old Code\BigLL.cs" />
+    <Compile Include="Schedule.cs" />
+    <Compile Include="Solver.cs" />
     <Compile Include="Orders.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Program.cs" />
@@ -63,8 +63,8 @@
     <Compile Include="RouteVisualizer.Designer.cs">
       <DependentUpon>RouteVisualizer.cs</DependentUpon>
     </Compile>
-    <Compile Include="Schedule.cs" />
-    <Compile Include="Solver.cs" />
+    <Compile Include="Old Code\OldSchedule.cs" />
+    <Compile Include="Old Code\OldSolver.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -74,7 +74,7 @@
     <Content Include="Brainstorm.txt" />
     <Content Include="data\dist.txt" />
     <Content Include="data\order.txt" />
-    <Content Include="Old.txt" />
+    <Content Include="Old Code\Old.txt" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

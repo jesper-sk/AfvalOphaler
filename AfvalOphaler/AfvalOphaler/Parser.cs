@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Drawing;
 
@@ -10,10 +8,13 @@ namespace AfvalOphaler
 {
     static class Parser
     {
-        // Spaties weghalen
-        // Splitsen op ;
-        // DoMagic(overgebleven_dingen)
-
+        /// <summary>
+        /// Parses the dist.txt file that contains the distance and time between each matrix-ID.
+        /// </summary>
+        /// <param name="dir">Directory of dist.txt</param>
+        /// <param name="nIds">Number of matrix-IDs</param>
+        /// <param name="dists">2D array that will contain the distance between each matrix-ID</param>
+        /// <param name="times">2D array that will contain the time between each matrix-ID (in minutes)</param>
         public static void ParseDistances(string dir, int nIds, out int[,] dists, out double[,] times)
         {
             string[] lines = File.ReadAllLines(dir);
@@ -24,14 +25,17 @@ namespace AfvalOphaler
                 string[] row = lines[i].Split(';');
                 int[] rowd = new int[row.Length];
                 for(int j = 0; j < row.Length; j++)
-                {
                     rowd[j] = int.Parse(row[j]);
-                }
                 dists[rowd[0], rowd[1]] = rowd[2];
                 times[rowd[0], rowd[1]] = rowd[3] / 60.0;
             }           
         }
 
+        /// <summary>
+        /// Parses only the x- and y-coordinates of the orders in the order.txt file.
+        /// </summary>
+        /// <param name="dir">Directory of order.txt</param>
+        /// <returns>A list of points that represents the location of each order</returns>
         public static List<Point> ParseOrderCoordinates(string dir)
         {
             List<Point> orders = new List<Point>();
@@ -46,6 +50,7 @@ namespace AfvalOphaler
             return orders;
         }
 
+        // [DEPRECATED]
         public static BigLL ParseOrders(string dir)
         {
             string[] lines = File.ReadAllLines(dir);
@@ -59,19 +64,31 @@ namespace AfvalOphaler
             return new BigLL(orders);
         }
 
+        /// <summary>
+        /// Parses the order.txt file to a list of Orders/
+        /// </summary>
+        /// <param name="dir">Directory of order.txt</param>
+        /// <returns>List of parsed Orders</returns>
         public static List<Order> ParseOrdersArr(string dir)
         {
             string[] lines = File.ReadAllLines(dir);
             List<Order> orders = new List<Order>(lines.Length - 1);
             for (int i = 1; i < lines.Length; i++)
-            {
-                Order o = new Order(lines[i].Split(';'));
-                //Console.WriteLine(o.ToString());
-                orders.Add(o);
-            }
+                orders.Add(new Order(lines[i].Split(';')));
             return orders;
         }
 
+        /// <summary>
+        /// Assigns a cluster to each order following the K-Means clustering algorithm:
+        /// - Assign each order to a random cluster
+        /// - Calculate middle-point of each cluser
+        /// - While (change_in_middle_points)
+        ///     - Assign each order to nearest cluster
+        ///     - Recalculate middle-point of each cluster
+        /// </summary>
+        /// <param name="orders">The orders to cluster</param>
+        /// <param name="k">Amount of clusters</param>
+        /// <param name="maxI">Maximum iterations</param>
         public static void KMeansClusterOrders(List<Order> orders, int k, int maxI)
         {
             Random rnd = new Random();
@@ -83,6 +100,7 @@ namespace AfvalOphaler
 
             int npk = orders.Count / k;
 
+            // Initialize clusters
             List<int> ks = new List<int>(k);
             for (int i = 0; i < k; i++)
             {
@@ -92,6 +110,7 @@ namespace AfvalOphaler
 
             ks.Sort((a, b) => rnd.Next(-1, 2));
 
+            // Assign each order to a cluster
             int j = 0;
             for (int i = 0; i < orders.Count; i++)
             {
@@ -102,21 +121,13 @@ namespace AfvalOphaler
                 }
                 orders[i].Cluster = ks[j++];
             }
-            /*/Setting clusters
-            for (int i = 0; i < k; i++)
-            {
-                clusters.Add(new Pointc());
-                orders[i].Cluster = i;
-            }
-            for (int i = k; i < orders.Count; i++)
-            {
-                orders[i].Cluster = rnd.Next(0, k);
-            }*/
 
+            // Do:
+            // - Update middle-points of each cluster
+            // - Assign each order to the nearest cluster
             int iter = 0;
             do { UpdateMeans(); /*Console.WriteLine(iter++);*/ iter++; } while (UpdateClusters() && iter < maxI);
-
-            
+         
             void UpdateMeans()
             {
                 int[] ninc = new int[k];
@@ -160,33 +171,30 @@ namespace AfvalOphaler
                         changed = true;
                     }
                 }
-                if (EmptyCluster())
-                {
-                    //Console.WriteLine("Empty");
-                    //return false;
-                }
-                //Console.WriteLine(changed);
+                // Check if there are any empty clusters:
+                // (Not used at the moment)
+                if (EmptyCluster()) return false;
+
                 return changed;
             }
 
+            // Calculates the Euclidean distance between two points:
             int EucDist(int x, int y, Pointc p2) => Convert.ToInt32(Math.Sqrt(Math.Pow(x - p2.X, 2) + Math.Pow(y - p2.Y, 2)));
 
+            // Checks if there are empty clusters:
             bool EmptyCluster()
             {
                 int[] ninc = new int[k];
                 foreach (Order order in orders)
-                {
                     ninc[order.Cluster]++;
-                }
                 foreach (int i in ninc)
-                {
                     if (i == 0) return true;
-                }
                 return false;
             }
 
         }
 
+        // Small helper class to represent points in 2D space:
         public class Pointc
         {
             public int X;

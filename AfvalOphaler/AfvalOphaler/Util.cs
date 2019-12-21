@@ -1,48 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace AfvalOphaler
 {
     public static class Util
     {
-        public static string ListToString(List<int> l)
+        /// <summary>
+        /// Prints a list as a string of all elements to string seperated with a comma.
+        /// </summary>
+        /// <param name="l">The list of integers thats needs to be printed</param>
+        /// <returns>A string of all elements to string seperated with a comma</returns>
+        public static string ListToString(List<object> l)
         {
+            if (l == null || l.Count == 0) return "";
+
             StringBuilder sb = new StringBuilder();
             sb.Append("{");
-            if (l.Count != 0)
-            {
-                sb.Append(l[0]);
-                for (int j = 1; j < l.Count; j++)
-                {
-                    int i = l[j];
-                    sb.Append($", {i}");
-                }
-            }
+            sb.Append(l[0]);
+            for (int j = 1; j < l.Count; j++)
+                sb.Append($", {l[j].ToString()}");
             sb.Append("}");
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Prints an array as a string of all elements to string seperated with a comma.
+        /// </summary>
+        /// <param name="l">Int array that needs to be printed</param>
+        /// <returns>A string of all elements to string seperated with a comma</returns>
         public static string ArrToString(int[] l)
         {
+            if (l == null || l.Length == 0) return "";
+
             StringBuilder sb = new StringBuilder();
             sb.Append("{");
-            if (l.Length != 0)
+            sb.Append(l[0]);
+            for (int j = 1; j < l.Length; j++)
             {
-                sb.Append(l[0]);
-                for (int j = 1; j < l.Length; j++)
-                {
-                    int i = l[j];
-                    sb.Append($", {i}");
-                }
+                int i = l[j];
+                sb.Append($", {i}");
             }
             sb.Append("}");
             return sb.ToString();
         }
-
+        /// <summary>
+        /// Prints an array as a string of all elements to string seperated with a comma.
+        /// </summary>
+        /// <param name="l">String array that needs to be printed</param>
+        /// <returns>A string of all elements to string seperated with a comma</returns>
         public static string ArrToString(string[] l)
         {
             StringBuilder sb = new StringBuilder();
@@ -63,8 +70,11 @@ namespace AfvalOphaler
 
     public static class GD
     {
+        // 2D double array that gives the time (minutes) between each matrix-ID
         public static double[,] JourneyTime;
 
+        // Static predefined order that is the dump
+        // The dump is special order that only has a time constraint
         public static Order Dump = new Order()
         {
             OrderId = 0,
@@ -74,9 +84,13 @@ namespace AfvalOphaler
             YCoord = 513026712,
             TimeToEmpty = 30
         };
+
+        // NOT USED:
         //public static BigLLNode DumpLLing = new BigLLNode(Dump);
 
-        // [Frequentie, aantal_combinaties, allowed_days_in_combi]
+        // Prefined constant that contains for each order frequency 
+        //  the combination of days in which the order may be planned
+        // [frequency][amount_of_combinations][allowed_days_in_combination]
         public static readonly int[][][] AllowedDayCombinations =
         {
             new int[][]
@@ -119,7 +133,14 @@ namespace AfvalOphaler
         };
     }
 
-    //Thread-safe static random number generator class
+    /// <summary>
+    /// Thread-safe static random number generator class:
+    /// Causes multiple randoms in a multi-threaded environment to have different seeds.
+    /// This class is defined because multiple randoms all created around the same time
+    /// will have (almost) equal seeds thus causing them to act about the same.
+    /// This class we prevent this, thus causing multiple randoms created around the same time
+    ///     be all random.
+    /// </summary>
     public static class StaticRandom
     {
         static int seed = Environment.TickCount;

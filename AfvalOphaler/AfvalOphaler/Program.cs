@@ -2,7 +2,7 @@
 //#define FINAL         // Whether to run the final build
 //#define CLUSTER       // Whether to cluster all orders
 //#define VISUALIZER    // Whether to show the visualizer
-//#define TEST          // Whether to use Solver and Schedule
+//#define TEST          // Whether to use Solver and Schedule [DEPRICATED]
 #define NTEST         // Whether to use NSolver and NSchedule
 //#define CUSTOM        // Whether to use Own-Defined small testcases
 #endregion
@@ -24,7 +24,7 @@ namespace AfvalOphaler
 {
     class Program
     {
-        #region Directory Declarations
+        #region Input FileDirectory Declarations
 #if FINAL
         const string distanceDir = @".\data\dist.txt";
         const string ordersDir = @".\data\order.txt";
@@ -35,19 +35,26 @@ namespace AfvalOphaler
         #endregion
 
         #region Main
+        /// <summary>
+        /// Entry point of the program.
+        /// </summary>
+        /// <param name="args"></param>
         static void Main(string[] args)
         {
-            // Getting times and distances:
+            // Parsing times and distances:
             Console.WriteLine("Parsing dist.txt");
             Parser.ParseDistances(distanceDir, 1098, out int[,] d, out double[,] t);
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
 
-            int threads = 1;
-            int operationCount = 10;
-            int maxIterations = 500000;
-            int maxNoChange = 75000;
+            #region Solver Variables
+            int threads = 10;                // How many seperate solvers should be started
+            int operationCount = 10;        // How many neighbors per iteration should be generated
+            int maxIterations = 500000;     // Maximum number of iterations per solver
+            int maxNoChange = 75000;        // Maximum number of iterations without state change per solver
+            int refreshTime = 1000;         // Delay of the statusUpdater
+            #endregion
 
 #if CLUSTER
             // Clustering:
@@ -69,11 +76,13 @@ namespace AfvalOphaler
 #endif
 
 #if FINAL
-            // HEY JOCHIE !!!
-            // DIT IS VOOR FINAL JOCHIE !!!
+            solver = new Solver(orders);
+            results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
+            AwaitAndPrintResults();
 #else
 #if TEST
-#if CUSTOM
+
+#elif CUSTOM
             orders = orders.OrderBy(o => o.Frequency).ToList();
             NAfvalOphaler.Schedule customSchedule = new NAfvalOphaler.Schedule(orders);
             int loopindex = customSchedule.AddLoop(0, 0);
@@ -94,22 +103,14 @@ namespace AfvalOphaler
             Console.WriteLine("Optimalisation done...");
             File.WriteAllText(@".\afterOpt.txt", customSchedule.ToCheckString());
             Console.WriteLine("Opt results saved...");
-#else
-            /* RouteVisualizer:
-            RouteVisualizer vis = new RouteVisualizer(Parser.ParseOrderCoordinates(ordersDir));
-            Application.DoEvents();
-            vis.WindowState = FormWindowState.Maximized;
-            Application.DoEvents();
-            Console.ReadKey();*/
-#endif
+
 #elif NTEST
             solver = new Solver(orders);
-            results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
-            //Task awaitAndPrintResults = Task.Factory.StartNew(() => 
-            //Task.WaitAll(new Task[] { awaitAndPrintResults });
+            results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange, refreshTime);
             AwaitAndPrintResults();
 
 #elif CUSTOM
+            // Swap test:
             Console.WriteLine($"Order {75}: id{orders[75]}");
             Console.WriteLine($"Order {23}: id{orders[23]}");
             Console.WriteLine($"Order {345}: {orders[345]}");
@@ -227,9 +228,15 @@ namespace AfvalOphaler
         #region Await Solver/User Then Print Results
         static Solver solver;
         static Task<ScheduleResult> results;
+        /// <summary>
+        /// Starts the solver.
+        /// Awaits until either:
+        /// - All solver instances are finished.
+        /// - Userinterrupt.
+        /// Then prints the best result.
+        /// </summary>
         private static void AwaitAndPrintResults()
         {
-            //Console.CancelKeyPress += Console_CancelKeyPress;
             Task userInterruptAwaiter = Task.Factory.StartNew(() => AwaitUserInterrupt(solver));
             results.Wait();
             if (!userInterruptAwaiter.IsCompleted) solverStillGoing = false;
@@ -240,6 +247,12 @@ namespace AfvalOphaler
         }
 
         private static bool solverStillGoing = true;
+        /// <summary>
+        /// Awaits userinterrupt (keypress of either the X or Escape key).
+        /// If the user pressed a key the solver is stopped.
+        /// Is stopped itself if all solvers are done.
+        /// </summary>
+        /// <param name="solver"></param>
         private static void AwaitUserInterrupt(Solver solver)
         {
             while (solverStillGoing)
@@ -258,23 +271,26 @@ namespace AfvalOphaler
                 else Thread.Sleep(50);
             }
         }
-        private static void PrintResult(ScheduleResult res, bool writeToFile = true, string fileName = "result")
+        /// <summary>
+        /// Prints the best solver result.
+        /// </summary>
+        /// <param name="best">The best schedule result</param>
+        /// <param name="writeToFile">if true saves the best result as string ready to put in the checker</param>
+        /// <param name="fileName">filename of the file in which the best result is saved, ignored if writeToFile=false</param>
+        private static void PrintResult(ScheduleResult best, bool writeToFile = true, string fileName = "result")
         {
             Console.Clear();
             Console.WriteLine("===============" +
                             "\n= BEST RESULT =" +
                             "\n===============");
-            Console.WriteLine(res.Stats);
-
-            if (writeToFile) File.WriteAllText($@".\{fileName}.txt", res.Check.ToString());
-
+            Console.WriteLine(best.Stats);
+            if (writeToFile) File.WriteAllText($@".\{fileName}.txt", best.Check.ToString());
             Console.WriteLine("===============");
         }
         #endregion
     }
 
-
-    #region Custom Exception
+    #region Custom Exception [Can be ignored]
     [Serializable]
     public class HeyJochieException : Exception
     {
