@@ -117,9 +117,9 @@ namespace AfvalOphaler
                 }
                 else noChangeAdd++;
 
-                if (i % 500 == 0) for (int opt = 0; opt < 25; opt++) solver.schedule.OptimizeAllDays();
+                if (i % Optimize_Interval == 0) for (int opt = 0; opt < Optimize_Iterations; opt++) solver.schedule.OptimizeAllDays();
                 if (i % 10000 == 0) iterationCounters[taskID] = i;
-                if (i % 15000 == 0) s = 1 - s; // Used to switch LocalSolver
+                if (i % Search_Algorithm_Interval == 0) s = 1 - s; // Used to switch LocalSolver
                 stopAdd = 
                     noChangeAdd == MaxNoChange_AddPhase
                     || ++i == MaxIterations_AddPhase
@@ -163,9 +163,9 @@ namespace AfvalOphaler
                         best = solv.schedule.ToResult();
                 }
                 else noChange++;
-                if (i % 1000 == 0) for (int opt = 0; opt < 50; opt++) solv.schedule.OptimizeAllDays();
+                if (i % Optimize_Interval == 0) for (int opt = 0; opt < Optimize_Interval; opt++) solv.schedule.OptimizeAllDays();
                 if (i % 10000 == 0) iterationCounters[taskID] = i;
-                //if (i % 10000 == 0) s = 1 - s; // Used to switch LocalSolver
+                //if (i % Search_Algorithm_Interval == 0) s = 1 - s; // Used to switch LocalSolver
                 stop = noChange == MaxNoChange_AllPhase
                     || ++i == MaxIterations_AllPhase
                     || UserInterrupt;

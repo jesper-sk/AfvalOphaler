@@ -31,6 +31,13 @@ namespace AfvalOphaler
 
         public const int MaxIterations_AllPhase = 500000;   // Maximum number of iterations per solver for the All phase
         public const int MaxNoChange_AllPhase = 75000;      // Maximum number of iterations without state change per solver for the All phase
+
+        public const int Optimize_Interval = 1000;          // Number of iterations between each optimization
+        public const int Optimize_Iterations = 25;          // Number of iterations to run the optimizer for
+
+        public const int Iteration_Count_Interval = 10000;  // Determines every how many iterations the iteration counter of the status should be updated
+
+        public const int Search_Algorithm_Interval = 10000; // Number of iterations between each switch of search algorithm
     }
     class Program
     {
