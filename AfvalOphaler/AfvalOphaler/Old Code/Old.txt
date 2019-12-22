@@ -1,0 +1,126 @@
+﻿ [OLD CODE, CAN BE IGNORED]
+			ADD operator:
+				// ASAP
+				/*
+				List<Node> nextTos = new List<Node>(bestNotPicked.Frequency);
+				List<int> loopIndices = new List<int>(bestNotPicked.Frequency);
+				List<int> days = new List<int>(bestNotPicked.Frequency);
+				List<int> trucks = new List<int>(bestNotPicked.Frequency);
+				List<double> deltas = new List<double>(bestNotPicked.Frequency);
+
+				bool planningFound = false;
+				for (int c = 0; c < combis.Length; c++)
+				{
+					int truckFoundForAllDays = 0;
+					nextTos = new List<Node>(bestNotPicked.Frequency);
+					loopIndices = new List<int>(bestNotPicked.Frequency);
+					days = new List<int>(bestNotPicked.Frequency);
+					trucks = new List<int>(bestNotPicked.Frequency);
+					deltas = new List<double>(bestNotPicked.Frequency);
+
+					for (int d = 0; d < combis[c].Length; d++)
+					{
+						bool truckFound = false;
+						for (int t = 0; t < 2; t++)
+						{
+							Node where;
+							if (s.days[combis[c][d], t].EvaluateAddition(bestNotPicked, out where, out double delta, out int loop))
+							{
+								nextTos.Add(where);
+								loopIndices.Add(loop);
+								days.Add(combis[c][d]);
+								trucks.Add(t);
+								deltas.Add(delta);
+
+								truckFound = true;
+								truckFoundForAllDays++;
+								break;
+							}
+						}
+						if (!truckFound) break;
+					}
+					if (truckFoundForAllDays == combis[c].Length) { planningFound = true; break; }
+				}
+				if (planningFound)
+				{
+					return new AddResult(s, bestNotPicked, notPickedOrderIndex, nextTos, loopIndices, days, trucks, deltas);
+				}
+				else
+				{
+					return new ImpossibleResult(s, new List<Order> { bestNotPicked });
+				}
+				//*/
+
+[SOLVER.CS, SOLVE() REGION OLD]
+			#region Old
+            ////Console.WriteLine($"Task {TaskID} started.");
+            //Schedule start = new Schedule(orders);
+            ////LocalSolver solver = new RandomHillClimbLocalSolver(start);
+            //ScheduleResult best = new ScheduleResult() { Score = double.MaxValue };
+            //LocalSolver[] solvs = new LocalSolver[]
+            //{
+            //    //new SaLocalSolver(start, 0.99, 0.999999),
+            //    new RandomHillClimbLocalSolver(start),
+            //    new SaLocalSolver(start, 0.6, 0.99999)
+            //};
+            //foreach (LocalSolver ss in solvs) ss.Init();
+            //int s = 0;
+
+            //bool stop = false;
+            //int i = 0;
+            //int noChange = 0;
+            //while (!stop)
+            //{
+            //    LocalSolver solver = solvs[s];
+            //    //double[] probs = new double[] { 1, 0, 0 };
+            //    double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0 };
+            //    if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer
+            //    {
+            //        noChange = 0;
+            //        if (solver.schedule.Score < best.Score)
+            //        {                     
+            //            best = solver.schedule.ToResult();
+            //            AddScheduleToTop(best);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        noChange++;
+            //    }
+            //    if (i % 500 == 0) for (int opt = 0; opt < 25; opt++) solver.schedule.OptimizeAllDays();
+            //    if (i % 10000 == 0) UpdateStatus(TaskID, $"Task {TaskID} on iteration: {i}");
+            //    if (i % 15000 == 0) s = 1 - s;
+            //    stop = noChange == 2500
+            //        || ++i == 30000
+            //        || UserInterrupt;
+            //}
+            //stop = false;
+
+            //LocalSolver solv = new SaLocalSolver(start, 0.7, 0.9999);
+            //solv.Init();
+            ////Console.WriteLine($"Task {TaskID} transfer: {start.Penalty}");
+            //while (!stop)
+            //{
+            //    //double[] probs = new double[] { 1, 0, 0 };
+            //    double[] probs = new double[] { 1/9.0, 1 / 9.0, 7 / 9.0 };
+            //    if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer
+            //    {
+            //        noChange = 0;
+            //        if (solv.schedule.Score < best.Score)
+            //        {
+            //            best = solv.schedule.ToResult();
+            //            AddScheduleToTop(best);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        noChange++;
+            //    }
+            //    if (i % 1000 == 0) for (int opt = 0; opt < 100; opt++) solv.schedule.OptimizeAllDays();
+            //    //if (i % 10000 == 0) Console.WriteLine($"Task {TaskID} on iteration: {i}");
+            //    stop = noChange == maxI
+            //        || ++i == maxI
+            //        || UserInterrupt;
+            //}
+            ////Console.WriteLine($"Task {TaskID} done.");
+            #endregion
