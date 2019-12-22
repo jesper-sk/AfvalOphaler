@@ -65,7 +65,7 @@ namespace AfvalOphaler
             solvs = new LocalSolver[]
             {
                 new RandomHikeLocalSolver(start),
-                new SaLocalSolver(start, 0.6, 0.99999)
+                new SaLocalSolver(start, 0.7, 0.9999)
             };
             foreach (LocalSolver ls in solvs) ls.Init();
             s = 0;
@@ -75,7 +75,7 @@ namespace AfvalOphaler
             while (!stopAdd)
             {
                 LocalSolver solver = solvs[s];
-                double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0, 0 };
+                double[] probs = new double[] { 7 / 8.0, 1 / 8.0, 0, 0, 0 };
                 //double[] probs = new double[] { 1, 0, 0, 0 };
                 if (solver.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
@@ -115,7 +115,7 @@ namespace AfvalOphaler
                 //double[] probs = new double[] { 1/2.0, 1/2.0, 0, 0 }; // delete only
                 //double[] probs = new double[] { 0, 0, 0, 1 }; // Swap only
                 //double[] probs = new double[] { 2 / 12.0, 5 / 12.0, 0, 5 / 12.0 };
-                double[] probs = new double[] { 1 / 12.0, 1 / 12.0, 5 / 12.0, 5 / 12.0 };
+                double[] probs = new double[] { 1 / 12.0, 1 / 12.0, 5 / 12.0, 5 / 12.0, 0 };
                 if (solv.GetNext(probs, opCount)) //Add, Delete, Transfer, Swap
                 {
                     noChange = 0;
@@ -241,33 +241,35 @@ namespace AfvalOphaler
                         currBestIndex = i;
                         best = curr;
                     }
-#if STATUS
-                    SolverStatus stat = stati[i];
-                    string extraInfo;
-                    switch (stat)
-                    { // In order of most time on status:
-                        case SolverStatus.Doing_All:
-                            extraInfo = $", iteration: {iterationCounters[i]}";
-                            break;
-                        case SolverStatus.Done:
-                            extraInfo = $", best: {bestResults[i].Score}";
-                            break;
-                        case SolverStatus.Doing_Add:
-                            extraInfo = $", iteration: {iterationCounters[i]}";
-                            break;
-                        default: extraInfo = ""; break;
+                    if (GD.ShowStatus)
+                    {
+                        SolverStatus stat = stati[i];
+                        string extraInfo;
+                        switch (stat)
+                        { // In order of most time on status:
+                            case SolverStatus.Doing_All:
+                                extraInfo = $", iteration: {iterationCounters[i]}";
+                                break;
+                            case SolverStatus.Done:
+                                extraInfo = $", best: {bestResults[i].Score}";
+                                break;
+                            case SolverStatus.Doing_Add:
+                                extraInfo = $", iteration: {iterationCounters[i]}";
+                                break;
+                            default: extraInfo = ""; break;
+                        }
+                        //string extraInfo = (stat == SolverStatus.Done || stat == SolverStatus.Not_Initialized) ? "" : $", iteration: {iterationCounters[i]}";
+                        Console.SetCursorPosition(0, i);
+                        Console.WriteLine($"Task {i}: {stat}{extraInfo}");
                     }
-                    //string extraInfo = (stat == SolverStatus.Done || stat == SolverStatus.Not_Initialized) ? "" : $", iteration: {iterationCounters[i]}";
-                    Console.SetCursorPosition(0, i);
-                    Console.WriteLine($"Task {i}: {stat}{extraInfo}");
-#endif
                 }
-#if STATUS
-                Console.SetCursorPosition(0, threads);
-                Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
-                Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
-#endif
-                Thread.Sleep(5000);
+                if (GD.ShowStatus)
+                {
+                    Console.SetCursorPosition(0, threads);
+                    Console.WriteLine($"===\nBest result produced on task {currBestIndex}:\n{best.String}");
+                    Console.WriteLine($"===\nCurrent runtime: {watch.Elapsed}");
+                }
+                Thread.Sleep(GD.ConsoleUpdateInterval);
             }
         }
 

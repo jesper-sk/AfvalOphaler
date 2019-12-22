@@ -59,11 +59,38 @@ namespace AfvalOphaler
             sb.Append("}");
             return sb.ToString();
         }
+
+        public static string IListToString<T>(IList<T> list, bool showLabel = true)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (showLabel)
+            {
+                sb.Append($"IList<{typeof(T)}> ");
+            }
+            sb.Append("{");
+            if (list.Count != 0)
+            {
+                sb.Append(list[0]);
+                for (int j = 1; j < list.Count; j++)
+                {
+                    string i = list[j].ToString();
+                    sb.Append($", {i}");
+                }
+            }
+            sb.Append("}");
+            return sb.ToString();
+        }
     }
 
     public static partial class GD
     {
         public static double[,] JourneyTime;
+
+        public static class GlobalCounter
+        {
+            static long c = 0;
+            public static long Next() => c++;
+        }
 
         public static Order Dump = new Order()
         {
@@ -72,7 +99,8 @@ namespace AfvalOphaler
             MatrixId = 287,
             XCoord = 56343016,
             YCoord = 513026712,
-            TimeToEmpty = 30
+            TimeToEmpty = 30,
+            Frequency = 1
         };
         //public static BigLLNode DumpLLing = new BigLLNode(Dump);
 

@@ -24,7 +24,15 @@ namespace AfvalOphaler
 {
     public static partial class GD
     {
+        public const bool ShowStatus = true;
+        public const int ConsoleUpdateInterval = 1000;
+
         public const int ResearchLimit = 10;    //The amount of times a neighbor operation should retry to search a possible candidate if previous failed
+
+        public const int ThreadCount = 10;
+        public const int OperationCount = 10;
+        public const int MaxIterations = 500000;
+        public const int MaxNoChange = 75000;
     }
     class Program
     {
@@ -47,11 +55,6 @@ namespace AfvalOphaler
             GD.JourneyTime = t;
             Console.WriteLine("Parsing order.txt");
             List<Order> orders = Parser.ParseOrdersArr(ordersDir);
-
-            int threads = 8;
-            int operationCount = 20;
-            int maxIterations = 500000;
-            int maxNoChange = 75000;
 
 #if CLUSTER
             // Clustering:
@@ -108,7 +111,7 @@ namespace AfvalOphaler
 #endif
 #elif NTEST
             solver = new Solver(orders);
-            results = solver.StartSolving(threads, operationCount, maxIterations, maxNoChange);
+            results = solver.StartSolving(GD.ThreadCount, GD.OperationCount, GD.MaxIterations, GD.MaxNoChange);
             //Task awaitAndPrintResults = Task.Factory.StartNew(() => 
             //Task.WaitAll(new Task[] { awaitAndPrintResults });
             AwaitAndPrintResults();
