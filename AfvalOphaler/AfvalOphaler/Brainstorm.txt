@@ -1,6 +1,14 @@
-﻿===================
-= SUBMISSION INFO =
-===================
+﻿To Do:
+	- Loops vervangen voor een ding in dag
+		- Lijst van Storten (oftewel elke loop begint bij een index)
+		- lijst van ruimte over per dump-dump reeks (tour)
+		- Grooooote loop: begint bij dumps[0] en eindigt bij dumps[0]
+		- 2.5-opt: Bij elke switch checken of operatie mag
+		- toCheckString: begin bij dumps[0].Next, ga door totte_met_ isDumpCounter == dumps.Count 
+	
+	-AANWENNEN: Als operatie in loop/dag/schedule, dan meteen tijd/afval aanpassen!
+
+
 
 Format Inlevermodel
 
@@ -16,52 +24,55 @@ Op het eind van de dag gaat de auto weer naar de stort; dit moet je ook aangeven
 1; 1; 3; 0
 1; 1; 4; 30
 
+SWEETSPOT PARAMETERS:
+	BESTE MET CLUSTER:
+	clusterCount = 4, 5, 6 <- verschilt wann welke beter.
+	nonPlannedOrders = orders.OrderBy(o => o.Cluster).ThenBy(o => o.Frequency).ThenBy(o => o.Score).ToList();
+	opCount = 20
+	Hillclimb
+	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+	AddByCluster BEST
+
+	TOT NU TOE BESTE (DUS BETER DAN MET CLUSTER):
+	nonPlannedOrders = orders.OrderBy(o => o.Score).ThenByDescending(o => o.Frequency).ToList();
+	opCount = 20
+	Hillclimb
+	int index = rnd.Next(0, s.nonPlannedOrders.Count / 5);
+	Add BEST
+
 http://178.85.229.78:8067/team/157557372232042770
 
-=============
-=== TO DO ===
-=============
+========================
+=== SWS NOG MAKEN!!! ===
+========================
+een algortime die een loop krijgt en die optimaliseert,
+dus de volgorde dusdanig maakt dat de loop het effectiefst is.
+Dit algoritme hoeft alleen maar te kijken naar reistijden want een loop voldoet altijd aan de afval constraints.
 
-- SWAP FIXEN
-- operators kunnen laten werken met hogere freq orders
-- dumps verwijderen / toevoegen
-- probability of operators dynamisch maken
-- andere zoekalgs implementeren
+Werking algoritme:
+1. Krijg een te optimaliseren loop L
+2. Kijk of alle nodes in L links of rechts zijn van de stort
+3. Zoja ga naar stap 5. <- kunnen we GOTO gebruiken!
+4. Verdeel de nodes in L over een lijst van nodes links en rechts van de stort.
+	Pas op beide lijsten stap 5. toe.
+5. Krijg een lijst van nodes
+	5.1 trek een lijn door deze nodes dusdanig dat de helft van de lijst boven de lijn zit, de andere helft onder de lijn.
+		Als de lijst van nodes oneven is, neem dan deze lijn dusdanig dat deze door een Node snijd én nog steeds
+			de helft van de nodes boven zich heeft en de andere helft onder zich.
+	5.2 Sorteer nu voor elke helft de nodes op volgorde van tijd tot de stort.
+	5.3 maak de nieuwe loop als:
+		stort -> alle_nodes_1e_helft -> alle_nodes_2e_helft_reversed
+6. return.
 
-==========================
-=== OPERATIES OP >1PWK ===
-==========================
-
-Elke node krijgt mee: HashSet<Node> met alle nodes die horen bij zijn order
-Als f=1pwk, dan hashset leeg of null
-Als f=npwk, dan hashset length n-1
-
-Als node verwijder:
-	foreach(Node node in freqNodes (oid))
-	{
-		node.Remove();
-	}
-	Remove();
-
-===========================
-= AANPAK MOEILIJKE DINGEN =
-===========================
-
-adden en verwijderen van dumps tijdens het zoeken:
-- Toestaan dat dit gebeurd in AddOperator/DeleteOperator
-
-- In de optimizer doen
-	De optimizer kijkt voor elke dayroute of een dump verwijderd kan worden of dat er één toegevoegd moet worden
-	Verwijderen kan altijd zolang de constraints niet geschonden worden.
-	Adden zou in theorie ook altijd mogen 
-	- Voor:
-		- Je weet zeker dat de dumps daadwerkelijk verwijderd/toegevoegd worden
-	- Tegen:
+Nog te bepalen:
+- Gezien de layout van alle punten kan een route die links en rechts van de stort gaat beter niet verdeeld worden
+	qua links/rechts van de stort op basis van X maar op basis van een schuine lijn door de stort met RC=1 (dus zo'n lijn: /)
+- De nieuwe loop is gedefinieerd als: stort -> alle_nodes_1e_helft -> alle_nodes_2e_helft_reversed,
+	wat is de 1e helft en wat is de 2e helft? maakt dat uit?
 
 ===========================================
 === Evolutionairy Programming Approach: ===
 ===========================================
-
 Iterate till convergence || maxiterations || user interupt:
 	Schedule[parentCount] Parents;
 	List<Schedule> Children = new List<Schedule>(to_be_determined);
