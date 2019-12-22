@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Threading;
-using NOp = AfvalOphaler.Schedule.NeighborOperation;
-using Timer = System.Timers.Timer;
+using System.Threading.Tasks;
 using static AfvalOphaler.GD;
+using NOp = AfvalOphaler.Schedule.NeighborOperation;
 
 
 namespace AfvalOphaler
@@ -117,9 +116,9 @@ namespace AfvalOphaler
                 }
                 else noChangeAdd++;
 
-                if (i % Optimize_Interval == 0) for (int opt = 0; opt < Optimize_Iterations; opt++) solver.schedule.OptimizeAllDays();
-                if (i % 10000 == 0) iterationCounters[taskID] = i;
-                if (i % Search_Algorithm_Interval == 0) s = 1 - s; // Used to switch LocalSolver
+                if (i % OptimizeInterval == 0) for (int opt = 0; opt < OptimizeIterations; opt++) solver.schedule.OptimizeAllDays();
+                if (i % UpdateIterationStatusInverval == 0) iterationCounters[taskID] = i;
+                if (i % SwitchSearchAlgorithmInterval_AddPhase == 0) s = 1 - s; // Used to switch LocalSolver
                 stopAdd = 
                     noChangeAdd == MaxNoChange_AddPhase
                     || ++i == MaxIterations_AddPhase
@@ -163,9 +162,9 @@ namespace AfvalOphaler
                         best = solv.schedule.ToResult();
                 }
                 else noChange++;
-                if (i % Optimize_Interval == 0) for (int opt = 0; opt < Optimize_Interval; opt++) solv.schedule.OptimizeAllDays();
-                if (i % 10000 == 0) iterationCounters[taskID] = i;
-                //if (i % Search_Algorithm_Interval == 0) s = 1 - s; // Used to switch LocalSolver
+                if (i % OptimizeInterval == 0) for (int opt = 0; opt < OptimizeInterval; opt++) solv.schedule.OptimizeAllDays();
+                if (i % UpdateIterationStatusInverval == 0) iterationCounters[taskID] = i;
+                //if (i % SwitchSearchAlgorithmInterval_AllPhase == 0) s = 1 - s; // Used to switch LocalSolver
                 stop = noChange == MaxNoChange_AllPhase
                     || ++i == MaxIterations_AllPhase
                     || UserInterrupt;

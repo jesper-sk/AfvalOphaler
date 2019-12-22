@@ -1,16 +1,12 @@
 ﻿//#define FINAL         // Whether to run the final build. If uncommented, program will look for the dist.txt and order.txt in the same directory as
-                        // the executable. If commented, program will look for them in the data folder in our solution
+// the executable. If commented, program will look for them in the data folder in our solution
 //#define CLUSTER       // Whether to cluster all orders. As we currently don't use clustering, it is commented by default.
-
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using System.Windows.Forms;
 using System.Threading;
+using System.Threading.Tasks;
 
 // © Het Woczek duo
 
@@ -18,26 +14,25 @@ namespace AfvalOphaler
 {
     public static partial class GD
     {
-        public const bool ShowStatus = true;                // Whether to show the status in the console. For debuggin purposes
-        public const int ConsoleUpdateInterval = 1000;      // Delay of the statusUpdater
+        public const bool ShowStatus = true;                                // Whether to show the status in the console. For debuggin purposes
+        public const int ConsoleUpdateInterval = 1000;                      // Delay of the statusUpdater
+        public const int UpdateIterationStatusInverval = 10000;             // Determines every how many iterations the iteration counter of the status should be updated
 
-        public const int ResearchLimit = 20;                //The amount of times a neighbor operation should retry to search a possible candidate if previous failed
+        public const int ResearchLimit = 20;                                //The amount of times a neighbor operation should retry to search a possible candidate if previous failed
 
-        public const int ThreadCount = 10;                  // The amount of solver instances that should run on parallel
-        public const int OperationCount = 20;               // How many neighbors per iteration should be generated     
+        public const int ThreadCount = 10;                                  // The amount of solver instances that should run on parallel
+        public const int OperationCount = 20;                               // How many neighbors per iteration should be generated     
 
-        public const int MaxIterations_AddPhase = 30000;    // Maximum number of iterations per solver for the All phase
-        public const int MaxNoChange_AddPhase = 3000;       // Maximum number of iterations without state change per solver for the All phase
+        public const int MaxIterations_AddPhase = 30000;                    // Maximum number of iterations per solver for the Add phase
+        public const int MaxNoChange_AddPhase = 3000;                       // Maximum number of iterations without state change per solver for the Add phase
+        public const int SwitchSearchAlgorithmInterval_AddPhase = 10000;    // Number of iterations between each switch of search algorithm for the Add phase
 
-        public const int MaxIterations_AllPhase = 500000;   // Maximum number of iterations per solver for the All phase
-        public const int MaxNoChange_AllPhase = 75000;      // Maximum number of iterations without state change per solver for the All phase
+        public const int MaxIterations_AllPhase = 500000;                   // Maximum number of iterations per solver for the All phase
+        public const int MaxNoChange_AllPhase = 75000;                      // Maximum number of iterations without state change per solver for the All phase
+        public const int SwitchSearchAlgorithmInterval_AllPhase = 10000;    // Number of iterations between each switch of search algorithm for All phase (currently unused)
 
-        public const int Optimize_Interval = 1000;          // Number of iterations between each optimization
-        public const int Optimize_Iterations = 25;          // Number of iterations to run the optimizer for
-
-        public const int Iteration_Count_Interval = 10000;  // Determines every how many iterations the iteration counter of the status should be updated
-
-        public const int Search_Algorithm_Interval = 10000; // Number of iterations between each switch of search algorithm
+        public const int OptimizeInterval = 1000;                           // Number of iterations between each optimization
+        public const int OptimizeIterations = 25;                           // Number of iterations to run the optimizer for
     }
     class Program
     {
