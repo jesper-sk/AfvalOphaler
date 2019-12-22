@@ -29,8 +29,8 @@ namespace AfvalOphaler
         public const int MaxIterations_AddPhase = 30000;    // Maximum number of iterations per solver for the All phase
         public const int MaxNoChange_AddPhase = 3000;       // Maximum number of iterations without state change per solver for the All phase
 
-        public const int MaxIterations_AllPhase = 500000;            // Maximum number of iterations per solver for the All phase
-        public const int MaxNoChange_AllPhase = 75000;               // Maximum number of iterations without state change per solver for the All phase
+        public const int MaxIterations_AllPhase = 500000;   // Maximum number of iterations per solver for the All phase
+        public const int MaxNoChange_AllPhase = 75000;      // Maximum number of iterations without state change per solver for the All phase
     }
     class Program
     {
